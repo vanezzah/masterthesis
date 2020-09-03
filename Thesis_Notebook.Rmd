@@ -181,3 +181,60 @@ combined2_df <- merge(x=maxbildung_dt,y=anzahlWege_dt,by="HH_ID")
 combined3_df <- merge(x=combined_df, y=gesamteWeglänge_dt, by="HH_ID")
 ```
 
+Anzahl berufstätiger Personen im HH
+
+HP_TAET_1 bis HP_TAET_8
+
+berufstätig:
+1: Vollzeit berufstätig
+2: Teilzeit berufstätig, d.h. 18 bis unter 35 Stunden pro Woche
+3: geringfügig beschäftigt
+4: berufstätig als Nebentätigkeit oder im Praktikum
+5: berufstätig ohne Angabe zum Umfang
+
+```{r}
+
+taet_dt <- HH_dt[, 13:20]
+taet_dt[, "berufstaetige"] <- 0
+taet_dt$berufstaetige <- as.numeric(taet_dt$berufstaetige)
+summary(taet_dt)
+taet_dt <- as.data.table(taet_dt)
+
+# temp vector
+res <- numeric(nrow(taet_dt))
+
+cols <- c(1:8)
+rows <- c(1:nrow(taet_dt))
+for (row in rows){
+  for (col in cols) {
+      if (taet_dt[row, ..col] == 1 || taet_dt[row, ..col] == 2 || taet_dt[row, ..col] == 3 ||taet_dt[row, ..col] == 4    ||taet_dt[row, ..col] == 5) {
+  res[row] <- res[row] + 1
+     
+      
+      #set(taet_dt[row], j = "berufstaetige", value = taet_dt[row, "berufstaetige"] + 1)
+    #taet_dt[row, "berufstaetige"] <- taet_dt[row, "berufstaetige"] +1
+    
+    }
+    
+  }
+  
+} 
+
+#taet_dt[1:50, lapply(.SD, function(x) { 
+##  if (x == 1 ||x == 2 || x == 3 ||x == 4 || x == 5) {
+ #     taet_dt[, "berufstaetige"] <- taet_dt[i, "berufstaetige"] +1
+      #taet_dt[row, "berufstaetige"] <- taet_dt[row, "berufstaetige"] + 1
+  #  } 
+  #}),.SDcols = c(1:8)] 
+
+
+  
+```
+
+Anzahl Führerscheinbesitzer
+
+```{r}
+HH_dt <- filter(HH_dt, HP_ANZFS != 99 &HP_ANZFS != 94 )
+dplyr::count(HH_dt, HP_ANZFS)
+```
+
