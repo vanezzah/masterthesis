@@ -111,7 +111,6 @@ dplyr::count(maxbildung_dt, maxBildung)
 mean(maxbildung_dt$maxBildung) 
 # damit ersetzen?
 
-# zusammenführen
 
 ```
 
@@ -130,6 +129,8 @@ Wege_Wochentage <- Wege_clean[arbwo == 1 & feiertag == 0]
 x <- sum(anzwege2 ~ H_ID, data = Wege_Wochentage)
 anzahlWege_dt <- as.data.table(data.frame(HH_ID=names(x), anzahlWege=x, row.names=NULL))
 dplyr::count(anzahlWege_dt, anzahlWege)
+
+unique(anzahlWege_dt$HH_ID)
 # noch ca. 100.000 HH vorhanden
 summary(anzahlWege_dt)
 # sehr hohe Werte rausnehmen ? 60?
@@ -150,17 +151,33 @@ Weglänge_dt$perskm2
 
 Weglänge_clean <- Weglänge_dt[perskm2 != "80803" & perskm2!= "80804"]
 
-
 # perskm2 is a character column, we need to convert it to numeric to be able to sum it up
 Weglänge_clean$perskm2 <- sub("," , ".", Weglänge_clean$perskm2)
 Weglänge_clean$perskm2 <- as.numeric(Weglänge_clean$perskm2)
 
 summary(Weglänge_clean)
 
+
 x <- sum(perskm2 ~ H_ID, data = Weglänge_clean)
 gesamteWeglänge_dt <- as.data.table(data.frame(HH_ID=names(x), perskm2=x, row.names=NULL))
 dplyr::count(gesamteWeglänge_dt, perskm2)
 
+unique(gesamteWeglänge_dt$HH_ID)
+
 ```
 
 Alle 3 Merkmale zusammen in eine data table
+
+```{r}
+#1. maxBildung_dt 
+# 4600 Leute mit anderer Bildung ?
+
+#2. anzahlWege_dt
+
+combined2_df <- merge(x=maxbildung_dt,y=anzahlWege_dt,by="HH_ID")
+
+#3. gesamteWeglänge_dt
+
+combined3_df <- merge(x=combined_df, y=gesamteWeglänge_dt, by="HH_ID")
+```
+
