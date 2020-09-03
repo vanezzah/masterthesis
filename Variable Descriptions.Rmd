@@ -1,50 +1,16 @@
-library(data.table)
-library(magrittr)
-library(tidyr)
-library(dplyr)
-
-# read in data
-HH_file<- file.path('Data/MiD2017_Haushalte.csv')
-HH_dt <- fread(HH_file)
-head(HH_dt)
-HH_dt <- as.data.table(HH_dt)
-str(HH_dt)
-
-# Löschen von nicht benötigten Variablen 
-HH_dt[, c("H_GEW","H_HOCH"):=NULL]
-# Gründe für nicht Besitz, pkw segment, bundesland, andere variablen zu einkommen (71-77), pkw_jahresfl)
-HH_dt <- HH_dt[, -c(62:66,86,87,90,91,71:73, 75:77, 88)]
-HH_dt[, c("MODE","BASISAUF", "TEILSTP", "H_NEBEN_1","H_NEBEN_2","H_NEBEN_3","H_NEBEN_4","H_NEBEN_5", "H_NEBEN_6", "H_NEBEN_7","H_NEBEN_8", "anzneben", "nebenws", "H_NOCAR_A" ):=NULL]
-HH_dt[, "hausnutz":=NULL]
-HH_dt[, "wohnlage":=NULL]
-HH_dt[, c("RegioStaR2","RegioStaR17"):=NULL]
-HH_dt[, "H_MIETE":=NULL]
-HH_dt[, "H_ART":=NULL]
-# Geschlecht
-HH_dt <- HH_dt[, -c(5:12)]
-
-# Überprüfen Haushalts IDs mit PersonenIDs
-# zu jedem Haushalt gibt es Personen
-ids_HH <- HH_dt[, "H_ID"] # 156240
-ids_P <- Person_dt[, "H_ID"]
-unique_ids_P <- unique(ids_P) # 156240
-
-# Wie viele Haushalte mit 1,2,3,4 autos gibt es: 
-dplyr::count(HH_dt, anzauto_gr1)
-
-
-
-#Korrelation: pkw_jahresfl_gr mit haushaltsgrösse?
-
-
-Person_file <- file.path('Data/MiD2017_Personen.csv')
-Person_dt <- fread(Person_file)
-head(Person_dt)
-typeof(Person_dt)
-
+---
+title: "R Notebook"
+output: html_notebook
+---
+Variablenbeschreibung
 
 # HH - Fragebogen alle erklärt:
 ### h_id: einzigartige ID des haushalts
+-# h_gew: gewichtungsfaktor haushalte? -> ich verwende nicht den gesamten datensatz + macht keinen sinn in regression, deswegen keine gewichtung oder hochrechnung
+-# h_hoch: hochrechnungsfaktor haushalte?
+-# mode: erhebungsmethode (papier, online, telefon)?
+-# basisauf: basis oder aufstockungsstichprobe
+-# teilstp: teilstichprobe (ohne, mit vorheriger ankündigung)
 # m_car : modul fahrzeugmerkmale und besitz, 0 nicht erhalten, 1 erhalten
 # h_gr: personen im haushalt: 1 bis 21
   # h_art : 1: 1 personen HH, 2 Mehrpersonen hh, 3 kein privat hh (wohnheim etc)
@@ -68,6 +34,9 @@ typeof(Person_dt)
   # andere Tätigkeit
   # nicht berufstätig ohne Details
   # 
+ - # h_neben_1 - 8: nebenwohnsitz 1 ja, 2 nein, 9 keine angabe, 302 -308 person ...
+ - # anzneben: anzahl personen im hh mit nebenwohnsitz
+ - # nebenws: personen im hh mit nebenwohnsitz (Ja 1, nein 2)
   # h_anzauto: anzahl autos im haushalt : 0 bis 30, 99 keine angabe
  #  anzauto_gr1 - gr3: anzahl autos in gruppen:
  #    gr_1 : 4+, gr2 3+, gr3 2+,  
@@ -77,6 +46,7 @@ typeof(Person_dt)
  #  4 Autos und mehr
  #  9 keine Angabe
  #  auto: auto im hh ja/nein 0 nein, 1 ja, 9 keine angabe
+ #  
  #  h_anzmot: anzahl motorräder
  #  h_anzmop: mopeds
  #  h_anzmotmop: anz motorräder mopeds mofas
@@ -89,11 +59,17 @@ typeof(Person_dt)
  #  anzpedrad:zusammen
  #  anzpedrad_gr:zusammen
  #  pedrad:ja nein 
+ #  -H_NOCAR_A - F: Gründe kein Auto zu haben
  #  nocar: priorisierung gründe kein auto 
  #  hp_anzfs: anzalh pkw führerschein besitzer, 99 keine angabe, 94 unplausibel
  #  anzfs_gr: führerschein in gruppen , 3 = 3 FS und mehr usw.
  #  h_cs: carsharing mitgliedschaft im haushalt: 9 keine angabe, 3 nein, 2, ja mehrere, 1 eine
- #  -hheink_gr2: einkommen in gruppen 1-15(1) und 1-10(2)
+ #  -h_eink: monatliches nettoeinkommen in euro, 99999 keine angabe
+ #  -hheink_imp: mit imputierten werten
+ #  -hheink_gr1 - gr2: einkommen in gruppen 1-15(1) und 1-10(2)
+ #  hhgr_oecd: gewichtete hh grösse nach OECD Skala
+ #  aq_eink: äquivalenzeinkommen nach neuer skala
+ #  ? oek_status: oekonomischer status: 1 neidirg bis 5 hoch
  #  anzkind06: anzahl kinder unter 6
  #  anzkind14: unter 14
  #  anzkind18: unter 18
@@ -116,8 +92,12 @@ typeof(Person_dt)
 
  #  ? hhtyp2: differenz nach alter, 1 jung unter 35, 2 familen, 3 hh it erwachsenen, 4 hh mit personen ab 65, 95 nicht zuzuordnen
  #  mobtyp: ausstatting mit mobilität
+ #  pkw_seg_kba: segment des autos
+ #  pkw_status: einfach, mittel, hoher status des autos
  #  pkw_jahresfl: summer der fahrleistung
  #  ! pkw_jahresfl_gr: fahrleistung in gruppen (bis so und so viel km)
+ #  BLAND: bundesland
+ #  BLAND_GEO: n, w, o, s
  #  !GEMTYP: gemeindetyp
  #  SKTYP: siedlungstruktureller kreistyp
  #  POLGK: politische gemiendegrössenklasse (nacheinwohnern)
@@ -154,7 +134,10 @@ typeof(Person_dt)
 #anzahl weiterer wege 
 #multimodale personen (nutzung nicht nur besitz)
 
+#Autofragebogen interessante:
+#üblicher pkw-stellplatz
+#auch viele andere enthalten? 
 
-
-
-
+```{r}
+plot(cars)
+```

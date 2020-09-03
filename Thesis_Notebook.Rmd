@@ -1,0 +1,166 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Libraries: 
+
+```{r}
+#install.packages('mosaic')
+#install.packages('data.table')
+#install.packages('magrittr')
+#install.packages('tidyr')
+#install.packages('dplyr')
+
+
+library(data.table)
+library(magrittr)
+library(tidyr)
+library(dplyr)
+library(mosaic)
+```
+
+
+Datenimport:
+
+```{r}
+
+HH_file<- file.path('Data/MiD2017_Haushalte.csv')
+HH_dt <- fread(HH_file)
+head(HH_dt)
+HH_dt <- as.data.table(HH_dt)
+str(HH_dt)
+
+
+Person_file <- file.path('Data/MiD2017_Personen.csv')
+Person_dt <- fread(Person_file)
+Person_dt <- as.data.table(Person_dt)
+head(Person_dt)
+
+```
+
+
+# Überprüfen Haushalts IDs mit PersonenIDs
+# zu jedem Haushalt gibt es Personen
+```{r}
+ids_HH <- HH_dt[, "H_ID"] # 156240
+ids_P <- Person_dt[, "H_ID"]
+unique_ids_P <- unique(ids_P) # 156240
+count(unique_ids_P)
+count(ids_HH)
+```
+
+# Wie viele Haushalte mit 1,2,3,4 autos gibt es: 
+```{r}
+dplyr::count(HH_dt, anzauto_gr1)
+3424/156420
+# nur ca. 2 % der HH haben 4 Autos und mehr -> es reicht die Untergliederung bis 3 und mehr Autos zu verwenden 
+```
+
+Wieviele Haushalte machen keine Angabe:
+
+```{r}
+dplyr::count(HH_dt, auto)
+```
+14 Haushalte machen keine Angabe --> aus Datensatz entfernen :
+
+```{r}
+
+HH_dt <- filter(HH_dt, anzauto_gr2 != 9 )
+```
+
+
+Spalten aus HH_dt löschen die nicht benötigt werden 
+
+```{r}
+HH_dt[, c("H_GEW","H_HOCH"):=NULL]
+# Gründe für nicht Besitz, pkw segment, bundesland, andere variablen zu einkommen (71-77), pkw_jahresfl)
+HH_dt <- HH_dt[, -c(62:66,86,87,90,91,71:73, 75:77, 88)]
+HH_dt[, c("MODE","BASISAUF", "TEILSTP", "H_NEBEN_1","H_NEBEN_2","H_NEBEN_3","H_NEBEN_4","H_NEBEN_5", "H_NEBEN_6", "H_NEBEN_7","H_NEBEN_8", "anzneben", "nebenws", "H_NOCAR_A" ):=NULL]
+HH_dt[, "hausnutz":=NULL]
+HH_dt[, "wohnlage":=NULL]
+HH_dt[, c("RegioStaR2","RegioStaR17"):=NULL]
+HH_dt[, "H_MIETE":=NULL]
+HH_dt[, "H_ART":=NULL]
+# Geschlecht
+HH_dt <- HH_dt[, -c(5:12)]
+HH_dt[, c("anzauto_gr1","anzauto_gr3"):=NULL]
+HH_dt[, "H_ANZAUTO":= NULL]
+```
+
+Daten aus Personenset hinzuziehen: 
+
+1. Höchster Bildungsabschluss
+
+```{r}
+bildung_dt <- Person_dt[, c("H_ID", "P_BIL")]
+Anzahl_HH <- unique(bildung_dt[, "H_ID"])
+count(Anzahl_HH)
+bildung_ohneProxy <- bildung_dt[P_BIL != "206" & P_BIL!= "9"]
+Anzahl_HH_ohneProxy <- unique(bildung_ohneProxy[, "H_ID"])
+count(Anzahl_HH_ohneProxy)
+
+maxbildung_byHH <- max(P_BIL ~ H_ID, data = bildung_ohneProxy)
+maxbildung_dt <- as.data.table(data.frame(HH_ID=names(maxbildung_byHH), maxBildung=maxbildung_byHH, row.names=NULL))
+str(maxbildung_dt)
+
+dplyr::count(maxbildung_dt, maxBildung)
+## 6 ( = anderer Abschluss)?
+
+
+mean(maxbildung_dt$maxBildung) 
+# damit ersetzen?
+
+# zusammenführen
+
+```
+
+2. Anzahl Wege insgesamt am Stichtag
+
+```{r}
+#anzwege2 sind die Anzahl Wege insgesamt (inkl. weiterer Wege aber ohne rbw(busfahrer etc.))
+Wege_dt <- Person_dt[, c("H_ID", "anzwege2", "arbwo", "feiertag")]
+
+#nur Personen mit bekannter Mobilität bzw. wegeerfassung
+Wege_clean <- Wege_dt[anzwege2 != "803" & anzwege2!= "804"]
+
+#nur Personen der Stichtag ein Wochentag war
+Wege_Wochentage <- Wege_clean[arbwo == 1 & feiertag == 0]
+
+x <- sum(anzwege2 ~ H_ID, data = Wege_Wochentage)
+anzahlWege_dt <- as.data.table(data.frame(HH_ID=names(x), anzahlWege=x, row.names=NULL))
+dplyr::count(anzahlWege_dt, anzahlWege)
+# noch ca. 100.000 HH vorhanden
+summary(anzahlWege_dt)
+# sehr hohe Werte rausnehmen ? 60?
+
+#wie mit jetzt fehlenden haushalten umgehen -> einfach raus oder imputieren?
+```
+
+3. Länge der Wege am Stichtag
+
+```{r}
+#perskm2 enthält länge aller wege mit weiteren wegen ohne rbw, fehlende werte wurden imputiert
+Weglänge_dt <- Person_dt[, c("H_ID", "perskm2", "arbwo", "feiertag")]
+
+summary(Weglänge_dt)
+Weglänge_dt$perskm2
+
+# wie mit "80802 - person hat nur rbw" umgehen? -> raus ca. 2600
+
+Weglänge_clean <- Weglänge_dt[perskm2 != "80803" & perskm2!= "80804"]
+
+
+# perskm2 is a character column, we need to convert it to numeric to be able to sum it up
+Weglänge_clean$perskm2 <- sub("," , ".", Weglänge_clean$perskm2)
+Weglänge_clean$perskm2 <- as.numeric(Weglänge_clean$perskm2)
+
+summary(Weglänge_clean)
+
+x <- sum(perskm2 ~ H_ID, data = Weglänge_clean)
+gesamteWeglänge_dt <- as.data.table(data.frame(HH_ID=names(x), perskm2=x, row.names=NULL))
+dplyr::count(gesamteWeglänge_dt, perskm2)
+
+```
+
+Alle 3 Merkmale zusammen in eine data table
