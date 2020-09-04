@@ -84,8 +84,11 @@ HH_dt[, "H_MIETE":=NULL]
 HH_dt[, "H_ART":=NULL]
 # Geschlecht
 HH_dt <- HH_dt[, -c(5:12)]
+#andere anz_auto infos
 HH_dt[, c("anzauto_gr1","anzauto_gr3"):=NULL]
 HH_dt[, "H_ANZAUTO":= NULL]
+# nur auto ja oder nein 
+HH_dt[, "M_CAR":= NULL]
 ```
 
 Daten aus Personenset hinzuziehen: 
@@ -227,7 +230,12 @@ for (row in rows){
   #  } 
   #}),.SDcols = c(1:8)] 
 
+# an HH_dt anschliessen 
 
+HH_dt$berufstaetige <- res
+
+# taetigkeitsspalten raus
+HH_dt <- HH_dt[, -c(13:20)]
   
 ```
 
@@ -236,5 +244,76 @@ Anzahl Führerscheinbesitzer
 ```{r}
 HH_dt <- filter(HH_dt, HP_ANZFS != 99 &HP_ANZFS != 94 )
 dplyr::count(HH_dt, HP_ANZFS)
+
+# entfernen Spalte anzfs in gruppen
+HH_dt[, "anzfs_gr":= NULL]
 ```
 
+HH-Größe
+
+```{r}
+HH_dt <- as.data.table(HH_dt)
+HH_dt[, "hhgr_gr":= NULL]
+setnames(HH_dt, "H_GR", "hhsize")
+```
+
+
+Alter der Haushaltsmitglieder
+
+```{r}
+alter_dt <- HH_dt[, 2:10]
+alter_dt[, "share2039"] <- 0
+alter_dt[, "share4064"] <- 0
+alter_dt[, "share65"] <- 0
+
+summary(alter_dt)
+is.data.table(alter_dt)
+# alle numerisch und ist data table
+
+# Aufteilung in share2039 share4064 share65
+
+temp2039 <- numeric(10)
+temp4064 <- numeric(10)
+temp65 <- numeric(10)
+
+cols <- c(2:9)
+rows <- c(1:10)
+for (row in rows){
+  for (col in cols) {
+      if (alter_dt[row, ..col] < 40 & alter_dt[row, ..col] > 19) {
+    temp2039[row] <- temp2039[row] + 1 }
+    else if (alter_dt[row, ..col] < 65 & alter_dt[row, ..col] > 39){
+     temp4064[row] <- temp4064[row] + 1 }
+    else if (alter_dt[row, ..col] > 64){
+     temp65[row] <- temp65[row] + 1 }
+  
+     }
+}
+
+#faster? :
+# für 20-39 jährige:
+temp <- alter_dt[1:20,2:9]
+
+result <- temp < 40 & test > 19
+result <- as.data.table(result)
+result <- result*1
+result
+anzahl2029 <- apply(result,1,sum)
+anzahl2029 / alter_dt[1:20,1]
+
+# noch anhängen und für andere machen
+```
+Household lifecycle stage / children?
+
+
+Anzahl andere Fortbewegungsmittel
+
+Gebäudetyp
+
+ÖPNV Variablen
+
+subjektive zufriedenheit öpnv (korreliert mit quali_öpnv?)
+
+Gebäudetyp
+
+Carsharing
