@@ -261,6 +261,18 @@ setnames(HH_dt, "H_GR", "hhsize")
 Alter der Haushaltsmitglieder
 
 ```{r}
+
+#NOCH 999 entfernen (nächster Durchlauf)!
+HH_dt <- filter(HH_dt, HP_ALTER_1 != 999 )
+HH_dt <- filter(HH_dt, HP_ALTER_2 != 999 )
+HH_dt <- filter(HH_dt, HP_ALTER_3 != 999 )
+HH_dt <- filter(HH_dt, HP_ALTER_4 != 999 )
+HH_dt <- filter(HH_dt, HP_ALTER_5 != 999 )
+HH_dt <- filter(HH_dt, HP_ALTER_6 != 999 )
+HH_dt <- filter(HH_dt, HP_ALTER_7 != 999 )
+HH_dt <- filter(HH_dt, HP_ALTER_8 != 999 )
+
+
 alter_dt <- HH_dt[, 2:10]
 alter_dt[, "share2039"] <- 0
 alter_dt[, "share4064"] <- 0
@@ -270,41 +282,133 @@ summary(alter_dt)
 is.data.table(alter_dt)
 # alle numerisch und ist data table
 
-# Aufteilung in share2039 share4064 share65
-
-temp2039 <- numeric(10)
-temp4064 <- numeric(10)
-temp65 <- numeric(10)
-
-cols <- c(2:9)
-rows <- c(1:10)
-for (row in rows){
-  for (col in cols) {
-      if (alter_dt[row, ..col] < 40 & alter_dt[row, ..col] > 19) {
-    temp2039[row] <- temp2039[row] + 1 }
-    else if (alter_dt[row, ..col] < 65 & alter_dt[row, ..col] > 39){
-     temp4064[row] <- temp4064[row] + 1 }
-    else if (alter_dt[row, ..col] > 64){
-     temp65[row] <- temp65[row] + 1 }
-  
-     }
-}
-
-#faster? :
 # für 20-39 jährige:
-temp <- alter_dt[1:20,2:9]
+temp <- alter_dt[,2:9]
 
-result <- temp < 40 & test > 19
+result <- temp < 40 & temp > 19
 result <- as.data.table(result)
 result <- result*1
 result
-anzahl2029 <- apply(result,1,sum)
-anzahl2029 / alter_dt[1:20,1]
+anzahl2039 <- apply(result,1,sum)
+share2039 <- anzahl2039/ alter_dt[,1]
+alter_dt$share2039 <- share2039
 
-# noch anhängen und für andere machen
+# für > 65 jährige
+
+result2 <- temp > 65 & temp < 150
+result2 <- as.data.table(result2)
+result2 <- result2*1
+anzahl65 <- apply(result2,1,sum)
+share65 <- anzahl65/ alter_dt[,1]
+alter_dt$share65 <- share65
+
+# für 40 - 64 jährige
+
+result3 <- temp < 65 & temp > 39
+result3 <- as.data.table(result3)
+result3 <- result3*1
+anzahl4064 <- apply(result3,1,sum)
+share4064 <- anzahl4064/ alter_dt[,1]
+alter_dt$share4064 <- share4064
+
+HH_dt[, "share2039"] <- 0
+HH_dt[, "share4064"] <- 0
+HH_dt[, "share65"] <- 0
+
+HH_dt$share2039 <- share2039
+HH_dt$share4064 <- share4064
+HH_dt$share65 <- share65
+
+HH_dt <- HH_dt[, -c(3:10)]
+
 ```
+
 Household lifecycle stage / children?
 
+ (a) single (1 if household consists of one member, 0 otherwise), (b) couple, (c) couple with children, (d) single parent (1 if the household consists of 1 adult and one or more children, 0 otherwise) and (e) extended families or unattached individuals. 
+ 
+hhtyp : 1 - 11
+95 rauswerfen 
+
+1: 18-29
+2:1-Personen-HH: Person 30-59 Jahre 
+3:1-Personen-HH: Person 60 Jahre und älter -> single
+4:2-Personen-HH: jüngste Person 18-29 Jahre
+5:2-Personen-HH: jüngste Person 30-59 Jahre
+6:2-Personen-HH: jüngste Person 60 Jahre und älte->couple
+7:HH mit mind. 3 Erwachsenen -> extended family
+8:HH mit mind. einem Kind unter 6 Jahren 
+9:HH mit mind. einem Kind unter 14 Jahren 
+10:HH mit mind. einem Kind unter 18 Jahren -> couple with children
+11:Alleinerziehende(r) -> single parent
+95:nicht zuzuordnen
+
+```{r}
+HH_dt <- filter(HH_dt, hhtyp != 95 )
+
+hhtyp_dt <- HH_dt[, 26]
+hhtyp_dt <- as.data.table(hhtyp_dt)
+hhtyp_dt[, "single"] <- 0
+hhtyp_dt[, "couple"] <- 0
+hhtyp_dt[, "couple_children"] <- 0
+hhtyp_dt[, "singleparent"] <- 0
+hhtyp_dt[, "otherindividuals"] <- 0
+
+
+# Singles
+temp2 <- hhtyp_dt[,1]
+
+single <- temp2 < 4
+single <- as.data.table(single)
+single <- single*1
+hhtyp_dt$single <- single
+
+# Couples
+
+couple <- temp2 < 7 & temp2 > 3
+couple <- as.data.table(couple)
+couple <- couple *1
+hhtyp_dt$couple <- couple 
+
+# Couples with children
+
+couple_c <- temp2 < 11 & temp2 > 7
+couple_c <- as.data.table(couple_c)
+couple_c <- couple_c*1
+hhtyp_dt$couple_children <- couple_c
+
+# singleparent
+
+singleparent <- temp2 == 11
+singleparent <- as.data.table(singleparent)
+singleparent <- singleparent*1
+hhtyp_dt$singleparent <- singleparent
+
+# otherindividuals
+
+others <- temp2 == 7
+others <- as.data.table(others)
+others <- others*1
+hhtyp_dt$otherindividuals <- others
+
+#anhängen 
+
+HH_dt[, "single"] <- 0
+HH_dt[, "couple"] <- 0
+HH_dt[, "couple_children"] <- 0
+HH_dt[, "single_parent"] <- 0
+HH_dt[, "other_ind"] <- 0
+
+HH_dt[, "single"] <- single
+HH_dt[, "couple"] <- couple
+HH_dt[, "couple_children"] <- couple_c
+HH_dt[, "single_parent"] <- singleparent
+HH_dt[, "other_ind"] <- others
+
+HH_dt <- as.data.table(HH_dt)
+HH_dt[, "hhtyp":= NULL]
+HH_dt[, "hhtyp2":= NULL]
+```
 
 Anzahl andere Fortbewegungsmittel
 
