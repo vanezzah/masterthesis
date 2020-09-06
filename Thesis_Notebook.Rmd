@@ -412,6 +412,11 @@ HH_dt[, "hhtyp2":= NULL]
 
 Anzahl andere Fortbewegungsmittel
 
+```{r}
+
+```
+
+
 Gebäudetyp
 
 ÖPNV Variablen
