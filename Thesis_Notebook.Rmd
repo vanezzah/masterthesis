@@ -11,6 +11,9 @@ Libraries:
 #install.packages('magrittr')
 #install.packages('tidyr')
 #install.packages('dplyr')
+#install.packages("Hmisc")
+#install.packages("corrplot")
+#install.packages("PerformanceAnalytics")
 
 
 library(data.table)
@@ -18,6 +21,9 @@ library(magrittr)
 library(tidyr)
 library(dplyr)
 library(mosaic)
+library(Hmisc)
+library(corrplot)
+library(PerformanceAnalytics)
 ```
 
 
@@ -27,15 +33,12 @@ Datenimport:
 
 HH_file<- file.path('Data/MiD2017_Haushalte.csv')
 HH_dt <- fread(HH_file)
-head(HH_dt)
 HH_dt <- as.data.table(HH_dt)
-str(HH_dt)
 
 
 Person_file <- file.path('Data/MiD2017_Personen.csv')
 Person_dt <- fread(Person_file)
 Person_dt <- as.data.table(Person_dt)
-head(Person_dt)
 
 ```
 
@@ -73,6 +76,7 @@ HH_dt <- filter(HH_dt, anzauto_gr2 != 9 )
 Spalten aus HH_dt löschen die nicht benötigt werden 
 
 ```{r}
+HH_dt <- as.data.table(HH_dt)
 HH_dt[, c("H_GEW","H_HOCH"):=NULL]
 # Gründe für nicht Besitz, pkw segment, bundesland, andere variablen zu einkommen (71-77), pkw_jahresfl)
 HH_dt <- HH_dt[, -c(62:66,86,87,90,91,71:73, 75:77, 88)]
@@ -152,7 +156,7 @@ Weglänge_dt$perskm2
 
 # wie mit "80802 - person hat nur rbw" umgehen? -> raus ca. 2600
 
-Weglänge_clean <- Weglänge_dt[perskm2 != "80803" & perskm2!= "80804"]
+Weglänge_clean <- Weglänge_dt[perskm2 != "80803" & perskm2!= "80804" & perskm2!="80802"]
 
 # perskm2 is a character column, we need to convert it to numeric to be able to sum it up
 Weglänge_clean$perskm2 <- sub("," , ".", Weglänge_clean$perskm2)
@@ -182,6 +186,8 @@ combined2_df <- merge(x=maxbildung_dt,y=anzahlWege_dt,by="HH_ID")
 #3. gesamteWeglänge_dt
 
 combined3_df <- merge(x=combined_df, y=gesamteWeglänge_dt, by="HH_ID")
+
+  
 ```
 
 Anzahl berufstätiger Personen im HH
@@ -197,45 +203,36 @@ berufstätig:
 
 ```{r}
 
-taet_dt <- HH_dt[, 13:20]
-taet_dt[, "berufstaetige"] <- 0
-taet_dt$berufstaetige <- as.numeric(taet_dt$berufstaetige)
+taet_dt <- HH_dt[, 12:19]
 summary(taet_dt)
 taet_dt <- as.data.table(taet_dt)
 
+temp_beruf <- taet_dt < 6 & taet_dt > 0
+temp_beruf <- as.data.table(temp_beruf)
+temp_beruf <- temp_beruf*1
+sum_berufstätige <- apply(temp_beruf,1,sum)
+HH_dt$berufstaetige <- sum_berufstätige
+
 # temp vector
-res <- numeric(nrow(taet_dt))
 
-cols <- c(1:8)
-rows <- c(1:nrow(taet_dt))
-for (row in rows){
-  for (col in cols) {
-      if (taet_dt[row, ..col] == 1 || taet_dt[row, ..col] == 2 || taet_dt[row, ..col] == 3 ||taet_dt[row, ..col] == 4    ||taet_dt[row, ..col] == 5) {
-  res[row] <- res[row] + 1
+#cols <- c(1:8)
+#rows <- c(1:nrow(taet_dt))
+#for (row in rows){
+ # for (col in cols) {
+#      if (taet_dt[row, ..col] == 1 || taet_dt[row, ..col] == 2 || taet_dt[row, ..col] == 3 ||taet_dt[row, ..col] == 4    ||taet_dt[row, ..col] == 5) {
+#  res[row] <- res[row] + 1
      
-      
-      #set(taet_dt[row], j = "berufstaetige", value = taet_dt[row, "berufstaetige"] + 1)
-    #taet_dt[row, "berufstaetige"] <- taet_dt[row, "berufstaetige"] +1
     
-    }
-    
-  }
+  #  }
+ #   
+  #}
   
-} 
+#} 
 
-#taet_dt[1:50, lapply(.SD, function(x) { 
-##  if (x == 1 ||x == 2 || x == 3 ||x == 4 || x == 5) {
- #     taet_dt[, "berufstaetige"] <- taet_dt[i, "berufstaetige"] +1
-      #taet_dt[row, "berufstaetige"] <- taet_dt[row, "berufstaetige"] + 1
-  #  } 
-  #}),.SDcols = c(1:8)] 
 
-# an HH_dt anschliessen 
-
-HH_dt$berufstaetige <- res
 
 # taetigkeitsspalten raus
-HH_dt <- HH_dt[, -c(13:20)]
+HH_dt <- HH_dt[, -c(12:19)]
   
 ```
 
@@ -244,7 +241,7 @@ Anzahl Führerscheinbesitzer
 ```{r}
 HH_dt <- filter(HH_dt, HP_ANZFS != 99 &HP_ANZFS != 94 )
 dplyr::count(HH_dt, HP_ANZFS)
-
+HH_dt <- as.data.table(HH_dt)
 # entfernen Spalte anzfs in gruppen
 HH_dt[, "anzfs_gr":= NULL]
 ```
@@ -295,7 +292,7 @@ alter_dt$share2039 <- share2039
 
 # für > 65 jährige
 
-result2 <- temp > 65 & temp < 150
+result2 <- temp > 64 & temp < 150
 result2 <- as.data.table(result2)
 result2 <- result2*1
 anzahl65 <- apply(result2,1,sum)
@@ -346,7 +343,7 @@ hhtyp : 1 - 11
 ```{r}
 HH_dt <- filter(HH_dt, hhtyp != 95 )
 
-hhtyp_dt <- HH_dt[, 26]
+hhtyp_dt <- HH_dt[, "hhtyp"]
 hhtyp_dt <- as.data.table(hhtyp_dt)
 hhtyp_dt[, "single"] <- 0
 hhtyp_dt[, "couple"] <- 0
@@ -410,21 +407,261 @@ HH_dt[, "hhtyp":= NULL]
 HH_dt[, "hhtyp2":= NULL]
 ```
 
+Anzahl Kinder
 
-# TEST TEST 
+```{r}
+# anzkind18: verwendung der anzahl kinder unter 18 (benötigen eventuell mobilität)
+# alle anderen entfernen
+HH_dt[, "anzkind06":= NULL]
+HH_dt[, "anzkind14":= NULL]
+HH_dt[, "anzerw14":= NULL]
+HH_dt[, "anzerw18":= NULL]
+```
+
+
 Anzahl andere Fortbewegungsmittel
 
 ```{r}
+# H_ANZMOTMOP : anzahl an motorräder, mopeds, mofas im HH
+# alle anderen entfernen:
+HH_dt[, "auto":= NULL]
+HH_dt[, "H_ANZMOT":= NULL]
+HH_dt[, "H_ANZMOP":= NULL]
+HH_dt[, "anzmotmop_gr":= NULL]
+HH_dt[, "motmop":= NULL]
 
+#anzpedrad: anzahl elektrofahrrad, pedelecs, fahrräder im HH
+HH_dt[, "H_ANZPED":= NULL]
+HH_dt[, "H_ANZRAD":= NULL]
+HH_dt[, "anzped_gr":= NULL]
+HH_dt[, "anzrad_gr":= NULL]
+HH_dt[, "anzpedrad_gr":= NULL]
+HH_dt[, "pedrad":= NULL]
+
+# mobtyp somit schon über andere variablen vorhanden
+HH_dt[, "mobtyp":= NULL]
 ```
 
 
 Gebäudetyp
 
+```{r}
+# haustyp: 1 ein-bis zweifamilienhaus, 2 mehrfamilienhaus, 3 geschosswohnungsbau, 4 sonstiges, 95 nicht zuzuordnen
+# what to do with 95?
+dplyr::count(HH_dt, haustyp)
+#HH_dt <- filter(HH_dt, haustyp != 95)
+
+# garage: 0 nein, 1 ja, 95 nicht zuzuordnen
+# what to do with 95?
+dplyr::count(HH_dt, garage)
+#HH_dt <- filter(HH_dt, garage != 95)
+
+```
+
+
 ÖPNV Variablen
 
-subjektive zufriedenheit öpnv (korreliert mit quali_öpnv?)
+bus28: luftlinienentfernung zur nächsten bushaltestelle mit mind. 28 abfahrten am werktag
+tram 28 ""
+bahn 28 ""
+quali_opnv
 
-Gebäudetyp
+quali_nv -> nähe zu apotheken etc.
+
+```{r}
+#pkw fahrzeit zum nächste ober- und mittelzentrum entfernen:
+HH_dt <- as.data.table(HH_dt)
+HH_dt[, "min_ozmz":= NULL]  
+```
+
+Raumtyp
+
+```{r}
+#politische gemeindegrößenklasse entfernen
+HH_dt[, "POLGK":= NULL]  
+HH_dt[, "RegioStaRGem7":= NULL]  
+HH_dt[, "RegioStaR7":= NULL]  
+HH_dt[, "RegioStaR4":= NULL]  
+HH_dt[, "GEMTYP":= NULL]
+
+# oder SKTYP:
+#kreisfreie Großstadt
+#städtischer Kreis
+#ländlicher Kreis mit Verdichtungsansätnze
+#dünn besiedelter ländlicher Kreis
+
+#oder RegiostarGem5:
+#Metropole
+#Regiopole, Großstadt
+#zentrale Stadt, Mittelstadt 
+#städtischer Raum
+#kleinstädtischer, dörflicher Raum  
+```
 
 Carsharing
+
+Abgebildet durch H_CS:
+1 ja, bei einem Anbieter
+2 ja, bei mehreren Anbietern 
+3 nein, gar nicht
+9 keine Angabe
+
+Sonstige Entfernungen
+```{r}
+# zu verzerrend, in andere variablen enthalten
+HH_dt[, "nocar":= NULL]
+HH_dt[, "pkw_jahresfl_gr":= NULL]
+```
+
+anzahl wege, länge wege und bildung anhängen 
+
+```{r}
+HH_dt <- as.data.table(HH_dt)
+setnames(HH_dt, "H_ID", "HH_ID")
+HH_dt$HH_ID <- factor(HH_dt$HH_ID)
+HH_dt_final <- merge(x=combined3_df, y=HH_dt, by="HH_ID")
+
+dplyr::count(HH_dt_final, haustyp)
+dplyr::count(HH_dt_final, garage)
+dplyr::count(HH_dt_final, quali_nv)
+dplyr::count(HH_dt_final, bus28)
+
+#train a model to impute values?
+```
+Testing correlation
+
+```{r}
+
+#Numerische Variablen mit numerischen variablen
+
+# correlation between numerical variables
+# spearman correlation coefficient
+
+numerical_dt <- HH_dt_final[, c("anzahlWege","perskm2", "H_ANZMOTMOP", "anzpedrad", "HP_ANZFS", "anzkind18", "berufstaetige", "share4064", "share65","share2039")]
+
+result <- cor(numerical_dt, method = "spearman")
+round(result, 2)
+
+result2 <- rcorr(as.matrix(numerical_dt), type="spearman")
+result2
+
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+
+flattenCorrMatrix(res2$r, res2$P)
+
+# Insignificant correlation are crossed
+corrplot(result2$r, type="upper", order="hclust", 
+         p.mat = res2$P, sig.level = 0.01, insig = "blank")
+# Insignificant correlations are leaved blank
+corrplot(result2$r, type="upper", order="hclust", 
+         p.mat = res2$P, sig.level = 0.01, insig = "blank")
+
+chart.Correlation(numerical_dt, histogram=TRUE, pch=19)
+
+```
+
+```{r}
+#Kategorische Variablen 
+#Using Cramer's V
+
+#Packages for Cramers V 
+install.packages("vcd")
+library(vcd)
+
+# import all categorical columns
+categorical_dt <- HH_dt_final[, c("H_CS","hheink_gr2", "bus28", "tram28", "bahn28", "haustyp", "garage", "quali_opnv", "quali_nv","single", "couple", "couple_children", "single_parent", "other_ind", "RegioStaRGem5", "maxBildung")]
+categorical_dt <- as.data.frame(categorical_dt)
+
+# convert into factor columns
+for(i in 1:ncol(categorical_dt)){
+
+categorical_dt[,i] <- as.factor(categorical_dt[,i])
+
+}
+
+#calculate Cramers_V for all pairs of categorical variables in the table:
+categorical_dt <- as.data.frame(categorical_dt)
+cv <- function(x, y) {
+  t <- table(x, y)
+  print(t)
+  chi <- suppressWarnings(chisq.test(t))$statistic
+  cramer <- sqrt(chi / (NROW(x) * (min(dim(t)) - 1)))
+  cramer
+}
+
+get.V3<-function(y, fill = TRUE){
+  col.y<-ncol(y)
+  V<-matrix(ncol=col.y,nrow=col.y)
+  for(i in 1:(col.y - 1)){
+    print(i)
+    for(j in (i + 1):col.y){
+      print(j)
+      V[i,j]<-cv(y[,i],y[,j])
+    }
+  }
+  diag(V) <- 1 
+  if (fill) {
+    for (i in 1:ncol(V)) {
+      V[, i] <- V[i, ]
+    }
+  }
+  V
+}
+test <- get.V3(categorical_dt)
+
+test <- as.data.frame(test)
+colnames(test) <- colnames(categorical_dt)
+rownames(test) <- colnames(categorical_dt)
+
+# add degress of freedom
+levels <- c(1:ncol(categorical_dt))
+for(i in 1:ncol(categorical_dt)){
+
+levels[i] <- nlevels(categorical_dt[,i])
+
+}
+
+test$df <- levels
+test <- rbind(round(levels,0),test)
+
+# check thresholds:
+#http://www.real-statistics.com/chi-square-and-f-distributions/effect-size-chi-square/
+  
+
+
+
+```
+
+```{r}
+# Korrelation zwischen kategorischen und numerischen variablen 
+# wenn numerische variable ordinal ist (1-6) dann kann ich spearman verwenden 
+
+ #income, which is specified as a quadratic to allow for nonlinear effects
+# durchschnittle wegelänge statt perskm2?
+
+singlehhsize <- HH_dt_final[, c("single", "perskm2")]
+singlehhsize <- filter(singlehhsize, perskm2 < 5000 )
+library(ggplot2)
+beanplot(perskm2~ single, data=HH_dt_final)
+summary(singlehhsize)
+
+#check if its normally distributed
+ggplot(singlehhsize, aes(x=single, y=perskm2)) + 
+  geom_violin() + facet_wrap(~single)
+
+#weitere wege cutten?
+
+# shapiro test
+single1 <- filter(singlehhsize, single == 1)
+
+shapiro.test(singlehhsize$perskm2)
+```
+
