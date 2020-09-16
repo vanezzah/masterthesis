@@ -125,15 +125,15 @@ mean(maxbildung_dt$maxBildung)
 
 ```{r}
 #anzwege2 sind die Anzahl Wege insgesamt (inkl. weiterer Wege aber ohne rbw(busfahrer etc.))
-Wege_dt <- Person_dt[, c("H_ID", "anzwege2", "arbwo", "feiertag")]
+Wege_dt <- Person_dt[, c("H_ID", "anzwege1", "arbwo", "feiertag")]
 
 #nur Personen mit bekannter Mobilität bzw. wegeerfassung
-Wege_clean <- Wege_dt[anzwege2 != "803" & anzwege2!= "804"]
+Wege_clean <- Wege_dt[anzwege1 != "803" & anzwege1!= "804"]
 
 #nur Personen der Stichtag ein Wochentag war
 Wege_Wochentage <- Wege_clean[arbwo == 1 & feiertag == 0]
 
-x <- sum(anzwege2 ~ H_ID, data = Wege_Wochentage)
+x <- sum(anzwege1 ~ H_ID, data = Wege_Wochentage)
 anzahlWege_dt <- as.data.table(data.frame(HH_ID=names(x), anzahlWege=x, row.names=NULL))
 dplyr::count(anzahlWege_dt, anzahlWege)
 
@@ -149,29 +149,38 @@ summary(anzahlWege_dt)
 
 ```{r}
 #perskm2 enthält länge aller wege mit weiteren wegen ohne rbw, fehlende werte wurden imputiert
-Weglänge_dt <- Person_dt[, c("H_ID", "perskm2", "arbwo", "feiertag")]
+Weglänge_dt <- Person_dt[, c("H_ID", "perskm2", "arbwo", "feiertag")] 
 
 summary(Weglänge_dt)
 Weglänge_dt$perskm2
 
 # wie mit "80802 - person hat nur rbw" umgehen? -> raus ca. 2600
 
-Weglänge_clean <- Weglänge_dt[perskm2 != "80803" & perskm2!= "80804" & perskm2!="80802"]
+Weglänge_clean <- Weglänge_dt[perskm2 != "80803" & perskm2!= "80804" & perskm2 != "80802"]
 
 # perskm2 is a character column, we need to convert it to numeric to be able to sum it up
 Weglänge_clean$perskm2 <- sub("," , ".", Weglänge_clean$perskm2)
 Weglänge_clean$perskm2 <- as.numeric(Weglänge_clean$perskm2)
 
-summary(Weglänge_clean)
-
+#summary(Weglänge_clean)
+#dplyr::count(Weglänge_clean, anzkm == 9995)
+#Weglänge_clean <- filter(Weglänge_clean, anzkm != 9995)
 
 x <- sum(perskm2 ~ H_ID, data = Weglänge_clean)
 gesamteWeglänge_dt <- as.data.table(data.frame(HH_ID=names(x), perskm2=x, row.names=NULL))
-dplyr::count(gesamteWeglänge_dt, perskm2)
+#dplyr::count(gesamteWeglänge_dt, anzkm > 500)
+gesamteWeglänge_dt2 <- filter(gesamteWeglänge_dt, perskm2 < 1000)
+summary(gesamteWeglänge_dt2)
+#gesamteWeglänge_dt2$anzkm <- log(gesamteWeglänge_dt2$anzkm)
+# transform -inf to zero 
+#gesamteWeglänge_dt2[gesamteWeglänge_dt2 == -Inf] <- 0
+#summary(gesamteWeglänge_dt2)
+#qqnorm(gesamteWeglänge_dt2$anzkm, pch = 1, frame = FALSE)
+#qqline(gesamteWeglänge_dt2$anzkm, col = "steelblue", lwd = 2)
 
-unique(gesamteWeglänge_dt$HH_ID)
+#unique(gesamteWeglänge_dt$HH_ID)
 
-```
+```  
 
 Alle 3 Merkmale zusammen in eine data table
 
@@ -185,7 +194,7 @@ combined2_df <- merge(x=maxbildung_dt,y=anzahlWege_dt,by="HH_ID")
 
 #3. gesamteWeglänge_dt
 
-combined3_df <- merge(x=combined_df, y=gesamteWeglänge_dt, by="HH_ID")
+combined3_df <- merge(x=combined_df, y=gesamteWeglänge_dt2, by="HH_ID")
 
   
 ```
@@ -483,7 +492,7 @@ HH_dt[, "RegioStaRGem7":= NULL]
 HH_dt[, "RegioStaR7":= NULL]  
 HH_dt[, "RegioStaR4":= NULL]  
 HH_dt[, "GEMTYP":= NULL]
-
+HH_dt[, "SKTYP":= NULL]
 # oder SKTYP:
 #kreisfreie Großstadt
 #städtischer Kreis
@@ -521,13 +530,37 @@ setnames(HH_dt, "H_ID", "HH_ID")
 HH_dt$HH_ID <- factor(HH_dt$HH_ID)
 HH_dt_final <- merge(x=combined3_df, y=HH_dt, by="HH_ID")
 
+HH_dt_final <- filter(HH_dt_final, quali_nv != 95)
 dplyr::count(HH_dt_final, haustyp)
 dplyr::count(HH_dt_final, garage)
 dplyr::count(HH_dt_final, quali_nv)
+dplyr::count(HH_dt_final, quali_opnv)
 dplyr::count(HH_dt_final, bus28)
+dplyr::count(HH_dt_final, tram28)
+dplyr::count(HH_dt_final, bahn28)
 
 #train a model to impute values?
 ```
+
+durchschnittliche weglänge dazu 
+```{r}
+
+HH_dt_final$Weglänge_avg <- HH_dt_final$perskm2/HH_dt_final$anzahlWege
+
+#Nan durch 0 ersetzen 
+HH_dt_final[is.na(HH_dt_final)] <- 0
+
+summary(HH_dt_final$Weglänge_avg)
+HH_dt_final$Weglänge_avg <- log(HH_dt_final$Weglänge_avg)
+
+# transform -inf to zero 
+HH_dt_final[HH_dt_final == -Inf] <- 0
+
+```
+
+summary(HH_dt_final$anzkm)
+summary(HH_dt_final$anzahlWege)
+
 Testing correlation
 
 ```{r}
@@ -537,7 +570,7 @@ Testing correlation
 # correlation between numerical variables
 # spearman correlation coefficient
 
-numerical_dt <- HH_dt_final[, c("anzahlWege","perskm2", "H_ANZMOTMOP", "anzpedrad", "HP_ANZFS", "anzkind18", "berufstaetige", "share4064", "share65","share2039")]
+numerical_dt <- HH_dt_final[, c("anzahlWege","perskm2", "H_ANZMOTMOP", "anzpedrad", "HP_ANZFS", "anzkind18", "berufstaetige", "share4064", "share65","share2039", "Weglänge_avg")]
 
 result <- cor(numerical_dt, method = "spearman")
 round(result, 2)
@@ -555,7 +588,7 @@ flattenCorrMatrix <- function(cormat, pmat) {
     )
 }
 
-flattenCorrMatrix(res2$r, res2$P)
+flattenCorrMatrix(result2$r, result2$P)
 
 # Insignificant correlation are crossed
 corrplot(result2$r, type="upper", order="hclust", 
@@ -570,7 +603,8 @@ chart.Correlation(numerical_dt, histogram=TRUE, pch=19)
 
 ```{r}
 #Kategorische Variablen 
-#Using Cramer's V
+#Using Cramer's V if one variable is more than 2, if both are dichotomous: cramers phi
+#can be used for nominal and ordinal variables
 
 #Packages for Cramers V 
 install.packages("vcd")
@@ -641,27 +675,192 @@ test <- rbind(round(levels,0),test)
 ```
 
 ```{r}
+#correlation between numerical and nominal variables 
+# numerische variable weglänge_avg mit allen kategoriellen variablen die nicht ordinal sind (e.g. CS, bildung, etc.)
+
+boxplot(qualinv_avgweg$Weglänge_avg ~ qualinv_avgweg$quali_nv)
+boxplot(qualinv_avgweg$Weglänge_avg)
+
+library(dplyr)
+
+table_var <- group_by(qualinv_avgweg, quali_nv) %>%
+  summarise(
+    count = n(),
+    mean = mean(Weglänge_avg, na.rm = TRUE),
+    variance = var(Weglänge_avg, na.rm = TRUE),
+    sd = sd(Weglänge_avg, na.rm = TRUE),
+  )
+table_var$var_before <- var(qualinv_avgweg$Weglänge_avg)
+table_var$sd_before <- sd(qualinv_avgweg$Weglänge_avg)
+table_var
+#-> variance after grouping still at the same level: no correlation
+
+
+```
+
+
+```{r}
+# Andere überlegungen numerical vs. nominal 
+# alles in dummy variablen umwandeln, ein level rauslassen, e.g 7 levels, 6 dummys
 # Korrelation zwischen kategorischen und numerischen variablen 
+
 # wenn numerische variable ordinal ist (1-6) dann kann ich spearman verwenden 
 
  #income, which is specified as a quadratic to allow for nonlinear effects
-# durchschnittle wegelänge statt perskm2?
 
-singlehhsize <- HH_dt_final[, c("single", "perskm2")]
-singlehhsize <- filter(singlehhsize, perskm2 < 5000 )
-library(ggplot2)
-beanplot(perskm2~ single, data=HH_dt_final)
-summary(singlehhsize)
 
-#check if its normally distributed
-ggplot(singlehhsize, aes(x=single, y=perskm2)) + 
-  geom_violin() + facet_wrap(~single)
+# anova - test durchführen oder kruskal walis test
+# voraussetzungen:
+# anova: normalerverteilte pro kategorie und homogene varianz 
+# kruskal_wallis: ohne normalerverteilungsannahmen etc. 
+# if only 2 categoris: mann-whitney-U / wilcoxon rank sum test
 
-#weitere wege cutten?
 
-# shapiro test
-single1 <- filter(singlehhsize, single == 1)
 
-shapiro.test(singlehhsize$perskm2)
+#Beispiel quali_nv: categories 1-4
+  
+qualinv_avgweg <- HH_dt_final[, c("quali_nv", "Weglänge_avg")]
+
+
+
+qualinv_avgweg1 <- filter(qualinv_avgweg, quali_nv == 1)
+
+# check normal distribution of each category
+# qq plot:
+qqnorm(qualinv_avgweg1$Weglänge_avg, pch = 1, frame = FALSE)
+qqline(qualinv_avgweg1$Weglänge_avg, col = "steelblue", lwd = 2)
+
+# homogene varianz der distributions : levene test or boxplot
+#library(car)
+boxplot(qualinv_avgweg$Weglänge_avg ~ qualinv_avgweg$quali_nv)
+boxplot(qualinv_avgweg$Weglänge_avg)
+#leveneTest(Weglänge_avg ~ quali_nv, data = qualinv_avgweg)
+
+# do anova test
+
+aov1 = aov(singleavgweg$Weglänge_avg ~ singleavgweg$single)
+summary(aov1)
+
+# pairwise wilcoxon test: # however with large sample sizes even small differences will be significant
+qualinv_avgweg$quali_nv <-as.factor(qualinv_avgweg$quali_nv)
+pairwise.wilcox.test(qualinv_avgweg$Weglänge_avg,qualinv_avgweg$quali_nv,exact=F)
+#p.adj='bonferroni'
+summary(qualinv_avgweg)
+dplyr::count(qualinv_avgweg, quali_nv)
+
+# how much variance in numeric variable is explained by categorical variable?
+# funktion daraus erstellen und dann für jede nominale variable mit weglänge_avg machen
+
+library(dplyr)
+
+table_var <- group_by(qualinv_avgweg, quali_nv) %>%
+  summarise(
+    count = n(),
+    mean = mean(Weglänge_avg, na.rm = TRUE),
+    variance = var(Weglänge_avg, na.rm = TRUE),
+    sd = sd(Weglänge_avg, na.rm = TRUE),
+  )
+table_var$var_before <- var(qualinv_avgweg$Weglänge_avg)
+table_var$sd_before <- sd(qualinv_avgweg$Weglänge_avg)
+table_var
+#-> variance after grouping still at the same level: no correlation
+
+
+
+
+
+```
+```{r}
+# für single: 
+
+test_single <- HH_dt_final[, c("single", "Weglänge_avg")]
+single1 <- filter(test_single, single == 1)
+single0 <- filter(test_single, single == 0)
+
+# check normal distribution of each category
+# qq plot:
+qqnorm(single1$Weglänge_avg, pch = 1, frame = FALSE)
+qqline(single1$Weglänge_avg, col = "steelblue", lwd = 2)
+
+qqnorm(single0$Weglänge_avg, pch = 1, frame = FALSE)
+qqline(single0$Weglänge_avg, col = "steelblue", lwd = 2)
+
+
+# check variance:
+test_single$single <- factor(test_single$single)
+leveneTest(Weglänge_avg ~ single, data = test_single)
+boxplot(test_single$Weglänge_avg ~test_single$single)
+
+summary(test_single)
+
+
+# removing outliers
+
+Q <- quantile(test_single$Weglänge_avg, probs=c(.25, .75), na.rm = FALSE)
+iqr <- IQR(test_single$Weglänge_avg)
+eliminated<- subset(test_single, test_single$Weglänge_avg > (Q[1] - 1.5*iqr) & test_single$Weglänge_avg < (Q[2]+1.5*iqr))
+
+boxplot(eliminated$Weglänge_avg ~ eliminated$single)
+single1 <- filter(eliminated, single == 1)
+single0 <- filter(eliminated, single == 0)
+summary(single1)
+summary(single0)
+var(single1$Weglänge_avg)
+var(single0$Weglänge_avg)
+#--> variance is not equal, point-biserial not feasible
+
+# couple
+
+test_couple <- HH_dt_final[, c("couple", "Weglänge_avg")]
+couple1 <- filter(test_couple, couple == 1)
+couple0 <- filter(test_couple, couple == 0)
+
+# check normal distribution of each category
+# qq plot:
+qqnorm(couple1$Weglänge_avg, pch = 1, frame = FALSE)
+qqline(couple1$Weglänge_avg, col = "steelblue", lwd = 2)
+
+qqnorm(couple0$Weglänge_avg, pch = 1, frame = FALSE)
+qqline(couple0$Weglänge_avg, col = "steelblue", lwd = 2)
+
+
+# check variance:
+test_couple$couple <- factor(test_couple$couple)
+leveneTest(Weglänge_avg ~ couple, data = test_couple)
+boxplot(test_couple$Weglänge_avg ~test_couple$couple)
+
+var(couple1$Weglänge_avg)
+var(couple0$Weglänge_avg)
+# variance almost equal
+summary(couple1)
+summary(couple0)
+
+# do point-biserial:
+install.packages('ltm')
+library(ltm)
+biserial.cor(test_couple$Weglänge_avg, test_couple$couple, use = c("all.obs"), level = 2)
+
+
+
+# removing outliers -> makes variance difference greater -> just leave as it is and do point-biserial
+
+Q <- quantile(test_couple$Weglänge_avg, probs=c(.25, .75), na.rm = FALSE)
+iqr <- IQR(test_couple$Weglänge_avg)
+eliminated<- subset(test_couple, test_couple$Weglänge_avg > (Q[1] - 1.5*iqr) & test_couple$Weglänge_avg < (Q[2]+1.5*iqr))
+
+boxplot(eliminated$Weglänge_avg ~ eliminated$single)
+couple1 <- filter(eliminated, couple == 1)
+couple0 <- filter(eliminated, couple == 0)
+
+summary(couple1)
+summary(couple0)
+var(couple1$Weglänge_avg)
+var(couple0$Weglänge_avg)
+leveneTest(Weglänge_avg ~ couple, data = eliminated)
+
+```
+
+```{r}
+
 ```
 
