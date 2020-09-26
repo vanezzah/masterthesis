@@ -14,8 +14,17 @@ Libraries:
 #install.packages("Hmisc")
 #install.packages("corrplot")
 #install.packages("PerformanceAnalytics")
+#install.packages("mlogit", dependencies=TRUE)
 
+#install.packages("foreign")
+#install.packages("nnet")
+#install.packages("ggplot2")
+#install.packages("reshape2")
 
+library(reshape2)
+library(ggplot2)
+library(nnet)
+library(foreign)
 library(data.table)
 library(magrittr)
 library(tidyr)
@@ -327,6 +336,10 @@ HH_dt$share65 <- share65
 
 HH_dt <- HH_dt[, -c(3:10)]
 
+HH_dt$anzahl2039 <- anzahl2039
+HH_dt$anzahl4064 <- anzahl4064
+HH_dt$anzahl65 <- anzahl65
+
 ```
 
 Household lifecycle stage / children?
@@ -531,10 +544,9 @@ HH_dt$HH_ID <- factor(HH_dt$HH_ID)
 HH_dt_final <- merge(x=combined3_df, y=HH_dt, by="HH_ID")
 
 HH_dt_final <- filter(HH_dt_final, quali_nv != 95)
-dplyr::count(HH_dt_final, haustyp)
-dplyr::count(HH_dt_final, garage)
-dplyr::count(HH_dt_final, quali_nv)
-dplyr::count(HH_dt_final, quali_opnv)
+HH_dt_final <- filter(HH_dt_final, haustyp != 95)
+HH_dt_final <- filter(HH_dt_final, quali_opnv != 95)
+
 dplyr::count(HH_dt_final, bus28)
 dplyr::count(HH_dt_final, tram28)
 dplyr::count(HH_dt_final, bahn28)
@@ -570,10 +582,28 @@ Testing correlation
 # correlation between numerical variables
 # spearman correlation coefficient
 
-numerical_dt <- HH_dt_final[, c("anzahlWege","perskm2", "H_ANZMOTMOP", "anzpedrad", "HP_ANZFS", "anzkind18", "berufstaetige", "share4064", "share65","share2039", "Weglänge_avg")]
+numerical_dt <- HH_dt_final[, c("anzahlWege", "HP_ANZFS", "anzkind18", "berufstaetige", "Weglänge_avg", "hheink_gr2", "bus28", "tram28", "bahn28","quali_opnv", "quali_nv")]
 
 result <- cor(numerical_dt, method = "spearman")
 round(result, 2)
+result > 0.5
+
+# hohe positive korrelation: 
+# share4064 mit berufstätigen 0.5
+# anzahl4064 mit berufstätigen 0.67
+# hheink mit berufstätigen und führerscheinen  0.58 und 0.57
+
+result < -0.5
+
+# hohe negative korrelation:
+# tram28 und bahn28 mit quali_opnv -0.59 und -0.65 -> quali_opnv für normales model raus
+# anzahl65 mit anzahl4064
+# anzahl65 mit berufstätigen -0.76 
+# berufstätige mit führerscheinen?
+# einkommen continous
+
+
+
 
 result2 <- rcorr(as.matrix(numerical_dt), type="spearman")
 result2
@@ -591,12 +621,11 @@ flattenCorrMatrix <- function(cormat, pmat) {
 flattenCorrMatrix(result2$r, result2$P)
 
 # Insignificant correlation are crossed
-corrplot(result2$r, type="upper", order="hclust", 
-         p.mat = res2$P, sig.level = 0.01, insig = "blank")
-# Insignificant correlations are leaved blank
-corrplot(result2$r, type="upper", order="hclust", 
-         p.mat = res2$P, sig.level = 0.01, insig = "blank")
+corrplot(result2$r, type="upper", order="hclust", sig.level = 0.01, insig = "blank")
 
+
+
+# Verteilungen anzeigen
 chart.Correlation(numerical_dt, histogram=TRUE, pch=19)
 
 ```
@@ -610,9 +639,25 @@ chart.Correlation(numerical_dt, histogram=TRUE, pch=19)
 install.packages("vcd")
 library(vcd)
 
-# import all categorical columns
-categorical_dt <- HH_dt_final[, c("H_CS","hheink_gr2", "bus28", "tram28", "bahn28", "haustyp", "garage", "quali_opnv", "quali_nv","single", "couple", "couple_children", "single_parent", "other_ind", "RegioStaRGem5", "maxBildung")]
+# import all categorical columns (alle ausser nuermische variablen)
+
+categorical_dt <- HH_dt_final[, c("H_CS","hheink_gr2", "bus28", "tram28", "bahn28", "haustyp", "garage", "quali_opnv", "quali_nv","single", "couple", "couple_children", "single_parent", "other_ind", "RegioStaRGem5", "maxBildung", "anzahlWege", "HP_ANZFS", "anzkind18", "berufstaetige","anzahl2039", "anzahl4064", "anzahl65")]
 categorical_dt <- as.data.frame(categorical_dt)
+
+relation1 <- categorical_dt$single == 1
+relation1 <- relation1*1
+relation2 <- categorical_dt$couple == 1
+relation2 <- relation2*2
+relation3 <- categorical_dt$couple_children == 1
+relation3 <- relation3*3
+relation4 <- categorical_dt$single_parent == 1
+relation4 <- relation4*4
+
+relation <- relation1 + relation2 + relation3 + relation4
+categorical_dt$relation <- relation
+categorical_dt <- categorical_dt[, -c(10:14)]
+
+
 
 # convert into factor columns
 for(i in 1:ncol(categorical_dt)){
@@ -668,6 +713,8 @@ test <- rbind(round(levels,0),test)
 
 # check thresholds:
 #http://www.real-statistics.com/chi-square-and-f-distributions/effect-size-chi-square/
+
+
   
 
 
@@ -676,7 +723,7 @@ test <- rbind(round(levels,0),test)
 
 ```{r}
 #correlation between numerical and nominal variables 
-# numerische variable weglänge_avg mit allen kategoriellen variablen die nicht ordinal sind (e.g. CS, bildung, etc.)
+# numerische variable weglänge_avg mit allen kategoriellen variablen die nicht ordinal sind (e.g. CS, bildung, RegioStarGem5, garage, haustyp, single - couple )
 
 boxplot(qualinv_avgweg$Weglänge_avg ~ qualinv_avgweg$quali_nv)
 boxplot(qualinv_avgweg$Weglänge_avg)
@@ -860,7 +907,253 @@ leveneTest(Weglänge_avg ~ couple, data = eliminated)
 
 ```
 
+Regression using mlogit
+
+```{r}
+#anzahlen raus, quali_öpnv raus, collapse categories of einkommen and where people live
+
+#https://datasciencebeginners.com/2018/12/20/multinomial-logistic-regression-using-r/
+
+
+library(mlogit)
+
+# transform dt
+datamlogit <- mlogit.data(HH_test2, choice = "anzauto_gr2", shape = "wide")
+
+model1 <- mlogit(anzauto_gr2 ~ 1 | hheink_gr2 | 1, data = datamlogit, reflevel = "0")
+
+summary(model1)
+# loglikelihood test is in comparison with null-model
+# shows loglikelihood, macfadden r^2 and likelihood ratio test
+
+#odds ratio of each predictor
+exp(coef(model1))
+
+# return predicted probabilities for all alternatives
+head(fitted(model1, outcome = FALSE))
+
+
+# Tests
+
+#constrained model: 
+model2 <- mlogit(anzauto_gr2 ~ 1 | hheink_gr2 | 1, data = datamlogit, reflevel = "0")
+
+# Wald test
+
+waldtest(model1, model2)
+
+# Score test
+library(mlogit)
+mlogit::scoretest(model2, model1)
+
+# LRT
+
+lrtest(model1, model2)
+
+# Hausman mc fadden test 
+# same model with less alternatives
+model11 <- mlogit(anzauto_gr2 ~ 1 | hheink_gr2 | 1, data = datamlogit, reflevel = "0", alt.subset = c("0","1", "2"))
+
+mlogit::hmftest(model1, model11)
+
+# AIC:
+AIC(model1)
+
+# Testing random effects and homoscedacity?
+```
+
+Regression using multinom
+
+```{r}
+
+# adapted from: 
+#https://stats.idre.ucla.edu/r/dae/multinomial-logistic-regression/
+  
+
+# for categorical variables
+with(HH_dt_final, table(hheink_gr2, anzauto_gr2))
+
+# for continous variables
+
+with(HH_dt_final, do.call(rbind, tapply(Weglänge_avg, anzauto_gr2, function(x) c(M= mean(x), SD = sd(x)))))
+
+# test mit nur zwei variablen und der abhängigen variable
+
+HH_test <- HH_dt_final[, c("anzauto_gr2", "hheink_gr2", "Weglänge_avg")]
+HH_test$anzauto_gr2 <- factor(HH_test$anzauto_gr2)
+# einkommen als integer
+#HH_test$hheink_gr2 <- as.integer(HH_test$hheink_gr2)
+#oder einkommen als factor / ordered factor?
+HH_test$hheink_gr2 <- factor(HH_test$hheink_gr2)
+HH_test$hheink_gr2 <- factor(HH_test$hheink_gr2, ordered = TRUE)
+
+summary(HH_test)
+str(HH_test)
+# choose baseline level of the outcome
+HH_test$anzauto2 <- relevel(HH_test$anzauto_gr2, ref = "0")
+# run model using multinom package
+# output here includes iteration history and final negative log likelihood 
+# this value multiplied by two is seen in summary as residual deviance and can be used in comparisons (look into that!)
+test <- multinom(anzauto2 ~ hheink_gr2 + Weglänge_avg, data = HH_test)
+
+
+# should ordinal variables be converted to factors or treated as continous/interval, or ordered factor?? for tests see:
+#https://www3.nd.edu/~rwilliam/stats3/OrdinalIndependent.pdf
+#https://stats.stackexchange.com/questions/381877/whether-to-use-factors-in-r-and-when-ordered-factors
+
+#r ordered factor, normal factor or integer: just try out!
+# if spaces between groups are equal we can put it as an integer
+
+  
+# model summary output has a coefficent block and a std. error block
+# rows correspond to levels of dependent variable
+# continous variable: one unit increase in weglänge is associated with an increase in of 0.011 in the log odds of having 1 car vs. 0 cars
+# categorical variable: the log odds of having 1 car vs. 0 cars will increase by 0.15 if moving from eink_gr 1 to eink_gr 3
+summary(test)
+
+# perform a wald test to calculate p-values as multinom does not include this: 
+z <- summary(test)$coefficients/summary(test)$standard.errors
+p <- (1 - pnorm(abs(z), 0, 1)) * 2
+p
+
+#Wald test ?
+W <- (summary(test)$coefficients)^2/(summary(test)$standard.errors)^2
+p2 <- (1 - pnorm(abs(W), 0, 1)) * 2
+p2
+
+# here e.g. hheink_gr2 is not significant
+
+# for relative risk ratio (odds) instead of log odds which is the output of the model
+
+## extract the coefficients from the model and exponentiate
+exp(coef(test))
+
+# predicted probabilities: 
+
+
+#McFaddens pseudo R2 in multinom: 
+test.loglik <- nnet:::logLik.multinom(test)
+nnet.mod0 <- multinom(anzauto2 ~ 1, HH_test)
+nnet.mod0.loglik <- nnet:::logLik.multinom(nnet.mod0)
+(nnet.mod.mfr2 <- as.numeric(1 - test.loglik/nnet.mod0.loglik))
+
+#Anova
+library(car)
+Anova(test)
+
+# likelihood ratio rest
+library(lmtest)
+lrtest(test, "Weglänge_avg")
+
+# LRT as a loop for all variables:
+for (var in test$coefnames[-1]) {
+  print(paste(var, "--", lrtest(test, var)[[5]][2]))
+}
+
+# AIC and residual deviance
+summary(test)
+
+
+#Rao score test
+?
+
+# Hausman mc fadden test for IIA
+?
+```
+
+Regression using mnlogit
+```{r}
+#https://cran.r-project.org/web/packages/mnlogit/vignettes/mnlogit.pdf
+
+#install.packages("mnlogit")
+library(mnlogit)
+
+HH_test2 <- HH_test[, -c(4)]
+
+# needs data in long format (like mlogit)
+mlogitSample <- mlogit.data(HH_test2, choice = "anzauto_gr2", shape = "wide") 
+head(mlogitSample)
+names(mlogitSample)[names(mlogitSample) == 'anzauto_gr2'] <- "anzautos"
+names(mlogitSample)[names(mlogitSample) == 'hheink_gr2'] <- "hheink"
+names(mlogitSample)[names(mlogitSample) == 'Weglänge_avg'] <- "weglängeavg"
+
+
+# formula
+install.packages("Formula")
+library(Formula)
+# 1.  The data must be in the ’long’ format.  This means that for each observation there must be asmany rows as there are alternatives (which should be grouped together).
+#2.   The formula should be specified in the format:  responseVar ~ choice specific variables withgeneric coefficients | individual specific variables | choice specific variables with choice specificcoefficients. These are the 3 available variable types.
+#3. Any type of variables may be omitted. To omit use "1" as a placeholder.
+#4. An alternative specific intercept is included by default in the estimation. To omit it, use a ’-1’ or’0’ anywhere in the formula.
+
+fm <- formula(anzautos ~ 1 | hheink + weglängeavg | 1)
+fm2 <- formula(anzautos ~ 1 | hheink | 1)
+fit <- mnlogit(fm, mlogitSample, ncores=2, choiceVar = "alt")
+fit2 <- mnlogit(fm2, mlogitSample, ncores=2, choiceVar = "alt")
+class(fit)
+ 
+print(fit, what = "eststat")
+print(fit, what = "modsize")
+
+# print coefficients
+summary(fit)
+print(fit)
+predict(fit)
+
+#tests
+waldtest(fit)
+scoretest(fit)
+lrtest(fit,fit2)
+hmftest(fit)
+```
+
+Regression using VGAM
+```{r}
+
+install.packages("VGAM")
+library(VGAM)
+
+vglmFitMN <- vglm(anzauto_gr2 ~ hheink_gr2 + Weglänge_avg, family=multinomial(refLevel=1), HH_test)
+
+```
+
+Using spark 
+
+```{r}
+#install.packages('sparklyr')
+#library(sparklyr)
+spark_install("2.3")
+```
+
+Validating the model 
+
+```{r}
+#Hausman test for IIA
+
+# Information criteria?
+
+# Scaler Measures of fit: mcfadden r2
+
+# Wald test 
+
+#Likelihood ratio test
+
+#VIF
+
+
+```
+
+
+
+Regression mit PCA
 ```{r}
 
 ```
+
+Marginal effects
+
+```{r}
+
+```
+
 
