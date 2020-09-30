@@ -23,12 +23,15 @@ Libraries:
 
 library(reshape2)
 library(ggplot2)
+library(mlogit)
 library(nnet)
 library(foreign)
 library(data.table)
 library(magrittr)
 library(tidyr)
 library(dplyr)
+library(mnlogit)
+library(Formula)
 library(mosaic)
 library(Hmisc)
 library(corrplot)
@@ -575,9 +578,12 @@ summary(HH_dt_final$anzahlWege)
 
 Testing correlation
 
+numericals
 ```{r}
 
 #Numerische Variablen mit numerischen variablen
+#spearman for ordered factors: 
+#https://stackoverflow.com/questions/43059228/correlation-of-two-ordinal-variables-in-r
 
 # correlation between numerical variables
 # spearman correlation coefficient
@@ -629,7 +635,73 @@ corrplot(result2$r, type="upper", order="hclust", sig.level = 0.01, insig = "bla
 chart.Correlation(numerical_dt, histogram=TRUE, pch=19)
 
 ```
+numerical mit überarbeiteter tabelle
 
+```{r}
+
+#Numerische Variablen mit numerischen variablen
+#spearman for ordered factors: 
+#https://stackoverflow.com/questions/43059228/correlation-of-two-ordinal-variables-in-r
+
+# correlation between numerical variables
+# spearman correlation coefficient
+
+numerical_dt <- HH_dt_model1[, c("anzahlWege", "anzfs", "anzkind18", "berufstaetige", "Weglänge_avg", "einkommen", "bus28", "tram28", "bahn28","quali_opnv", "quali_nv", "anzmots", "anzahl2039", "anzahl65", "anzahl4064")]
+numerical_dt$einkommen <- as.numeric(numerical_dt$einkommen)
+numerical_dt$bus28 <- as.numeric(numerical_dt$bus28)
+numerical_dt$bahn28 <- as.numeric(numerical_dt$bahn28)
+numerical_dt$tram28 <- as.numeric(numerical_dt$tram28)
+numerical_dt$quali_nv <- as.numeric(numerical_dt$quali_nv)
+numerical_dt$quali_opnv <- as.numeric(numerical_dt$quali_opnv)
+
+result <- cor(numerical_dt, method = "spearman")
+round(result, 2)
+result > 0.5
+
+# hohe positive korrelation: 
+# share4064 mit berufstätigen 0.5
+# anzahl4064 mit berufstätigen 0.67
+# hheink mit berufstätigen und führerscheinen  0.58 und 0.57
+
+result < -0.5
+
+# hohe negative korrelation:
+# tram28 und bahn28 mit quali_opnv -0.59 und -0.65 -> quali_opnv für normales model raus
+# anzahl65 mit anzahl4064
+# anzahl65 mit berufstätigen -0.76 
+# berufstätige mit führerscheinen?
+# einkommen continous
+
+
+
+
+result2 <- rcorr(as.matrix(numerical_dt), type="spearman")
+result2
+
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+
+flattenCorrMatrix(result2$r, result2$P)
+
+# Insignificant correlation are crossed
+corrplot(result2$r, type="upper", order="hclust", sig.level = 0.01, insig = "blank")
+
+
+
+# Verteilungen anzeigen
+chart.Correlation(numerical_dt, histogram=TRUE, pch=19)
+```
+
+
+
+categorical
 ```{r}
 #Kategorische Variablen 
 #Using Cramer's V if one variable is more than 2, if both are dichotomous: cramers phi
@@ -639,10 +711,12 @@ chart.Correlation(numerical_dt, histogram=TRUE, pch=19)
 install.packages("vcd")
 library(vcd)
 
-# import all categorical columns (alle ausser nuermische variablen)
+# import all categorical columns (alle ausser numerische variablen)
 
 categorical_dt <- HH_dt_final[, c("H_CS","hheink_gr2", "bus28", "tram28", "bahn28", "haustyp", "garage", "quali_opnv", "quali_nv","single", "couple", "couple_children", "single_parent", "other_ind", "RegioStaRGem5", "maxBildung", "anzahlWege", "HP_ANZFS", "anzkind18", "berufstaetige","anzahl2039", "anzahl4064", "anzahl65")]
 categorical_dt <- as.data.frame(categorical_dt)
+
+
 
 relation1 <- categorical_dt$single == 1
 relation1 <- relation1*1
@@ -720,10 +794,78 @@ test <- rbind(round(levels,0),test)
 
 
 ```
+categorical mit überarbeiteter Tabelle
 
 ```{r}
+
+categorical_dt <- HH_dt_model1[, c("CS","einkommen", "bus28", "tram28", "bahn28", "haustyp", "garage", "quali_opnv", "quali_nv","householdtype", "region", "Bildung", "anzahlWege", "anzfs", "anzkind18", "berufstaetige")]
+categorical_dt <- as.data.frame(categorical_dt)
+
+
+# convert into factor columns
+for(i in 1:ncol(categorical_dt)){
+
+categorical_dt[,i] <- as.factor(categorical_dt[,i])
+
+}
+
+#calculate Cramers_V for all pairs of categorical variables in the table:
+categorical_dt <- as.data.frame(categorical_dt)
+cv <- function(x, y) {
+  t <- table(x, y)
+  print(t)
+  chi <- suppressWarnings(chisq.test(t))$statistic
+  cramer <- sqrt(chi / (NROW(x) * (min(dim(t)) - 1)))
+  cramer
+}
+
+get.V3<-function(y, fill = TRUE){
+  col.y<-ncol(y)
+  V<-matrix(ncol=col.y,nrow=col.y)
+  for(i in 1:(col.y - 1)){
+    print(i)
+    for(j in (i + 1):col.y){
+      print(j)
+      V[i,j]<-cv(y[,i],y[,j])
+    }
+  }
+  diag(V) <- 1 
+  if (fill) {
+    for (i in 1:ncol(V)) {
+      V[, i] <- V[i, ]
+    }
+  }
+  V
+}
+test <- get.V3(categorical_dt)
+
+test <- as.data.frame(test)
+colnames(test) <- colnames(categorical_dt)
+rownames(test) <- colnames(categorical_dt)
+
+# add degress of freedom
+levels <- c(1:ncol(categorical_dt))
+for(i in 1:ncol(categorical_dt)){
+
+levels[i] <- nlevels(categorical_dt[,i])
+
+}
+
+test$df <- levels
+test <- rbind(round(levels,0),test)
+
+
+```
+
+
+
+both
+```{r}
 #correlation between numerical and nominal variables 
-# numerische variable weglänge_avg mit allen kategoriellen variablen die nicht ordinal sind (e.g. CS, bildung, RegioStarGem5, garage, haustyp, single - couple )
+# numerische variable weglänge_avg mit allen kategoriellen variablen die nicht ordinal sind (e.g. CS, bildung, RegioStarGem5, garage, haustyp, householdtype)
+
+#garage
+
 
 boxplot(qualinv_avgweg$Weglänge_avg ~ qualinv_avgweg$quali_nv)
 boxplot(qualinv_avgweg$Weglänge_avg)
@@ -745,7 +887,7 @@ table_var
 
 ```
 
-
+other thoughs
 ```{r}
 # Andere überlegungen numerical vs. nominal 
 # alles in dummy variablen umwandeln, ein level rauslassen, e.g 7 levels, 6 dummys
@@ -812,12 +954,122 @@ table_var$sd_before <- sd(qualinv_avgweg$Weglänge_avg)
 table_var
 #-> variance after grouping still at the same level: no correlation
 
+```
+
+point-biserial or others for new table
+```{r}
+
+#weglänge average mit allen kategoriellen variablen die nicht ordinal sind (e.g. CS, bildung, RegioStarGem5, garage, haustyp, householdtype)
+
+# für householdtype insgesamt: 
+test_type <- HH_dt_model1[, c("householdtype", "Weglänge_avg")]
+
+#removing outliers:
+Q <- quantile(test_type$Weglänge_avg, probs=c(.25, .75), na.rm = FALSE)
+iqr <- IQR(test_type$Weglänge_avg)
+test_type<- subset(test_type, test_type$Weglänge_avg > (Q[1] - 1.5*iqr) & test_type$Weglänge_avg < (Q[2]+1.5*iqr))
+
+single1 <- filter(test_type, householdtype == 1)
+qqnorm(single1$Weglänge_avg, pch = 1, frame = FALSE)
+qqline(single1$Weglänge_avg, col = "steelblue", lwd = 2)
+
+couple1 <- filter(test_type, householdtype == 2)
+qqnorm(couple1$Weglänge_avg, pch = 1, frame = FALSE)
+qqline(couple1$Weglänge_avg, col = "steelblue", lwd = 2)
+
+couple2 <- filter(test_type, householdtype == 3)
+qqnorm(couple2$Weglänge_avg, pch = 1, frame = FALSE)
+qqline(couple2$Weglänge_avg, col = "steelblue", lwd = 2)
+
+single2 <- filter(test_type, householdtype == 4)
+qqnorm(single2$Weglänge_avg, pch = 1, frame = FALSE)
+qqline(single2$Weglänge_avg, col = "steelblue", lwd = 2)
+
+other <- filter(test_type, householdtype == 5)
+qqnorm(other$Weglänge_avg, pch = 1, frame = FALSE)
+qqline(other$Weglänge_avg, col = "steelblue", lwd = 2)
 
 
+# check variances 
+#variances are not similar, do something else
+#if the variance in categories is a lot lower, than the categorical variable explains it, if not its fine
 
+boxplot(test_type$Weglänge_avg ~ test_type$householdtype)
+test_type1 <- filter(test_type, householdtype == 1)
+test_type2 <- filter(test_type, householdtype == 2)
+test_type3 <- filter(test_type, householdtype == 3)
+test_type4 <- filter(test_type, householdtype == 4)
+test_type5 <- filter(test_type, householdtype == 5)
+var(test_type5$Weglänge_avg)
+
+
+# Weglänge mit CS
+test_CS <- HH_dt_model1[, c("CS", "Weglänge_avg")]
+CS1 <- filter(test_CS, CS == 1)
+qqnorm(CS1$Weglänge_avg, pch = 1, frame = FALSE)
+qqline(CS1$Weglänge_avg, col = "steelblue", lwd = 2)
+
+CS2 <- filter(test_CS, CS == 2)
+qqnorm(CS2$Weglänge_avg, pch = 1, frame = FALSE)
+qqline(CS2$Weglänge_avg, col = "steelblue", lwd = 2)
+
+CS3 <- filter(test_CS, CS == 3)
+qqnorm(CS3$Weglänge_avg, pch = 1, frame = FALSE)
+qqline(CS3$Weglänge_avg, col = "steelblue", lwd = 2)
+
+boxplot(test_CS$Weglänge_avg ~ test_CS$CS)
+# have same variance
+var(test_CS$Weglänge_avg)
+# after grouping, variance stays the same, no correlation
+
+# Weglänge mit bildung
+test_bildung <- HH_dt_model1[, c("Bildung", "Weglänge_avg")]
+var(test_bildung$Weglänge_avg)
+boxplot(test_bildung$Weglänge_avg ~ test_bildung$Bildung)
+bildung1 <- filter(test_bildung, Bildung == 1)
+var(bildung1$Weglänge_avg)
+
+# Weglänge mit garage 
+test_garage <- HH_dt_model1[, c("garage", "Weglänge_avg")]
+var(test_garage$Weglänge_avg)
+boxplot(test_garage$Weglänge_avg ~ test_garage$garage)
+# same variance
+
+# Weglänge mit haustype
+test_haustyp <- HH_dt_model1[, c("haustyp", "Weglänge_avg")]
+boxplot(test_haustyp$Weglänge_avg ~ test_haustyp$haustyp)
+haustyp1 <- filter(test_haustyp, haustyp == 1)
+var(haustyp1$Weglänge_avg)
+
+# weglänge mit region
+test_region <- HH_dt_model1[, c("region", "Weglänge_avg")]
+boxplot(test_region$Weglänge_avg ~ test_region$region)
+region1 <- filter(test_region, region == 55)
+var(region1$Weglänge_avg)
 
 ```
+
+
+
+
 ```{r}
+
+# für householdtype insgesamt: 
+
+# removing outliers
+test_type <- HH_dt_model1[, c("householdtype", "Weglänge_avg")]
+
+
+
+
+single1 <- filter(test_type, householdtype == 1)
+qqnorm(single1$Weglänge_avg, pch = 1, frame = FALSE)
+qqline(single1$Weglänge_avg, col = "steelblue", lwd = 2)
+
+couple1 <- filter(test_type, householdtype == 2)
+qqnorm(couple1$Weglänge_avg, pch = 1, frame = FALSE)
+qqline(couple1$Weglänge_avg, col = "steelblue", lwd = 2)
+
 # für single: 
 
 test_single <- HH_dt_final[, c("single", "Weglänge_avg")]
@@ -907,6 +1159,268 @@ leveneTest(Weglänge_avg ~ couple, data = eliminated)
 
 ```
 
+Making actual datatable by reducing some categories, factorizing etc. 
+
+```{r}
+
+# dependent variable, passt
+dplyr::count(HH_dt_model1, anzauto)
+setnames(HH_dt_model1, "anzauto_gr2", "anzauto")
+# remove HH_ID
+HH_dt_model1 <- HH_dt_final[, -c(1)]
+
+# change bildung
+# 1 kein abschluss
+# 2: 2 und 3 zusammen zu Hauptschule und mittlere Reife
+# 3 Abitur
+# 4 höherer abschluss
+
+dplyr::count(HH_dt_model1, maxBildung)
+temp_bildung <- HH_dt_model1[,1]
+
+keinabschluss <- temp_bildung == 1
+keinabschluss <- as.data.table(keinabschluss)
+keinabschluss <- keinabschluss*1
+
+hauptundreal <- temp_bildung == 2 |temp_bildung == 3
+hauptundreal <- as.data.table(hauptundreal)
+hauptundreal <- hauptundreal*2
+
+abitur <- temp_bildung == 4
+abitur <- as.data.table(abitur)
+abitur <- abitur * 3
+
+uni <- temp_bildung == 5 | temp_bildung == 6
+uni <- as.data.table(uni)
+uni <- uni * 4
+
+bildung <- keinabschluss + hauptundreal + abitur + uni
+#Kontrolle
+dplyr::count(HH_dt_model1, maxBildung)
+dplyr::count(bildung, keinabschluss)
+
+# als factor, not ordinal
+HH_dt_model1$Bildung<- factor(HH_dt_model1$Bildung)
+summary(HH_dt_model1$Bildung)
+
+ # remove maxBildung
+HH_dt_model1[, maxBildung:=NULL]
+df3[,foo:=NULL]
+
+# anzahl wege ok weil numerisch
+# perskm2 auch, wird zusammen eh zu weglänge_avg
+# perskm2 entfernen: 
+HH_dt_model1[, perskm2 := NULL]
+
+# hhsize - numerical, fine like it is
+dplyr::count(HH_dt_model1, hhsize)
+
+# motorräder und fahrräder (passt da numerisch)
+setnames(HH_dt_model1, "H_ANZMOTMOP", "anzmots")
+setnames(HH_dt_model1, "anzpedrad", "anzped")
+dplyr::count(HH_dt_model1, anzmots)
+dplyr::count(HH_dt_model1, anzped)
+# 99 entfernen 
+HH_dt_model1 <- filter(HH_dt_model1, anzmots != 99)
+HH_dt_model1 <- filter(HH_dt_model1, anzped != 99)
+
+#anz fs , passt da numerisch
+dplyr::count(HH_dt_model1, HP_ANZFS)
+setnames(HH_dt_model1, "HP_ANZFS", "anzfs")
+
+#H_CS
+dplyr::count(HH_dt_model1, H_CS)
+
+
+# 9 entfernen 
+HH_dt_model1 <- filter(HH_dt_model1, H_CS != 9)
+setnames(HH_dt_model1, "H_CS", "CS")
+HH_dt_model1$CS<- factor(HH_dt_model1$CS)
+
+# change einkommen   
+dplyr::count(HH_dt_model1, hheink_gr2)
+# bis 2000: 1 
+# zwischen 2000 - 4000 2
+# 4000 - 7000 3
+# more than 7000 4
+
+temp_einkommen <- HH_dt_model1[, "hheink_gr2"]
+
+low <- temp_einkommen == 1 | temp_einkommen == 2| temp_einkommen == 3 | temp_einkommen == 4
+low <- low*1
+
+middle <- temp_einkommen == 5 |temp_einkommen == 6
+middle <- middle*2
+
+high <- temp_einkommen == 7 | temp_einkommen == 8 | temp_einkommen == 9 
+high <- high * 3
+
+highest <- temp_einkommen == 10 
+highest <- highest * 4
+
+einkommen <- low + middle + high + highest 
+#Kontrolle
+dplyr::count(HH_dt_model1, hheink_gr2)
+einkommen <- factor(einkommen)
+summary(einkommen)
+
+# hinzufügen: 
+HH_dt_model1$einkommen <- einkommen
+# as ordered factor: 
+HH_dt_model1$einkommen <- factor(HH_dt_model1$einkommen, ordered = FALSE)
+# delete old einkommen column 
+HH_dt_model1 <- as.data.table(HH_dt_model1)
+HH_dt_model1[, hheink_gr2:= NULL]
+
+# anzkind18, passt numerisch
+dplyr::count(HH_dt_model1, anzkind18)
+
+# regional variable -> bleibt erstmal so 
+setnames(HH_dt_model1, "RegioStaRGem5", "region")
+dplyr::count(HH_dt_model1, region)
+HH_dt_model1$region <- factor(HH_dt_model1$region)
+# summarize
+#Urban (71+72)
+#Mid-urban (73, 75, 76)
+#Rural (74, 77)
+
+#temp_region <- HH_dt_model1[, "region"]
+
+# bus28 , bahn28, tram28, ordered factor
+# bis 500m nah 
+# bis 2,5 mittel 
+# bis 5 weit 
+# über 5 sehr weit
+dplyr::count(HH_dt_model1, bus28)
+
+temp_bus <- HH_dt_model1[, "bus28"]
+near <- temp_bus == 1 | temp_bus == 2
+near <- near*1
+
+middle <- temp_bus == 3 |temp_bus == 4
+middle <- middle*2
+
+far <- temp_bus == 5
+far <- far * 3
+
+rfar <- temp_bus == 6
+rfar <- rfar * 4
+
+bus <- near + middle + far + rfar 
+#Kontrolle
+dplyr::count(HH_dt_model1, bus28)
+bus <- factor(bus)
+summary(bus)
+
+# hinzufügen: 
+HH_dt_model1$bus28 <- bus
+# as ordered factor: 
+HH_dt_model1$bus28 <- factor(HH_dt_model1$bus28)
+
+#same for bahn
+dplyr::count(HH_dt_model1, bahn28)
+temp_bahn <- HH_dt_model1[, "bahn28"]
+near <- temp_bahn == 1 | temp_bahn == 2
+near <- near*1
+
+middle <- temp_bahn == 3 |temp_bahn == 4
+middle <- middle*2
+
+far <- temp_bahn == 5
+far <- far * 3
+
+rfar <- temp_bahn == 6
+rfar <- rfar * 4
+
+bahn <- near + middle + far + rfar 
+#Kontrolle
+dplyr::count(HH_dt_model1, bahn28)
+bahn <- factor(bahn)
+summary(bahn)
+
+# hinzufügen: 
+HH_dt_model1$bahn28 <- bahn
+# as ordered factor: 
+HH_dt_model1$bahn28 <- factor(HH_dt_model1$bahn28, ordered = TRUE)
+
+#same for tram: (a lot of people for whom it is really far)
+dplyr::count(HH_dt_model1, tram28)
+temp_tram <- HH_dt_model1[, "tram28"]
+near <- temp_tram == 1 | temp_tram == 2
+near <- near*1
+
+middle <- temp_tram == 3 |temp_tram == 4
+middle <- middle*2
+
+far <- temp_tram == 5
+far <- far * 3
+
+rfar <- temp_tram == 6
+rfar <- rfar * 4
+
+tram <- near + middle + far + rfar 
+#Kontrolle
+dplyr::count(HH_dt_model1, tram28)
+tram <- factor(tram)
+summary(tram)
+
+# hinzufügen: 
+HH_dt_model1$tram28 <- tram
+# as ordered factor: 
+HH_dt_model1$tram28 <- factor(HH_dt_model1$tram28, ordered = TRUE)
+
+#haustyp
+dplyr::count(HH_dt_model1, haustyp)
+HH_dt_model1$haustyp <- factor(HH_dt_model1$haustyp)
+
+#garage
+dplyr::count(HH_dt_model1, garage)
+HH_dt_model1$garage<- factor(HH_dt_model1$garage)
+
+#quali_nv
+dplyr::count(HH_dt_model1, quali_nv)
+HH_dt_model1$quali_nv<- factor(HH_dt_model1$quali_nv, ordered = FALSE)
+
+#quali_opnv, ordered factor
+dplyr::count(HH_dt_model1, quali_opnv)
+HH_dt_model1$quali_opnv<- factor(HH_dt_model1$quali_opnv, ordered = FALSE)
+
+#berufstaetige, numerisch
+dplyr::count(HH_dt_model1, berufstaetige)
+
+#anzahlen passen
+
+#relationshipstatus in one variable
+temp_single <- HH_dt_model1[, "single"]
+temp_couple <- HH_dt_model1[, "couple"]
+temp_couplec <- HH_dt_model1[, "couple_children"]
+temp_singlep <- HH_dt_model1[, "single_parent"]
+temp_oth <- HH_dt_model1[, "other_ind"]
+
+temp_single <- temp_single*1
+temp_couple <- temp_couple * 2
+temp_couplec <- temp_couplec * 3
+temp_singlep <- temp_singlep * 4
+temp_oth <- temp_oth * 5
+
+householdtype <- temp_single + temp_couple + temp_couplec + temp_singlep + temp_oth
+#kontrolle:
+dplyr::count(HH_dt_model1, single)
+dplyr::count(HH_dt_model1, couple)
+dplyr::count(HH_dt_model1, single_parent)
+dplyr::count(HH_dt_model1, other_ind)
+householdtype$single <- factor(householdtype$single)
+summary(householdtype)
+HH_dt_model1$householdtype <- householdtype$single
+HH_dt_model1[, c("single", "couple", "couple_children", "single_parent", "other_ind") := NULL]
+
+# Weglänge_avg, numerisch
+
+# remove correlated variables!
+# run model 
+
+```
+
 Regression using mlogit
 
 ```{r}
@@ -915,12 +1429,12 @@ Regression using mlogit
 #https://datasciencebeginners.com/2018/12/20/multinomial-logistic-regression-using-r/
 
 
-library(mlogit)
+#starting with anz_fs
 
 # transform dt
-datamlogit <- mlogit.data(HH_test2, choice = "anzauto_gr2", shape = "wide")
+datamlogit <- mlogit.data(HH_dt_model1, choice = "anzauto", shape = "wide")
 
-model1 <- mlogit(anzauto_gr2 ~ 1 | hheink_gr2 | 1, data = datamlogit, reflevel = "0")
+model1 <- mlogit(anzauto ~ 1 | quali_opnv | 1, data = datamlogit, reflevel = "0")
 
 summary(model1)
 # loglikelihood test is in comparison with null-model
@@ -936,7 +1450,7 @@ head(fitted(model1, outcome = FALSE))
 # Tests
 
 #constrained model: 
-model2 <- mlogit(anzauto_gr2 ~ 1 | hheink_gr2 | 1, data = datamlogit, reflevel = "0")
+model2 <- mlogit(anzauto ~ 1 | hheink_gr2 | 1, data = datamlogit, reflevel = "0")
 
 # Wald test
 
@@ -1068,14 +1582,13 @@ Regression using mnlogit
 #install.packages("mnlogit")
 library(mnlogit)
 
-HH_test2 <- HH_test[, -c(4)]
+HH_dt_model1$tram28 <- factor(HH_dt_model1$tram28, ordered = FALSE)
+HH_dt_model1$bahn28 <- factor(HH_dt_model1$bahn28, ordered = FALSE)
+HH_dt_model1$bus28 <- factor(HH_dt_model1$bus28, ordered = FALSE)
 
 # needs data in long format (like mlogit)
-mlogitSample <- mlogit.data(HH_test2, choice = "anzauto_gr2", shape = "wide") 
+mlogitSample <- mlogit.data(HH_dt_model1, choice = "anzauto", shape = "wide") 
 head(mlogitSample)
-names(mlogitSample)[names(mlogitSample) == 'anzauto_gr2'] <- "anzautos"
-names(mlogitSample)[names(mlogitSample) == 'hheink_gr2'] <- "hheink"
-names(mlogitSample)[names(mlogitSample) == 'Weglänge_avg'] <- "weglängeavg"
 
 
 # formula
@@ -1086,17 +1599,101 @@ library(Formula)
 #3. Any type of variables may be omitted. To omit use "1" as a placeholder.
 #4. An alternative specific intercept is included by default in the estimation. To omit it, use a ’-1’ or’0’ anywhere in the formula.
 
-fm <- formula(anzautos ~ 1 | hheink + weglängeavg | 1)
-fm2 <- formula(anzautos ~ 1 | hheink | 1)
-fit <- mnlogit(fm, mlogitSample, ncores=2, choiceVar = "alt")
+#NULL MODEL (only intercept)
+fm2 <- formula(anzauto ~ 1 | 1 | 1)
 fit2 <- mnlogit(fm2, mlogitSample, ncores=2, choiceVar = "alt")
-class(fit)
- 
-print(fit, what = "eststat")
-print(fit, what = "modsize")
+
+fm3 <- formula(anzauto ~ 1 | anzfs| 1)
+fit3 <- mnlogit(fm3, mlogitSample, ncores=2, choiceVar = "alt")
+
+fm <- formula(anzauto ~ 1 | anzfs + region + einkommen + quali_nv + householdtype + berufstaetige + CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung| 1)
+fit <- mnlogit(fm, mlogitSample, ncores=4, choiceVar = "alt")
+#mc fadden pseudo r2 (cox and snell, nagelkerke?): 
+as.vector(1 - (logLik(fit) / logLik(fit2)))
+
+#0.34919 garage
+# 116680
 
 # print coefficients
 summary(fit)
+
+print(fit, what = "eststat")
+print(fit, what = "modsize")
+
+
+#VIF
+#The VIF may be calculated for each predictor by doing a linear regression of that predictor on all the other predictors, and then obtaining the R2 from that regression. The VIF is just 1/(1-R2).
+# for dummies square gvif^(1/2...) and apply same rule as to VIF
+
+library(car)
+x_reg <- lm(anzauto ~ anzfs + region + einkommen + quali_nv + berufstaetige + CS + householdtype + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28, data = HH_dt_model1)
+vif(x_reg)
+
+
+#relative risk rates / the odds ratio 
+format(exp(coef(fit)), scientific = FALSE)
+
+
+
+# average marginal effects
+# anzfs
+B <- coef(fit)
+probs <- predict(fit, type="probs")
+as.matrix(B)
+b <- c(0,B[c("anzfs:1", "anzfs:2", "anzfs:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+ }
+apply(me, 2, mean)
+
+#We find that the average marginal effect of anzfs on having 2 cars is positive: 0.19. This means that the probability of having 2 cars is on average about 19 percentage points higher for households for a unit increase in drivers licenses in comparison with households with the same other variables. 
+
+b <- c(0,B[c("einkommen2:1", "einkommen2:2", "einkommen2:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+ }
+apply(me, 2, mean)
+
+#We find that the average marginal effect of einkommen2 on having 1 car is actually negative: -0.11. This means that the probability of having 1 car is on average about 11 percentage points lower for households in einkommen2 than for einkommen 1 with the same other variables. (for 1 car really heterogenous, therefore not that easy interpretable)
+
+
+
+# how to interpret:
+# total of 3 models, 1 relative to 0, 2 relative to 0, 3 relative to zero
+
+# output represents log-odds
+# standard interpretation of the multinomial logit is that for a unit change in the predictor variable, the logit of outcome m relative to the referent group is expected to change by its respective parameter estimate (which is in log-odds units) given the variables in the model are held constant.
+
+# for relative risk ratio (odds) instead of log odds which is the output of the model
+## extract the coefficients from the model and exponentiate
+# The odds ratio of a coefficient indicates how the risk of the outcome falling in the comparison group compared to the risk of the outcome falling in the referent group changes with the variable in question.  An odds ratio > 1 indicates that the risk of the outcome falling in the comparison group relative to the risk of the outcome falling in the referent group increases as the variable increases.  In other words, the comparison outcome is more likely.  An odds ratio < 1 indicates that the risk of the outcome falling in the comparison group relative to the risk of the outcome falling in the referent group decreases as the variable increases.
+
+# marginal effects :
+# To determine the effect of black in the probability scale we need to compute marginal effects, which can be done using continuous or discrete calculations. 
+# We find that the average marginal effect of black on work is actually negative: -0.0406. This means that the probability of working is on average about four percentage points lower for blacks than for non-blacks with the same education and experience. 
+
+# e.g. einkommen: 
+# the log odds for einkommen2 to einkommen1 is 0.54 for having 1 car relative to 0 car, meaning it is more likely to have 1 car for people in einkommen2 than for people in einkommen1
+# the relative risk rate for einkommen 2 to einkommen 1 is 1.72 for having 1 car relative to 0 cars, therefore it is more likely to have 1 car than zero cars when having einkommen2
+# the relative probability of having 1 car rather than having 0 cars for people in einkommen 2 is 72% higher than the relative probability for people in einkommen1 with the same other variables!
+
+
+# e.g. anzfs
+# estimate for a one unit increase in anzfs for 1 car relative to 0 cars. if a household has one more drivers license, the log-odds of having 1 car relative to zero car would be expected to increase by 1.84
+# the relative risk rate for an increase of 1 drivers license is 6.34 for having 1 car relative to 0 cars, therefore it is 6.34 times more likely to have 1 car than 0 cars when you have one drivers license more.
+
+
+# interpreting the intercept? -> leave in
+#The intercept might be interpreted as the estimated baseline log odds when all independent variables are set to 0, or the reference category in case of categorical variables. The probability when all independent variables are set to 0 is log(intercept)/(1+log(intercept)).
+
+
+
+
+
 print(fit)
 predict(fit)
 
@@ -1122,7 +1719,21 @@ Using spark
 ```{r}
 #install.packages('sparklyr')
 #library(sparklyr)
-spark_install("2.3")
+spark_install("3.0.0")
+
+library(sparklyr)
+sc <- spark_connect(master = "local", version = "3.0.0")
+
+HH_dt <-copy_to(sc, HH_dt_model1)
+
+
+HH_dt %>% 
+  ml_logistic_regression(anzauto ~ einkommen, family= "multinomial") %>%
+  summary()
+
+
+
+spark_disconnect(sc)
 ```
 
 Validating the model 
