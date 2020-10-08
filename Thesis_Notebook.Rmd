@@ -20,8 +20,13 @@ Libraries:
 #install.packages("nnet")
 #install.packages("ggplot2")
 #install.packages("reshape2")
+#install.packages("mnlogit")
+install.packages("Formula")
+
+
 
 library(reshape2)
+library(car)
 library(ggplot2)
 library(mlogit)
 library(nnet)
@@ -35,7 +40,9 @@ library(Formula)
 library(mosaic)
 library(Hmisc)
 library(corrplot)
+library(mnlogit)
 library(PerformanceAnalytics)
+library(Formula)
 ```
 
 
@@ -550,11 +557,8 @@ HH_dt_final <- filter(HH_dt_final, quali_nv != 95)
 HH_dt_final <- filter(HH_dt_final, haustyp != 95)
 HH_dt_final <- filter(HH_dt_final, quali_opnv != 95)
 
-dplyr::count(HH_dt_final, bus28)
-dplyr::count(HH_dt_final, tram28)
-dplyr::count(HH_dt_final, bahn28)
 
-#train a model to impute values?
+
 ```
 
 durchschnittliche weglänge dazu 
@@ -571,10 +575,11 @@ HH_dt_final$Weglänge_avg <- log(HH_dt_final$Weglänge_avg)
 # transform -inf to zero 
 HH_dt_final[HH_dt_final == -Inf] <- 0
 
-```
-
 summary(HH_dt_final$anzkm)
 summary(HH_dt_final$anzahlWege)
+
+
+```
 
 Testing correlation
 
@@ -632,6 +637,7 @@ corrplot(result2$r, type="upper", order="hclust", sig.level = 0.01, insig = "bla
 
 
 # Verteilungen anzeigen
+
 chart.Correlation(numerical_dt, histogram=TRUE, pch=19)
 
 ```
@@ -852,6 +858,7 @@ levels[i] <- nlevels(categorical_dt[,i])
 }
 
 test$df <- levels
+
 test <- rbind(round(levels,0),test)
 
 
@@ -1050,16 +1057,12 @@ var(region1$Weglänge_avg)
 ```
 
 
-
-
 ```{r}
 
 # für householdtype insgesamt: 
 
 # removing outliers
 test_type <- HH_dt_model1[, c("householdtype", "Weglänge_avg")]
-
-
 
 
 single1 <- filter(test_type, householdtype == 1)
@@ -1163,11 +1166,11 @@ Making actual datatable by reducing some categories, factorizing etc.
 
 ```{r}
 
+HH_dt_model1 <- HH_dt_final
+
 # dependent variable, passt
+# setnames(HH_dt_model1, "anzauto_gr2", "anzauto")
 dplyr::count(HH_dt_model1, anzauto)
-setnames(HH_dt_model1, "anzauto_gr2", "anzauto")
-# remove HH_ID
-HH_dt_model1 <- HH_dt_final[, -c(1)]
 
 # change bildung
 # 1 kein abschluss
@@ -1176,7 +1179,7 @@ HH_dt_model1 <- HH_dt_final[, -c(1)]
 # 4 höherer abschluss
 
 dplyr::count(HH_dt_model1, maxBildung)
-temp_bildung <- HH_dt_model1[,1]
+temp_bildung <- HH_dt_model1[,"maxBildung"]
 
 keinabschluss <- temp_bildung == 1
 keinabschluss <- as.data.table(keinabschluss)
@@ -1195,25 +1198,28 @@ uni <- as.data.table(uni)
 uni <- uni * 4
 
 bildung <- keinabschluss + hauptundreal + abitur + uni
+
 #Kontrolle
 dplyr::count(HH_dt_model1, maxBildung)
 dplyr::count(bildung, keinabschluss)
 
 # als factor, not ordinal
+HH_dt_model1$Bildung<- bildung$keinabschluss
 HH_dt_model1$Bildung<- factor(HH_dt_model1$Bildung)
 summary(HH_dt_model1$Bildung)
 
  # remove maxBildung
+HH_dt_model1 <- as.data.table(HH_dt_model1)
 HH_dt_model1[, maxBildung:=NULL]
-df3[,foo:=NULL]
 
 # anzahl wege ok weil numerisch
 # perskm2 auch, wird zusammen eh zu weglänge_avg
 # perskm2 entfernen: 
 HH_dt_model1[, perskm2 := NULL]
 
-# hhsize - numerical, fine like it is
+# remove hhsize due to correlation
 dplyr::count(HH_dt_model1, hhsize)
+HH_dt_model1[, hhsize := NULL]
 
 # motorräder und fahrräder (passt da numerisch)
 setnames(HH_dt_model1, "H_ANZMOTMOP", "anzmots")
@@ -1266,8 +1272,7 @@ summary(einkommen)
 
 # hinzufügen: 
 HH_dt_model1$einkommen <- einkommen
-# as ordered factor: 
-HH_dt_model1$einkommen <- factor(HH_dt_model1$einkommen, ordered = FALSE)
+
 # delete old einkommen column 
 HH_dt_model1 <- as.data.table(HH_dt_model1)
 HH_dt_model1[, hheink_gr2:= NULL]
@@ -1284,13 +1289,13 @@ HH_dt_model1$region <- factor(HH_dt_model1$region)
 #Mid-urban (73, 75, 76)
 #Rural (74, 77)
 
-#temp_region <- HH_dt_model1[, "region"]
 
 # bus28 , bahn28, tram28, ordered factor
 # bis 500m nah 
-# bis 2,5 mittel 
-# bis 5 weit 
-# über 5 sehr weit
+# bis 2,5km mittel 
+# bis 5km weit 
+# über 5km sehr weit
+
 dplyr::count(HH_dt_model1, bus28)
 
 temp_bus <- HH_dt_model1[, "bus28"]
@@ -1314,8 +1319,8 @@ summary(bus)
 
 # hinzufügen: 
 HH_dt_model1$bus28 <- bus
-# as ordered factor: 
-HH_dt_model1$bus28 <- factor(HH_dt_model1$bus28)
+summary(HH_dt_model1$bus28)
+HH_dt_model1$bus28 <- factor(HH_dt_model1$bus28, ordered  = FALSE)
 
 #same for bahn
 dplyr::count(HH_dt_model1, bahn28)
@@ -1341,7 +1346,7 @@ summary(bahn)
 # hinzufügen: 
 HH_dt_model1$bahn28 <- bahn
 # as ordered factor: 
-HH_dt_model1$bahn28 <- factor(HH_dt_model1$bahn28, ordered = TRUE)
+HH_dt_model1$bahn28 <- factor(HH_dt_model1$bahn28, ordered  = FALSE)
 
 #same for tram: (a lot of people for whom it is really far)
 dplyr::count(HH_dt_model1, tram28)
@@ -1367,7 +1372,7 @@ summary(tram)
 # hinzufügen: 
 HH_dt_model1$tram28 <- tram
 # as ordered factor: 
-HH_dt_model1$tram28 <- factor(HH_dt_model1$tram28, ordered = TRUE)
+HH_dt_model1$tram28 <- factor(HH_dt_model1$tram28, ordered  = FALSE)
 
 #haustyp
 dplyr::count(HH_dt_model1, haustyp)
@@ -1379,11 +1384,11 @@ HH_dt_model1$garage<- factor(HH_dt_model1$garage)
 
 #quali_nv
 dplyr::count(HH_dt_model1, quali_nv)
-HH_dt_model1$quali_nv<- factor(HH_dt_model1$quali_nv, ordered = FALSE)
+HH_dt_model1$quali_nv<- factor(HH_dt_model1$quali_nv)
 
 #quali_opnv, ordered factor
 dplyr::count(HH_dt_model1, quali_opnv)
-HH_dt_model1$quali_opnv<- factor(HH_dt_model1$quali_opnv, ordered = FALSE)
+HH_dt_model1$quali_opnv<- factor(HH_dt_model1$quali_opnv)
 
 #berufstaetige, numerisch
 dplyr::count(HH_dt_model1, berufstaetige)
@@ -1414,17 +1419,31 @@ summary(householdtype)
 HH_dt_model1$householdtype <- householdtype$single
 HH_dt_model1[, c("single", "couple", "couple_children", "single_parent", "other_ind") := NULL]
 
-# Weglänge_avg, numerisch
 
-# remove correlated variables!
-# run model 
+# nochmal alles importieren
+HH_file<- file.path('Data/MiD2017_Haushalte.csv')
+HH_all <- fread(HH_file)
+HH_all <- as.data.table(HH_all)
+
+Regioeink_dt <- HH_all[, c("H_ID", "hheink_imp", "RegioStaR7")]
+setnames(Regioeink_dt, "H_ID", "HH_ID")
+Regioeink_dt$HH_ID <- as.factor(Regioeink_dt$HH_ID)
+
+# einkommen numerisch und andere regionalaufteilung hinzu:
+
+HH_dt_model2 <- merge(x=HH_dt_model1, y=Regioeink_dt, by="HH_ID")
+
+HH_dt_model2$hheink_imp <- sub("," , ".", HH_dt_model2$hheink_imp)
+HH_dt_model2$hheink_imp <- as.numeric(HH_dt_model2$hheink_imp)
+summary(HH_dt_model2$hheink_imp)
+
+
 
 ```
 
 Regression using mlogit
 
 ```{r}
-#anzahlen raus, quali_öpnv raus, collapse categories of einkommen and where people live
 
 #https://datasciencebeginners.com/2018/12/20/multinomial-logistic-regression-using-r/
 
@@ -1579,9 +1598,6 @@ Regression using mnlogit
 ```{r}
 #https://cran.r-project.org/web/packages/mnlogit/vignettes/mnlogit.pdf
 
-#install.packages("mnlogit")
-library(mnlogit)
-
 HH_dt_model1$tram28 <- factor(HH_dt_model1$tram28, ordered = FALSE)
 HH_dt_model1$bahn28 <- factor(HH_dt_model1$bahn28, ordered = FALSE)
 HH_dt_model1$bus28 <- factor(HH_dt_model1$bus28, ordered = FALSE)
@@ -1591,9 +1607,18 @@ mlogitSample <- mlogit.data(HH_dt_model1, choice = "anzauto", shape = "wide")
 head(mlogitSample)
 
 
+# needs data in long format (like mlogit)
+mlogitSample2 <- mlogit.data(HH_dt_model2, choice = "anzauto", shape = "wide") 
+head(mlogitSample2)
+
+# ANZAUTO als factor -> kein unterschied
+#HH_dt_model3 <- HH_dt_model1
+#HH_dt_model3$anzauto <- as.factor(HH_dt_model3$anzauto)
+#mlogitSample3 <- mlogit.data(HH_dt_model3, choice = "anzauto", shape = "wide") 
+#fitfactor <- mnlogit(fm, mlogitSample3, ncores=4, choiceVar = "alt")
+
 # formula
-install.packages("Formula")
-library(Formula)
+
 # 1.  The data must be in the ’long’ format.  This means that for each observation there must be asmany rows as there are alternatives (which should be grouped together).
 #2.   The formula should be specified in the format:  responseVar ~ choice specific variables withgeneric coefficients | individual specific variables | choice specific variables with choice specificcoefficients. These are the 3 available variable types.
 #3. Any type of variables may be omitted. To omit use "1" as a placeholder.
@@ -1603,15 +1628,19 @@ library(Formula)
 fm2 <- formula(anzauto ~ 1 | 1 | 1)
 fit2 <- mnlogit(fm2, mlogitSample, ncores=2, choiceVar = "alt")
 
-fm3 <- formula(anzauto ~ 1 | anzfs| 1)
-fit3 <- mnlogit(fm3, mlogitSample, ncores=2, choiceVar = "alt")
+# ganz kleines bisschen besser!
+fm3 <- formula(anzauto ~ 1 | anzfs + region + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege| 1)
+fit3 <- mnlogit(fm3, mlogitSample2, ncores=4, choiceVar = "alt")
 
-fm <- formula(anzauto ~ 1 | anzfs + region + einkommen + quali_nv + householdtype + berufstaetige + CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung| 1)
+fm <- formula(anzauto ~ 1 | anzfs + region + einkommen + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege| 1)
 fit <- mnlogit(fm, mlogitSample, ncores=4, choiceVar = "alt")
+
+
+
 #mc fadden pseudo r2 (cox and snell, nagelkerke?): 
 as.vector(1 - (logLik(fit) / logLik(fit2)))
 
-#0.34919 garage
+#0.3495484 garage
 # 116680
 
 # print coefficients
@@ -1625,8 +1654,8 @@ print(fit, what = "modsize")
 #The VIF may be calculated for each predictor by doing a linear regression of that predictor on all the other predictors, and then obtaining the R2 from that regression. The VIF is just 1/(1-R2).
 # for dummies square gvif^(1/2...) and apply same rule as to VIF
 
-library(car)
-x_reg <- lm(anzauto ~ anzfs + region + einkommen + quali_nv + berufstaetige + CS + householdtype + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28, data = HH_dt_model1)
+
+x_reg <- lm(anzauto ~ anzfs + region + einkommen + quali_nv + berufstaetige + CS + householdtype + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege, data = HH_dt_model1)
 vif(x_reg)
 
 
@@ -1704,37 +1733,73 @@ lrtest(fit,fit2)
 hmftest(fit)
 ```
 
-Regression using VGAM
+
+Regional models 
+
 ```{r}
 
-install.packages("VGAM")
-library(VGAM)
+# 28000
+Urban_dt <- filter(HH_dt_model2, RegioStaR7 == 71 | RegioStaR7 == 72)
+Urban_dt$region <- as.numeric(Urban_dt$region)
+Urban_dt$region <- as.factor(Urban_dt$region)
+dplyr::count(Urban_dt, region)
+str(Urban_dt)
 
-vglmFitMN <- vglm(anzauto_gr2 ~ hheink_gr2 + Weglänge_avg, family=multinomial(refLevel=1), HH_test)
+#34000
+Suburban_dt <- filter(HH_dt_model2, RegioStaR7 == 73 | RegioStaR7 == 75 | RegioStaR7 == 76)
+Suburban_dt$region <- as.numeric(Suburban_dt$region)
+Suburban_dt$region <- as.factor(Suburban_dt$region)
+dplyr::count(Suburban_dt, region)
+str(Suburban_dt)
+
+#15000
+Rural_dt <- filter(HH_dt_model2, RegioStaR7 == 74 | RegioStaR7 == 77)
+Rural_dt$region <- as.numeric(Rural_dt$region)
+Rural_dt$region <- as.factor(Rural_dt$region)
+dplyr::count(Rural_dt, region)
+str(Rural_dt)
+
+
+# data in long format (like mlogit)
+mlogiturban <- mlogit.data(Urban_dt, choice = "anzauto", shape = "wide") 
+mlogitsuburban <- mlogit.data(Suburban_dt, choice = "anzauto", shape = "wide") 
+mlogitrural <- mlogit.data(Rural_dt, choice = "anzauto", shape = "wide") 
+
+#model
+fmregional <- formula(anzauto ~ 1 | anzfs + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege| 1)
+fmregional2 <- formula(anzauto ~ 1 | anzfs + region + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege| 1)
+
+fiturban <- mnlogit(fmregional, mlogiturban, ncores=4, choiceVar = "alt")
+summary(fiturban)
+# fiturban 2 etwas besserer model wert, mit region:
+fiturban2 <- mnlogit(fmregional2, mlogiturban, ncores=4, choiceVar = "alt")
+summary(fiturban2)
+
+fitsuburban <- mnlogit(fmregional, mlogitsuburban, ncores=4, choiceVar = "alt")
+summary(fitsuburban)
+# mit region: 
+fitsuburban2 <- mnlogit(fmregional2, mlogitsuburban, ncores=4, choiceVar = "alt")
+summary(fitsuburban2)
+
+# hier nur ohne region, da mit keinen sinn macht, da nur 1 wert
+fitrural <- mnlogit(fmregional, mlogitrural, ncores=4, choiceVar = "alt")
+summary(fitrural)
+
+#VIF urban : kein großer  unterschied ob mit oder ohne region
+x_reg_urban <- lm(anzauto ~ anzfs + einkommen + quali_nv + berufstaetige + CS + householdtype + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege, data = Urban_dt)
+vif(x_reg_urban)
+
+#VIF suburban : kein großer  unterschied ob mit oder ohne region
+x_reg_suburban <- lm(anzauto ~ anzfs + einkommen + quali_nv + berufstaetige + CS + householdtype + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege, data = Suburban_dt)
+vif(x_reg_suburban)
+
+#VIF rural : kein großer  unterschied ob mit oder ohne region
+x_reg_rural <- lm(anzauto ~ anzfs + einkommen + quali_nv + berufstaetige + CS + householdtype + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege, data = Rural_dt)
+vif(x_reg_rural)
 
 ```
 
-Using spark 
 
-```{r}
-#install.packages('sparklyr')
-#library(sparklyr)
-spark_install("3.0.0")
-
-library(sparklyr)
-sc <- spark_connect(master = "local", version = "3.0.0")
-
-HH_dt <-copy_to(sc, HH_dt_model1)
-
-
-HH_dt %>% 
-  ml_logistic_regression(anzauto ~ einkommen, family= "multinomial") %>%
-  summary()
-
-
-
-spark_disconnect(sc)
-```
 
 Validating the model 
 
