@@ -2,11 +2,23 @@
 title: "R Notebook"
 output: html_notebook
 ---
+Nützliche Befehle
+```{r}
+save.image(file='yoursession.RData')
+
+#To load this data later you can use:
+
+load('yoursession.RData')
+
+```
+
+
 
 Libraries: 
 
 ```{r}
 #install.packages('mosaic')
+#install.packages('interactions')
 #install.packages('data.table')
 #install.packages('magrittr')
 #install.packages('tidyr')
@@ -40,6 +52,7 @@ library(Formula)
 library(mosaic)
 library(Hmisc)
 library(corrplot)
+library(interactions)
 library(mnlogit)
 library(PerformanceAnalytics)
 library(Formula)
@@ -1629,12 +1642,22 @@ fm2 <- formula(anzauto ~ 1 | 1 | 1)
 fit2 <- mnlogit(fm2, mlogitSample, ncores=2, choiceVar = "alt")
 
 # ganz kleines bisschen besser!
-fm3 <- formula(anzauto ~ 1 | anzfs + region + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege| 1)
+fm3 <- formula(anzauto ~ 1 | anzfs + region + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege + region*anzfs + region:quali_nv| 1)
 fit3 <- mnlogit(fm3, mlogitSample2, ncores=4, choiceVar = "alt")
+
+install.packages("effects")
+library(effects)
+
+regionanzfs.effect <- effect( "region*anzfs", mlogitSample2,xlevels = list(anzfs = 1:11,   region = 51:55))
 
 fm <- formula(anzauto ~ 1 | anzfs + region + einkommen + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege| 1)
 fit <- mnlogit(fm, mlogitSample, ncores=4, choiceVar = "alt")
+summary(fit)
 
+#ohne region: 
+fm_ohneregion <- formula(anzauto ~ 1 | anzfs + einkommen + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege + | 1)
+fit_ohneregion <- mnlogit(fm_ohneregion, mlogitSample, ncores=4, choiceVar = "alt")
+summary(fit_ohneregion)
 
 
 #mc fadden pseudo r2 (cox and snell, nagelkerke?): 
@@ -1662,14 +1685,22 @@ vif(x_reg)
 #relative risk rates / the odds ratio 
 format(exp(coef(fit)), scientific = FALSE)
 
-
+#https://data.princeton.edu/wws509/r/mlogit
 
 # average marginal effects
+#Marginal effects are a useful way to describe the average effect of changes in explanatory variables on the change in the probability of outcomes in logistic regression and other nonlinear models.
+
+#When comparing some category to the base outcome, a positive coefficient always means you are more likely to be in the comparison category than in the base category. However, when talking about the probability of being in a given category, the marginal effect (that is, the effect on the probability of being in a specific group by increasing the independent variable by one) does not have to be positive. This is because, in the former example, we are only comparing the two categories to one another. On the other hand, in the latter example, we are talking about comparing the probability of being in the comparison category not just to the base outcome (which will always be higher if the coefficient is positive) but also to the probability of being in all the other comparison groups.
+
+#Let's assume we have gropus A, B, and C. A is the base outcome. If a coefficient on variable X is positive for group B, then increasing X will always make you more likely to be in B than A. However, increasing X does not necessarily make you more likely to be in group B, because the effect on the probability of being in group C may be even greater than the probability of being in group B, which means the marginal effect of X may actually be negative for group B (because you are more likely at this point to be in group C), but you are still more likely to be in group B than group A. 
+
+save.image(file='yoursession.RData')
+
 # anzfs
 B <- coef(fit)
 probs <- predict(fit, type="probs")
 as.matrix(B)
-b <- c(0,B[c("anzfs:1", "anzfs:2", "anzfs:3")])
+b <- c(0,B[c("region52:1", "region52:2", "region52:3")])
 pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
 me <- matrix(0, nrow(probs), ncol(probs))
 for(j in 1:4) {
@@ -1687,7 +1718,7 @@ for(j in 1:4) {
  }
 apply(me, 2, mean)
 
-#We find that the average marginal effect of einkommen2 on having 1 car is actually negative: -0.11. This means that the probability of having 1 car is on average about 11 percentage points lower for households in einkommen2 than for einkommen 1 with the same other variables. (for 1 car really heterogenous, therefore not that easy interpretable)
+#We find that the average marginal effect of einkommen2 on having 1 car is actually negative: -0.11. This means that the probability of having 1 car is on average about 11 percentage points lower for households in einkommen2 than for households in other einkommen groups with the same other variables. (for 1 car really heterogenous, therefore not that easy interpretable)
 
 
 
@@ -1727,10 +1758,116 @@ print(fit)
 predict(fit)
 
 #tests
-waldtest(fit)
-scoretest(fit)
-lrtest(fit,fit2)
+waldtest(fit, fit2)
+
+model11 <- mlogit(anzauto_gr2 ~ 1 | hheink_gr2 | 1, data = datamlogit, reflevel = "0", alt.subset = c("0","1", "2"))
+
+fit <- mnlogit(fm, mlogitSample, ncores=4, choiceVar = "alt")
+
+model_constrained <- mnlogit(fm, data = mlogitSample, ncores = 4, reflevel = "0", alt.subset = c("0","1", "2"), choiceVar = "alt")
+scoretest(fit, model_constrained)
+
+lrtest(fit3,fit)
+
+
 hmftest(fit)
+```
+Average marginal effects anders: funktioniert nicht
+
+```{r}
+
+#https://stackoverflow.com/questions/54079553/how-to-get-average-marginal-effects-ames-with-standard-errors-of-a-multinomial
+
+
+fit_mlogit <- mlogit(anzauto ~ 1 | anzfs + region + einkommen + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege| 1, data = mlogitSample, reflevel = "0")
+
+
+c.names <- names(fit_mlogit$model)[- c(1, 19:21)]
+
+ME.mnl <- sapply(c.names, function(x) 
+  stats::effects(fit_mlogit, covariate=x, data=mlogitSample), 
+  simplify=FALSE) 
+
+Me_test <-  stats::effects(fit_mlogit, covariate="region52", data=mlogitSample)
+
+# get AMEs
+(AME.mnl <- t(sapply(ME.mnl, colMeans)))
+
+AME.fun <- function(betas) {
+  tmp <- fit_mlogit
+  tmp$coefficients <- betas
+  ME.mnl <- sapply(c.names, function(x) 
+    effects(tmp, covariate = x, data = mlogitSample), simplify = FALSE)
+  c(sapply(ME.mnl, colMeans))
+}
+
+install.packages("numDeriv")
+require(numDeriv)
+grad <- jacobian(AME.fun, fit_mlogit$coef)
+
+
+
+(AME.mnl.se <- matrix(sqrt(diag(grad %*% vcov(ml.fit) %*% t(grad))), nrow = 3, byrow = TRUE))
+
+# standard errors:
+AME.mnl / AME.mnl.se
+
+```
+
+```{r}
+myeffects<-function (object, covariate = NULL, type = c("aa", "ar", "rr", 
+                                             "ra"), data = NULL, ...) 
+{
+    type <- match.arg(type)
+    if (is.null(data)) {
+        P <- predict(object, returnData = TRUE)
+        data <- attr(P, "data")
+        attr(P, "data") <- NULL
+    }
+    else P <- predict(object, data)
+    newdata <- data
+    J <- length(P)
+    alt.levels <- names(P)
+    pVar <- substr(type, 1, 1)
+    xVar <- substr(type, 2, 2)
+    cov.list <- strsplit(as.character(attr(formula(object), "rhs")), " + ", fixed = TRUE)
+    rhs <- sapply(cov.list, function(x) length(na.omit(match(x, 
+                                                             covariate))) > 0)
+    rhs <- (1:length(cov.list))[rhs]
+    eps <- 1e-05
+    if (rhs %in% c(1, 3)) {
+        if (rhs == 3) {
+            theCoef <- paste(alt.levels, covariate, sep = ":")
+            theCoef <- coef(object)[theCoef]
+        }
+        else theCoef <- coef(object)[covariate]
+        me <- c()
+        for (l in 1:J) {
+            newdata[l, covariate] <- data[l, covariate] + eps
+            newP <- predict(object, newdata)
+            me <- rbind(me, (newP - P)/eps)
+            newdata <- data
+        }
+        if (pVar == "r") 
+            me <- t(t(me)/P)
+        if (xVar == "r") 
+            me <- me * matrix(rep(data[[covariate]], J), J)
+        dimnames(me) <- list(alt.levels, alt.levels)
+    }
+    if (rhs == 2) {
+        newdata[, covariate] <- data[, covariate] + eps
+        newP <- predict(object, newdata)
+        me <- (newP - P)/eps
+        if (pVar == "r") 
+            me <- me/P
+        if (xVar == "r") 
+            me <- me * data[[covariate]]
+        names(me) <- alt.levels
+    }
+    me
+}
+
+myeffects(fit_mlogit, covariate = "region52", data = mlogitSample)
 ```
 
 
@@ -1821,10 +1958,6 @@ Validating the model
 
 
 
-Regression mit PCA
-```{r}
-
-```
 
 Marginal effects
 
