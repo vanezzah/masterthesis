@@ -8,7 +8,7 @@ save.image(file='yoursession.RData')
 
 #To load this data later you can use:
 
-load('yoursession.RData')
+load('myEnvironement.RData')
 
 ```
 
@@ -23,6 +23,7 @@ Libraries:
 #install.packages('magrittr')
 #install.packages('tidyr')
 #install.packages('dplyr')
+#install.packages('interplot')
 #install.packages("Hmisc")
 #install.packages("corrplot")
 #install.packages("PerformanceAnalytics")
@@ -33,11 +34,12 @@ Libraries:
 #install.packages("ggplot2")
 #install.packages("reshape2")
 #install.packages("mnlogit")
-install.packages("Formula")
+#install.packages("Formula")
 
 
 
 library(reshape2)
+library(interplot)
 library(car)
 library(ggplot2)
 library(mlogit)
@@ -377,8 +379,8 @@ hhtyp : 1 - 11
 3:1-Personen-HH: Person 60 Jahre und älter -> single
 4:2-Personen-HH: jüngste Person 18-29 Jahre
 5:2-Personen-HH: jüngste Person 30-59 Jahre
-6:2-Personen-HH: jüngste Person 60 Jahre und älte->couple
-7:HH mit mind. 3 Erwachsenen -> extended family
+6: 2-Personen HH: jüngste Person über 60 Jahre
+7:HH mit mind. 3 Erwachsenen -> extended family / unattached
 8:HH mit mind. einem Kind unter 6 Jahren 
 9:HH mit mind. einem Kind unter 14 Jahren 
 10:HH mit mind. einem Kind unter 18 Jahren -> couple with children
@@ -483,8 +485,8 @@ HH_dt[, "anzrad_gr":= NULL]
 HH_dt[, "anzpedrad_gr":= NULL]
 HH_dt[, "pedrad":= NULL]
 
-# mobtyp somit schon über andere variablen vorhanden
-HH_dt[, "mobtyp":= NULL]
+
+
 ```
 
 
@@ -1450,6 +1452,33 @@ HH_dt_model2$hheink_imp <- sub("," , ".", HH_dt_model2$hheink_imp)
 HH_dt_model2$hheink_imp <- as.numeric(HH_dt_model2$hheink_imp)
 summary(HH_dt_model2$hheink_imp)
 
+# region 2 hinzufügen (Lukas version)
+# summarize
+#Urban (71+72)
+#Mid-urban (73, 75, 76)
+#Rural (74, 77)
+
+dplyr::count(HH_dt_model2, RegioStaR7)
+
+temp_region2 <- HH_dt_model2[, "RegioStaR7"]
+urban <- temp_region2 == 71 | temp_region2 == 72
+urban <- urban*1
+
+midurban <- temp_region2 == 73 | temp_region2 == 75 | temp_region2 == 76
+midurban <- midurban*2
+
+rural <- temp_region2 == 74 | temp_region2 == 77
+rural <- rural * 3
+
+region2 <- urban + midurban + rural 
+#Kontrolle
+dplyr::count(HH_dt_model2, RegioStaR7)
+region2 <- factor(region2)
+summary(region2)
+
+# hinzufügen: 
+HH_dt_model2$region2 <- region2
+summary(HH_dt_model2$region2)
 
 
 ```
@@ -1464,9 +1493,15 @@ Regression using mlogit
 #starting with anz_fs
 
 # transform dt
+HH_dt_model1$anzauto <- as.factor(HH_dt_model1$anzauto)
 datamlogit <- mlogit.data(HH_dt_model1, choice = "anzauto", shape = "wide")
 
-model1 <- mlogit(anzauto ~ 1 | quali_opnv | 1, data = datamlogit, reflevel = "0")
+
+model1 <- mlogit(anzauto ~ 1 | quali_opnv, data = datamlogit, reflevel = "0")
+
+install.packages('margins')
+library(margins)
+margins(model1)
 
 summary(model1)
 # loglikelihood test is in comparison with null-model
@@ -1482,7 +1517,8 @@ head(fitted(model1, outcome = FALSE))
 # Tests
 
 #constrained model: 
-model2 <- mlogit(anzauto ~ 1 | hheink_gr2 | 1, data = datamlogit, reflevel = "0")
+model2 <- mlogit(anzauto ~ 1 | einkommen, data = datamlogit, reflevel = "0")
+margins(model2)
 
 # Wald test
 
@@ -1540,8 +1576,10 @@ HH_test$anzauto2 <- relevel(HH_test$anzauto_gr2, ref = "0")
 # run model using multinom package
 # output here includes iteration history and final negative log likelihood 
 # this value multiplied by two is seen in summary as residual deviance and can be used in comparisons (look into that!)
-test <- multinom(anzauto2 ~ hheink_gr2 + Weglänge_avg, data = HH_test)
+test <- multinom(anzauto ~ einkommen + anzfs + einkommen:anzfs , data = HH_dt_model1)
 
+#effects plot
+plot(effect("einkommen:anzfs", test), multiline=TRUE, ylab="Probability(1)", rug=FALSE)
 
 # should ordinal variables be converted to factors or treated as continous/interval, or ordered factor?? for tests see:
 #https://www3.nd.edu/~rwilliam/stats3/OrdinalIndependent.pdf
@@ -1619,10 +1657,12 @@ HH_dt_model1$bus28 <- factor(HH_dt_model1$bus28, ordered = FALSE)
 mlogitSample <- mlogit.data(HH_dt_model1, choice = "anzauto", shape = "wide") 
 head(mlogitSample)
 
-
+library(mlogit)
 # needs data in long format (like mlogit)
 mlogitSample2 <- mlogit.data(HH_dt_model2, choice = "anzauto", shape = "wide") 
 head(mlogitSample2)
+
+
 
 # ANZAUTO als factor -> kein unterschied
 #HH_dt_model3 <- HH_dt_model1
@@ -1642,22 +1682,23 @@ fm2 <- formula(anzauto ~ 1 | 1 | 1)
 fit2 <- mnlogit(fm2, mlogitSample, ncores=2, choiceVar = "alt")
 
 # ganz kleines bisschen besser!
-fm3 <- formula(anzauto ~ 1 | anzfs + region + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege + region*anzfs + region:quali_nv| 1)
+fm3 <- formula(anzauto ~ 1 | anzfs + region2 + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65+ bahn28 + garage + anzahlWege+anzfs:region2+hheink_imp:region2 + CS:region2 + garage:region2 + haustyp:region2 + Weglänge_avg:region2 + berufstaetige:region2  + anzahlWege:region2| 1)
 fit3 <- mnlogit(fm3, mlogitSample2, ncores=4, choiceVar = "alt")
+summary(fit3)
 
+library(mnlogit)
 install.packages("effects")
 library(effects)
 
-regionanzfs.effect <- effect( "region*anzfs", mlogitSample2,xlevels = list(anzfs = 1:11,   region = 51:55))
 
-fm <- formula(anzauto ~ 1 | anzfs + region + einkommen + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege| 1)
-fit <- mnlogit(fm, mlogitSample, ncores=4, choiceVar = "alt")
+fm <- formula(anzauto ~ 1 | anzfs + region2 + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege| 1)
+fit <- mnlogit(fm, mlogitSample2, ncores=4, choiceVar = "alt")
 summary(fit)
 
 #ohne region: 
-fm_ohneregion <- formula(anzauto ~ 1 | anzfs + einkommen + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege + | 1)
-fit_ohneregion <- mnlogit(fm_ohneregion, mlogitSample, ncores=4, choiceVar = "alt")
-summary(fit_ohneregion)
+#fm_ohneregion <- formula(anzauto ~ 1 | anzfs + einkommen + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege + | 1)
+#fit_ohneregion <- mnlogit(fm_ohneregion, mlogitSample, ncores=4, choiceVar = "alt")
+#summary(fit_ohneregion)
 
 
 #mc fadden pseudo r2 (cox and snell, nagelkerke?): 
@@ -1677,9 +1718,10 @@ print(fit, what = "modsize")
 #The VIF may be calculated for each predictor by doing a linear regression of that predictor on all the other predictors, and then obtaining the R2 from that regression. The VIF is just 1/(1-R2).
 # for dummies square gvif^(1/2...) and apply same rule as to VIF
 
-
-x_reg <- lm(anzauto ~ anzfs + region + einkommen + quali_nv + berufstaetige + CS + householdtype + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege, data = HH_dt_model1)
+library(car)
+x_reg <- lm(anzauto ~  anzfs + region2 + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65+ bahn28 + garage + anzahlWege+anzfs:region2+hheink_imp:region2 + CS:region2 + garage:region2 + haustyp:region2 + Weglänge_avg:region2 + berufstaetige:region2  + anzahlWege:region2, data = HH_dt_model2)
 vif(x_reg)
+
 
 
 #relative risk rates / the odds ratio 
@@ -1699,8 +1741,8 @@ save.image(file='yoursession.RData')
 # anzfs
 B <- coef(fit)
 probs <- predict(fit, type="probs")
-as.matrix(B)
-b <- c(0,B[c("region52:1", "region52:2", "region52:3")])
+#B <- as.matrix(B)
+b <- c(0,B[c("anzfs:1", "anzfs:2", "anzfs:3")])
 pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
 me <- matrix(0, nrow(probs), ncol(probs))
 for(j in 1:4) {
@@ -1710,7 +1752,9 @@ apply(me, 2, mean)
 
 #We find that the average marginal effect of anzfs on having 2 cars is positive: 0.19. This means that the probability of having 2 cars is on average about 19 percentage points higher for households for a unit increase in drivers licenses in comparison with households with the same other variables. 
 
-b <- c(0,B[c("einkommen2:1", "einkommen2:2", "einkommen2:3")])
+#Marginal Effect for Xk = P(Y=1 |X) * P(Y = 0|X) * bk.
+
+b <- c(0,B[c("region23:1", "region23:2", "region23:3")])
 pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
 me <- matrix(0, nrow(probs), ncol(probs))
 for(j in 1:4) {
@@ -1776,22 +1820,23 @@ Average marginal effects anders: funktioniert nicht
 
 ```{r}
 
+
 #https://stackoverflow.com/questions/54079553/how-to-get-average-marginal-effects-ames-with-standard-errors-of-a-multinomial
 
+# geht so nur mit numericals
+fit_mlogit <- mlogit(anzauto ~ 1 | anzfs + region2 + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege| 1, data = mlogitSample2, reflevel = "0")
 
-fit_mlogit <- mlogit(anzauto ~ 1 | anzfs + region + einkommen + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege| 1, data = mlogitSample, reflevel = "0")
+
 
 
 c.names <- names(fit_mlogit$model)[- c(1, 19:21)]
+ME.mnl <- sapply(c.names, function(x) {effects(fit_mlogit, covariate=x, data=mlogitSample)}, simplify=FALSE) 
 
-ME.mnl <- sapply(c.names, function(x) 
-  stats::effects(fit_mlogit, covariate=x, data=mlogitSample), 
-  simplify=FALSE) 
-
-Me_test <-  stats::effects(fit_mlogit, covariate="region52", data=mlogitSample)
+Me_test2 <-  stats::effects(fit_mlogit, covariate="anzahlWege", data=mlogitSample)
 
 # get AMEs
-(AME.mnl <- t(sapply(ME.mnl, colMeans)))
+AME.mnl <- colMeans(Me_test2)
+AME.mnl
 
 AME.fun <- function(betas) {
   tmp <- fit_mlogit
@@ -1805,9 +1850,7 @@ install.packages("numDeriv")
 require(numDeriv)
 grad <- jacobian(AME.fun, fit_mlogit$coef)
 
-
-
-(AME.mnl.se <- matrix(sqrt(diag(grad %*% vcov(ml.fit) %*% t(grad))), nrow = 3, byrow = TRUE))
+(AME.mnl.se <- matrix(sqrt(diag(grad %*% vcov(fit_mlogit) %*% t(grad))), nrow = 16, byrow = TRUE))
 
 # standard errors:
 AME.mnl / AME.mnl.se
@@ -1867,7 +1910,8 @@ myeffects<-function (object, covariate = NULL, type = c("aa", "ar", "rr",
     me
 }
 
-myeffects(fit_mlogit, covariate = "region52", data = mlogitSample)
+myeffects(fit_mlogit, covariate = "anzfs", data = mlogitSample2)
+
 ```
 
 
@@ -1933,6 +1977,62 @@ vif(x_reg_suburban)
 #VIF rural : kein großer  unterschied ob mit oder ohne region
 x_reg_rural <- lm(anzauto ~ anzfs + einkommen + quali_nv + berufstaetige + CS + householdtype + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege, data = Rural_dt)
 vif(x_reg_rural)
+
+
+# to get effects of region on different models do regression in multinom and use effets package!
+
+# multinom 
+HH_dt_model2$anzauto <- as.factor(HH_dt_model2$anzauto)
+HH_dt_model2$anzauto <- relevel(HH_dt_model2$anzauto, ref = "0")
+# run model using multinom package
+# output here includes iteration history and final negative log likelihood 
+# this value multiplied by two is seen in summary as residual deviance and can be used in comparisons (look into that!)
+fit_multinom <- multinom(anzauto ~ 1 +anzfs + region + hheink_imp + quali_nv + berufstaetige + householdtype + CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege + region:quali_opnv, data = HH_dt_model2)
+
+# test significance
+Anova(fit_multinom)
+
+# or
+z <- summary(fit_multinom)$coefficients/summary(fit_multinom)$standard.errors
+p <- (1 - pnorm(abs(z), 0, 1)) * 2
+p
+
+#effects plot
+plot(effect("region:quali_opnv", fit_multinom), multiline=TRUE, x.var = "quali_opnv", rug=FALSE)
+plot(effect("hheink_imp", fit_multinom), multiline=TRUE, rug=FALSE)
+
+# comparison:
+
+mlogitSample_test <- mlogit.data(HH_dt_model2, choice = "anzauto", shape = "wide") 
+
+
+fm_test <- formula(anzauto ~ 1 | anzfs + region + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage)
+fit_test <- mnlogit(fm_test, mlogitSample_test, ncores=2, choiceVar = "alt")
+summary(fit_test)
+
+
+
+fit_multitest <- multinom(anzauto ~ anzfs + region + hheink_imp+ quali_nv + berufstaetige + householdtype + CS, data = HH_dt_model2)
+#multitest.cf <- coef(fit_multitest)
+
+
+fmtest <- formula(anzauto ~ 1 | anzfs + region + hheink_imp + quali_nv + berufstaetige + householdtype + CS)
+fit_test <- mnlogit(fmtest, mlogitSample_test, ncores=4, choiceVar = "alt")
+summary(fit_test)
+
+# Substitution of coefficients as they are not the same, funktioniert!!
+# https://stackoverflow.com/questions/43623076/multinomial-logit-in-r-mlogit-versus-nnet/43697814
+
+fit_multitest2 <- fit_multitest
+cf <- matrix(fit_multitest2$wts, nrow=36) # immer 37
+fit_test.cf <- coef(fit_test)
+cf[2:nrow(cf), 2:ncol(cf)] <- (matrix(fit_test.cf,nrow=3))
+
+# Substitution of probabilities
+fit_multitest2$wts <- c(cf)
+fit_multitest2$fitted.values <- fit_test$probabilities
+
+plot(effect("anzfs", fit_multitest2), multiline=TRUE, x.var = "anzfs", rug=FALSE)
 
 ```
 

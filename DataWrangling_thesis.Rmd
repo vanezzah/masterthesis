@@ -1,0 +1,750 @@
+---
+title: "Thesis_clean"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Packages and libraries
+
+```{r}
+#install.packages('mosaic')
+#install.packages('interactions')
+#install.packages('data.table')
+#install.packages('magrittr')
+#install.packages('tidyr')
+#install.packages('dplyr')
+#install.packages('interplot')
+#install.packages("Hmisc")
+#install.packages("corrplot")
+#install.packages("PerformanceAnalytics")
+#install.packages("mlogit", dependencies=TRUE)
+#install.packages("foreign")
+#install.packages("nnet")
+#install.packages("ggplot2")
+#install.packages("reshape2")
+#install.packages("mnlogit")
+#install.packages("Formula")
+
+
+library(reshape2)
+library(interplot)
+library(car)
+library(ggplot2)
+library(mlogit)
+library(nnet)
+library(foreign)
+library(data.table)
+library(magrittr)
+library(tidyr)
+library(dplyr)
+library(mnlogit)
+library(Formula)
+library(mosaic)
+library(Hmisc)
+library(corrplot)
+library(interactions)
+library(PerformanceAnalytics)
+library(Formula)
+```
+
+Import Data
+
+```{r}
+
+HH_file<- file.path('Data/MiD2017_Haushalte.csv')
+HH_dt <- fread(HH_file)
+HH_dt <- as.data.table(HH_dt)
+
+
+Person_file <- file.path('Data/MiD2017_Personen.csv')
+Person_dt <- fread(Person_file)
+Person_dt <- as.data.table(Person_dt)
+
+```
+
+
+Check if the two files match
+Yes, in the person file there are person for every household in the household file
+```{r}
+ids_HH <- HH_dt[, "H_ID"] # 156240
+ids_P <- Person_dt[, "H_ID"]
+unique_ids_P <- unique(ids_P) # 156240
+count(unique_ids_P)
+count(ids_HH)
+```
+
+How many households are there per number of cars
+-> only 2% of households have four cars and more, therefore the grouping by only 0,1,2 and more than 3
+cars is sufficient
+```{r}
+dplyr::count(HH_dt, anzauto_gr1)
+3424/156420
+# nur ca. 2 % der HH haben 4 Autos und mehr -> es reicht die Untergliederung bis 3 und mehr Autos zu verwenden 
+```
+
+Remove the 14 households that do not disclose their number of cars from the dataset
+```{r}
+dplyr::count(HH_dt, auto)
+HH_dt <- filter(HH_dt, anzauto_gr2 != 9)
+dplyr::count(HH_dt, H_ANZAUTO)
+```
+
+Remove columns there are not needed from the dataset
+
+```{r}
+HH_dt <- as.data.table(HH_dt)
+HH_dt[, c("H_GEW","H_HOCH"):=NULL]
+
+HH_dt <- HH_dt[, -c("H_NOCAR_B", "H_NOCAR_A", "H_NOCAR_C", "H_NOCAR_D", "H_NOCAR_E", "H_NOCAR_F","BLAND","pkw_status", "pkw_seg_kba", "pkw_jahresfl", "pkw_jahresfl_gr", "BLAND_GEO", "H_EINK", "hheink_gr1", "hhgr_oecd", "aq_eink", "oek_status")]
+HH_dt[, c("MODE","BASISAUF", "TEILSTP", "H_NEBEN_1","H_NEBEN_2","H_NEBEN_3","H_NEBEN_4","H_NEBEN_5", "H_NEBEN_6", "H_NEBEN_7","H_NEBEN_8", "anzneben", "nebenws" ):=NULL]
+HH_dt[, "hausnutz":=NULL]
+HH_dt[, "wohnlage":=NULL]
+HH_dt[, c("RegioStaR2","RegioStaR17"):=NULL]
+HH_dt[, "H_MIETE":=NULL]
+HH_dt[, "H_ART":=NULL]
+HH_dt[, "mobtyp":= NULL]
+HH_dt <- HH_dt[, -c("HP_SEX_1","HP_SEX_2","HP_SEX_3","HP_SEX_4","HP_SEX_5","HP_SEX_6","HP_SEX_7","HP_SEX_8")]
+HH_dt[, c("anzauto_gr1","anzauto_gr3"):=NULL]
+HH_dt[, "M_CAR":= NULL]
+HH_dt[, "anzfs_gr":= NULL]
+HH_dt[, "hhgr_gr":= NULL]
+HH_dt[, "nocar":= NULL]
+HH_dt[, "min_ozmz":= NULL]  
+HH_dt[, "anzkind06":= NULL]
+HH_dt[, "anzkind14":= NULL]
+HH_dt[, "anzerw14":= NULL]
+HH_dt[, "anzerw18":= NULL]
+HH_dt[, "POLGK":= NULL]  
+HH_dt[, "RegioStaRGem7":= NULL]  
+HH_dt[, "RegioStaR4":= NULL]  
+HH_dt[, "GEMTYP":= NULL]
+HH_dt[, "SKTYP":= NULL]
+```
+
+Modelling explanatory variables 
+
+1. Number of working people 
+```{r}
+taet_dt <- HH_dt[, c("HP_TAET_1","HP_TAET_2", "HP_TAET_3", "HP_TAET_4","HP_TAET_5","HP_TAET_6","HP_TAET_7","HP_TAET_8")]
+summary(taet_dt)
+taet_dt <- as.data.table(taet_dt)
+
+temp_workers <- taet_dt < 6 & taet_dt > 0
+temp_workers <- as.data.table(temp_workers)
+temp_workers <- temp_workers*1
+
+sum_workers<- apply(temp_workers,1,sum)
+# add new column 
+HH_dt$workers <- sum_workers
+
+# remove old columns
+HH_dt <- HH_dt[, -c("HP_TAET_1","HP_TAET_2", "HP_TAET_3", "HP_TAET_4","HP_TAET_5","HP_TAET_6","HP_TAET_7","HP_TAET_8")]
+
+dplyr::count(HH_dt, workers)
+
+```
+
+2. Number of license holders
+
+```{r}
+# remove unlogical values and households that did not disclose number of holders
+HH_dt <- filter(HH_dt, HP_ANZFS != 99 &HP_ANZFS != 94 )
+
+dplyr::count(HH_dt, HP_ANZFS)
+HH_dt <- as.data.table(HH_dt)
+
+
+```
+
+3. Household size 
+
+```{r}
+HH_dt <- as.data.table(HH_dt)
+setnames(HH_dt, "H_GR", "hhsize")
+dplyr::count(HH_dt, hhsize)
+
+```
+
+4. Age of household members
+
+```{r}
+# remove households that did not disclose age
+HH_dt <- filter(HH_dt, HP_ALTER_1 != 999 )
+HH_dt <- filter(HH_dt, HP_ALTER_2 != 999 )
+HH_dt <- filter(HH_dt, HP_ALTER_3 != 999 )
+HH_dt <- filter(HH_dt, HP_ALTER_4 != 999 )
+HH_dt <- filter(HH_dt, HP_ALTER_5 != 999 )
+HH_dt <- filter(HH_dt, HP_ALTER_6 != 999 )
+HH_dt <- filter(HH_dt, HP_ALTER_7 != 999 )
+HH_dt <- filter(HH_dt, HP_ALTER_8 != 999 )
+
+age_dt <- HH_dt[, c("HP_ALTER_1", "HP_ALTER_2", "HP_ALTER_3", "HP_ALTER_4", "HP_ALTER_5", "HP_ALTER_6", "HP_ALTER_7", "HP_ALTER_8")]
+
+
+summary(age_dt)
+is.data.table(age_dt)
+
+# 20-39 year olds
+temp <- age_dt
+
+result <- temp < 40 & temp > 19
+result <- as.data.table(result)
+result <- result*1
+result
+anzahl2039 <- apply(result,1,sum)
+
+# 40-64 year olds
+
+result3 <- temp < 65 & temp > 39
+result3 <- as.data.table(result3)
+result3 <- result3*1
+anzahl4064 <- apply(result3,1,sum)
+
+
+# 65 year olds and older
+
+result2 <- temp > 64 & temp < 150
+result2 <- as.data.table(result2)
+result2 <- result2*1
+anzahl65 <- apply(result2,1,sum)
+
+# create new columns
+HH_dt$num2039 <- anzahl2039
+HH_dt$num4064 <- anzahl4064
+HH_dt$num65 <- anzahl65
+
+
+#remove old columns
+HH_dt <- HH_dt[, -c("HP_ALTER_1", "HP_ALTER_2", "HP_ALTER_3", "HP_ALTER_4", "HP_ALTER_5", "HP_ALTER_6", "HP_ALTER_7", "HP_ALTER_8")]
+
+# share noch hinzufügen?
+```
+
+5.
+
+Household lifecycle stage 
+-> single, couple, couple with children, singleparent and other (extended family, unattached individuals)
+
+```{r}
+# remove households that did not disclose hhtyp
+HH_dt <- filter(HH_dt, hhtyp != 95)
+
+hhtyp_dt <- HH_dt[, "hhtyp"]
+hhtyp_dt <- as.data.table(hhtyp_dt)
+hhtyp_dt[, "single"] <- 0
+hhtyp_dt[, "couple"] <- 0
+hhtyp_dt[, "couple_children"] <- 0
+hhtyp_dt[, "singleparent"] <- 0
+hhtyp_dt[, "otherindividuals"] <- 0
+
+
+# Singles
+temp2 <- hhtyp_dt[,1]
+
+single <- temp2 < 4
+single <- as.data.table(single)
+single <- single*1
+
+# Couples
+
+couple <- temp2 < 7 & temp2 > 3
+couple <- as.data.table(couple)
+couple <- couple *1
+
+# Couples with children
+
+couple_c <- temp2 < 11 & temp2 > 7
+couple_c <- as.data.table(couple_c)
+couple_c <- couple_c*1
+
+# singleparent
+
+singleparent <- temp2 == 11
+singleparent <- as.data.table(singleparent)
+singleparent <- singleparent*1
+
+
+# other individuals
+
+others <- temp2 == 7
+others <- as.data.table(others)
+others <- others*1
+
+#add new columns
+HH_dt[, "single"] <- single
+HH_dt[, "couple"] <- couple
+HH_dt[, "couple_children"] <- couple_c
+HH_dt[, "single_parent"] <- singleparent
+HH_dt[, "other_ind"] <- others
+
+#remove old columns
+HH_dt <- as.data.table(HH_dt)
+HH_dt[, "hhtyp":= NULL]
+HH_dt[, "hhtyp2":= NULL]
+
+
+#(relationshipstatus in one variable -> test difference)
+temp_single <- HH_dt[, "single"]
+temp_couple <- HH_dt[, "couple"]
+temp_couplec <- HH_dt[, "couple_children"]
+temp_singlep <- HH_dt[, "single_parent"]
+temp_oth <- HH_dt[, "other_ind"]
+
+temp_single <- temp_single*1
+temp_couple <- temp_couple * 2
+temp_couplec <- temp_couplec * 3
+temp_singlep <- temp_singlep * 4
+temp_oth <- temp_oth * 5
+
+householdtype <- temp_single + temp_couple + temp_couplec + temp_singlep + temp_oth
+
+#control:
+dplyr::count(HH_dt, single)
+dplyr::count(HH_dt, couple)
+dplyr::count(HH_dt, single_parent)
+dplyr::count(HH_dt, other_ind)
+householdtype$single <- factor(householdtype$single)
+summary(householdtype)
+#assign new column
+HH_dt$householdtype_all <- householdtype$single
+
+```
+
+6. Number of children
+```{r}
+# Spalte anzkind18
+
+dplyr::count(HH_dt, anzkind18)
+
+
+```
+
+7. Motorräder und Fahrräder
+
+```{r}
+# H_ANZMOTMOP : anzahl an motorräder, mopeds, mofas im HH
+# alle anderen entfernen:
+HH_dt[, "auto":= NULL]
+HH_dt[, "H_ANZMOT":= NULL]
+HH_dt[, "H_ANZMOP":= NULL]
+HH_dt[, "anzmotmop_gr":= NULL]
+HH_dt[, "motmop":= NULL]
+
+#anzpedrad: anzahl elektrofahrrad, pedelecs, fahrräder im HH
+HH_dt[, "H_ANZPED":= NULL]
+HH_dt[, "H_ANZRAD":= NULL]
+HH_dt[, "anzped_gr":= NULL]
+HH_dt[, "anzrad_gr":= NULL]
+HH_dt[, "anzpedrad_gr":= NULL]
+HH_dt[, "pedrad":= NULL]
+
+#  remove households without information
+HH_dt <- filter(HH_dt, H_ANZMOTMOP != 99)
+HH_dt <- filter(HH_dt, anzpedrad != 99)
+
+```
+
+8. housing type and availability of a garage
+
+```{r}
+# haustyp: 1 ein-bis zweifamilienhaus, 2 mehrfamilienhaus, 3 geschosswohnungsbau, 4 sonstiges, 95 nicht zuzuordnen
+dplyr::count(HH_dt, haustyp)
+HH_dt <- filter(HH_dt, haustyp != 95)
+
+#transform into factor
+HH_dt$haustyp <- factor(HH_dt$haustyp)
+
+# garage: 0 nein, 1 ja
+dplyr::count(HH_dt, garage)
+HH_dt <- filter(HH_dt, garage != 95)
+setnames(HH_dt, "haustyp", "housing_type")
+
+#transform into factor
+
+HH_dt$garage<- factor(HH_dt$garage)
+```
+
+
+10. Variables regarding public transport and public services
+
+```{r}
+#bus28: airline distance (in groups) to the next busstop with at least 28 departures on workdays
+#tram 28 ""
+#bahn 28 ""
+
+# change grouping for these variables to near, middle, far, very far and factorize them
+
+# less than 500m: near
+# less than 2.5km: middle
+# less than 5km: far
+# more than 5km: very far
+
+dplyr::count(HH_dt, bus28)
+
+temp_bus <- HH_dt[, "bus28"]
+near <- temp_bus == 1 | temp_bus == 2
+near <- near*1
+
+middle <- temp_bus == 3 |temp_bus == 4
+middle <- middle*2
+
+far <- temp_bus == 5
+far <- far * 3
+
+rfar <- temp_bus == 6
+rfar <- rfar * 4
+
+bus <- near + middle + far + rfar 
+#Kontrolle
+dplyr::count(HH_dt, bus28)
+bus <- factor(bus)
+summary(bus)
+
+# add column
+HH_dt$bus28 <- bus
+summary(HH_dt$bus28)
+
+#same for train
+dplyr::count(HH_dt, bahn28)
+temp_train <- HH_dt[, "bahn28"]
+near <- temp_train == 1 | temp_train == 2
+near <- near*1
+
+middle <- temp_train== 3 |temp_train == 4
+middle <- middle*2
+
+far <- temp_train == 5
+far <- far * 3
+
+rfar <- temp_train == 6
+rfar <- rfar * 4
+
+train<- near + middle + far + rfar 
+#control
+train <- factor(train)
+summary(train)
+dplyr::count(HH_dt, bahn28)
+
+# add column
+HH_dt$train28 <- train
+summary(HH_dt$train28)
+#remove old column
+HH_dt[, "bahn28":= NULL]
+
+
+#same for metro: (a lot of people for whom it is really far)
+dplyr::count(HH_dt, tram28)
+temp_tram <- HH_dt[, "tram28"]
+near <- temp_tram == 1 | temp_tram == 2
+near <- near*1
+
+middle <- temp_tram == 3 |temp_tram == 4
+middle <- middle*2
+
+far <- temp_tram == 5
+far <- far * 3
+
+rfar <- temp_tram == 6
+rfar <- rfar * 4
+
+metro <- near + middle + far + rfar 
+#Kontrolle
+metro <- factor(metro)
+summary(metro)
+dplyr::count(HH_dt, tram28)
+
+# add 
+HH_dt$metro28 <- metro
+#remove old column
+HH_dt[, "tram28":= NULL]
+
+#quali_opnv -> quality of public transport on a scale of 1 to 4
+
+#quali_nv -> quality of public services (schools, supermarkets, doctors, pharmacys, etc.) on a scale of 1 to 4
+
+dplyr::count(HH_dt, quali_opnv)
+dplyr::count(HH_dt, quali_nv)
+
+# remove households that did not disclose this information
+HH_dt <- filter(HH_dt, quali_opnv!= 95)
+HH_dt <- filter(HH_dt, quali_nv!= 95)
+
+
+#transform into factors
+#quali_nv
+HH_dt$quali_nv<- factor(HH_dt$quali_nv)
+
+#quali_opnv, ordered factor
+HH_dt$quali_opnv<- factor(HH_dt$quali_opnv)
+
+```
+
+11. Regional type
+
+```{r}
+# variable RegioStaR7
+# variable RegioStaRGem5
+dplyr::count(HH_dt, RegioStaR7)
+dplyr::count(HH_dt, RegioStaRGem5)
+#oder RegiostarGem5:
+#Metropole
+#Regiopole, Großstadt
+#zentrale Stadt, Mittelstadt 
+#städtischer Raum
+#kleinstädtischer, dörflicher Raum  
+```
+
+12. Carsharing
+
+```{r}
+#Abgebildet durch H_CS:
+#1 ja, bei einem Anbieter
+#2 ja, bei mehreren Anbietern 
+#3 nein, gar nicht
+#9 keine Angabe
+dplyr::count(HH_dt, H_CS)
+
+# remove households that did not disclose this information 
+HH_dt <- filter(HH_dt, H_CS!= 9)
+```
+
+Merging data from the person data set
+
+1. Highest type of education in the household
+
+```{r}
+education_dt <- Person_dt[, c("H_ID", "P_BIL")]
+Anzahl_HH <- unique(bildung_dt[, "H_ID"])
+count(Anzahl_HH)
+education_withoutProxy <- education_dt[P_BIL != "206" & P_BIL!= "9" & P_BIL!= "6"]
+Anzahl_HH_withoutproxy <- unique(education_withoutProxy[, "H_ID"])
+count(Anzahl_HH_withoutproxy)
+
+# find highest degree per household
+maxEducation_byHH <- max(P_BIL ~ H_ID, data = education_withoutProxy)
+maxEducation_dt <- as.data.table(data.frame(HH_ID=names(maxEducation_byHH), maxEducation=maxEducation_byHH, row.names=NULL))
+summary(maxEducation_dt)
+
+dplyr::count(maxEducation_dt, maxEducation)
+
+``` 
+2. Number of trips on a given day per household
+
+```{r}
+
+trips_dt <- Person_dt[, c("H_ID", "anzwege2", "arbwo", "feiertag")]
+
+#remove person with unknown number of trips
+trips_dt <- trips_dt[anzwege2 != "803" & anzwege2!= "804"]
+
+#remove persons that were measured on weekends or holidays
+trips_workdays <- trips_dt[arbwo == 1 & feiertag == 0]
+
+x <- sum(anzwege2 ~ H_ID, data = trips_workdays)
+numberoftrips_dt <- as.data.table(data.frame(HH_ID=names(x), trips=x, row.names=NULL))
+dplyr::count(numberoftrips_dt, trips)
+summary(numberoftrips_dt)
+
+
+```
+
+3. Länge der Wege am Stichtag
+
+```{r}
+#perskm2 enthält länge aller wege mit weiteren wegen ohne rbw, fehlende werte wurden imputiert
+triplength_dt <- Person_dt[, c("H_ID", "perskm2", "arbwo", "feiertag")] 
+triplength_dt <- triplength_dt[arbwo == 1 & feiertag == 0]
+
+summary(triplength_dt)
+
+#remove households without information on trips
+triplength_clean <- triplength_dt[perskm2 != "80803" & perskm2!= "80804" & perskm2 != "80802"]
+
+# perskm2 is a character column, we need to convert it to numeric to be able to sum it up
+triplength_clean$perskm2 <- sub("," , ".", triplength_clean$perskm2)
+triplength_clean$perskm2 <- as.numeric(triplength_clean$perskm2)
+
+
+dplyr::count(triplength_clean, perskm2)
+
+x <- sum(perskm2 ~ H_ID, data = triplength_clean)
+totaltriplength_dt <- as.data.table(data.frame(HH_ID=names(x), perskm2=x, row.names=NULL))
+
+summary(totaltriplength_dt)
+dplyr::count(totaltriplength_dt, perskm2)
+
+```  
+
+Merge all three features
+
+```{r}
+#1. maxEducation_dt 
+
+#2. numberoftrips_dt
+
+combined2_df <- merge(x=maxEducation_dt,y=numberoftrips_dt,by="HH_ID")
+
+#3. gesamteWeglänge_dt
+
+combined3_df <- merge(x=combined2_df, y=totaltriplength_dt, by="HH_ID")
+
+```
+
+Combine both data tables
+
+```{r}
+HH_dt <- as.data.table(HH_dt)
+setnames(HH_dt, "H_ID", "HH_ID")
+HH_dt$HH_ID <- factor(HH_dt$HH_ID)
+
+HH_dt_2 <- merge(x=combined3_df, y=HH_dt, by="HH_ID")
+
+```
+
+Add a column for adverage triplength
+```{r}
+
+HH_dt_2$triplength_avg <- HH_dt_2$perskm2/HH_dt_2$trips
+
+#Nan durch 0 ersetzen 
+HH_dt_2[is.na(HH_dt_2)] <- 0
+
+summary(HH_dt_2$triplength_avg)
+
+#log transformation?
+#HH_dt_final$Weglänge_avg <- log(HH_dt_final$Weglänge_avg)
+# transform -inf to zero 
+#HH_dt_final[HH_dt_final == -Inf] <- 0
+
+summary(HH_dt_2$trips)
+setnames(HH_dt_2, "perskm2", "triplength")
+
+```
+
+
+9. Income
+
+```{r}
+# income as a number, with imputed values : hheink_imp
+#outlier removal
+dplyr::count(HH_dt_2, hheink_imp)
+summary(HH_dt_2$hheink_imp)
+HH_dt_2$hheink_imp <- sub("," , ".", HH_dt_2$hheink_imp)
+HH_dt_2$hheink_imp <- as.numeric(HH_dt_2$hheink_imp)
+summary(HH_dt_2$hheink_imp)
+
+setnames(HH_dt_2, "hheink_imp", "income_numerical")
+
+# change scale of income
+HH_dt_2$income_numerical <- HH_dt_2$income_numerical/1000
+
+#income in groups
+
+dplyr::count(HH_dt, hheink_gr2)
+# bis 2000: 1 
+# zwischen 2000 - 4000 2
+# 4000 - 7000 3
+# more than 7000 4
+
+temp_income <- HH_dt_2[, "hheink_gr2"]
+
+low <- temp_income == 1 | temp_income == 2| temp_income == 3 | temp_income == 4
+low <- low*1
+
+middle <- temp_income == 5 |temp_income == 6
+middle <- middle*2
+
+high <- temp_income == 7 | temp_income == 8 | temp_income == 9 
+high <- high * 3
+
+highest <- temp_income == 10 
+highest <- highest * 4
+
+income <- low + middle + high + highest 
+# control:
+dplyr::count(HH_dt_2, hheink_gr2)
+income <- factor(income)
+summary(income)
+
+# add new column 
+HH_dt_2$income_gr <- income
+
+# delete old income column 
+HH_dt_2<- as.data.table(HH_dt_2)
+HH_dt_2[, hheink_gr2:= NULL]
+
+```
+
+Further datawrangling
+
+Making actual datatable by reducing some categories, factorizing etc. 
+
+```{r}
+#change name of dependent variable
+setnames(HH_dt_2, "anzauto_gr2", "anzauto")
+
+# education as factor, not ordinal
+HH_dt_2$maxEducation<- factor(HH_dt_2$maxEducation)
+summary(HH_dt_2$maxEducation)
+# change Name
+setnames(HH_dt_2, "maxEducation", "education")
+
+# change name motor vehicles and bikes
+setnames(HH_dt_2, "H_ANZMOTMOP", "nummots")
+setnames(HH_dt_2, "anzpedrad", "numped")
+
+#change name for number of licenses
+dplyr::count(HH_dt_2, HP_ANZFS)
+setnames(HH_dt_2, "HP_ANZFS", "numlic")
+
+#change name for H_CS and make into factor
+setnames(HH_dt_2, "H_CS", "CS")
+HH_dt_2$CS<- factor(HH_dt_2$CS)
+
+# change name for region variables and change into factors
+# RegioStarGem5
+setnames(HH_dt_2, "RegioStaRGem5", "region1")
+dplyr::count(HH_dt_2, region1)
+HH_dt_2$region1 <- factor(HH_dt_2$region1)
+
+# RegiostaR7
+setnames(HH_dt_2, "RegioStaR7", "region2")
+
+#group according to:
+#Urban (71+72)
+#Mid-urban (73, 75, 76)
+#Rural (74, 77)
+
+dplyr::count(HH_dt_2, region2)
+
+temp_region2 <- HH_dt_2[, "region2"]
+urban <- temp_region2 == 71 | temp_region2 == 72
+urban <- urban*1
+
+midurban <- temp_region2 == 73 | temp_region2 == 75 | temp_region2 == 76
+midurban <- midurban*2
+
+rural <- temp_region2 == 74 | temp_region2 == 77
+rural <- rural * 3
+
+region2 <- urban + midurban + rural 
+#control
+dplyr::count(HH_dt_2, region2)
+region2 <- factor(region2)
+summary(region2)
+
+# add column:
+HH_dt_2$region2 <- region2
+summary(HH_dt_2$region2)
+
+
+```
+
+
+
+

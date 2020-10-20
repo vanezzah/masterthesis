@@ -1,0 +1,176 @@
+---
+title: "outliers"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Remove outliers from the data (do with and without)
+
+1. Define Quartiles and IQR for the different continuous variables
+
+```{r cars}
+# triplength_avg
+
+Q <- quantile(HH_dt_2$triplength_avg, probs=c(.05, .95), na.rm = FALSE)
+iqr <- IQR(HH_dt_2$triplength_avg)
+lower_bound <- Q[1]-1.5*iqr # -12
+upper_bound <- Q[2]+1.5*iqr # 54
+
+
+# nummots
+Q2<- quantile(HH_dt_2$nummots, probs=c(.05, .99), na.rm = FALSE)
+iqr2 <- IQR(HH_dt_2$nummots)
+lower_bound2 <- Q2[1]-1.5*iqr2  #0
+upper_bound2 <- Q2[2]+1.5*iqr2 #3
+lower_bound2
+upper_bound2
+
+
+#numlic
+Q3 <- quantile(HH_dt_2$numlic, probs=c(.05, .95), na.rm = FALSE)
+iqr3 <- IQR(HH_dt_2$numlic)
+lower_bound_3 <- Q3[1]-1.5*iqr3 # -0.5
+upper_bound_3 <- Q3[2]+1.5*iqr3 # 4.5
+lower_bound_3
+upper_bound_3
+
+# hhsize
+Q4 <- quantile(HH_dt_2$hhsize, probs=c(.05, .95), na.rm = FALSE)
+iqr4 <- IQR(HH_dt_2$hhsize)
+lower_bound_4 <- Q4[1]-1.5*iqr4 #0.5
+upper_bound_4 <- Q4[2]+1.5*iqr4 #5.5
+lower_bound_4
+upper_bound_4
+
+#numpeds
+Q5<- quantile(HH_dt_2$numped, probs=c(.25, .99), na.rm = FALSE)
+iqr5 <- IQR(HH_dt_2$numped)
+lower_bound5 <- Q5[1]-1.5*iqr5  #-2
+upper_bound5 <- Q5[2]+1.5*iqr5  #8
+lower_bound5 
+upper_bound5 
+
+
+# workers:
+Q6 <- quantile(HH_dt_2$workers, probs=c(.25, .95), na.rm = FALSE)
+iqr6 <- IQR(HH_dt_2$workers)
+lower_bound_6 <- Q6[1]-1.5*iqr6  #-3
+upper_bound_6 <- Q6[2]+1.5*iqr6  #5
+lower_bound_6 
+upper_bound_6
+
+# age
+Q65 <- quantile(HH_dt_2$num65, probs=c(.25, .95), na.rm = FALSE)
+iqr65 <- IQR(HH_dt_2$num65)
+lower_bound65 <- Q65[1]-1.5*iqr65  #-1.5
+upper_bound65 <- Q65[2]+1.5*iqr65  #3.5
+lower_bound65 
+upper_bound65
+
+?
+Q40 <- quantile(HH_dt_2$anzahl4064, probs=c(.25, .99), na.rm = FALSE)
+iqr40 <- IQR(HH_dt_2$anzahl4064)
+lower_bound40 <- Q40[1]-1.5*iqr40 #-3
+upper_bound40 <- Q40[2]+1.5*iqr40 #5 
+lower_bound40
+upper_bound40
+
+Q20 <- quantile(HH_dt_2$anzahl2039, probs=c(.25, .95), na.rm = FALSE)
+iqr20 <- IQR(HH_dt_2$anzahl2039)
+lower_bound20 <- Q20[1]-1.5*iqr20 # 0
+upper_bound20 <- Q20[2]+1.5*iqr20 # 2
+lower_bound20 
+upper_bound20 
+
+# number of trips
+
+Q_trips <- quantile(HH_dt_2$trips, probs=c(.25, .95), na.rm = FALSE)
+iqrtrips <- IQR(HH_dt_2$trips)
+lower_boundtrips <- Q_trips[1]-1.5*iqrtrips # -6
+upper_boundtrips <- Q_trips[2]+1.5*iqrtrips # 18
+lower_boundtrips
+upper_boundtrips
+
+
+# income numerical 
+Q_inc<- quantile(HH_dt_2$income_numerical, probs=c(.25, .95), na.rm = FALSE)
+iqr_inc <- IQR(HH_dt_2$income_numerical)
+lower_bound_inc <- Q_inc[1]-1.5*iqr_inc #-1
+upper_bound_inc <- Q_inc[2]+1.5*iqr_inc #10.3
+lower_bound_inc
+upper_bound_inc
+
+
+#anzkind18
+Q_kind<- quantile(HH_dt_2$anzkind18, probs=c(.25, .95), na.rm = FALSE)
+iqr_kind <- IQR(HH_dt_2$anzkind18)
+lower_bound_kind <- Q_kind[1]-1.5*iqr_kind #0
+upper_bound_kind <- Q_kind[2]+1.5*iqr_kind #0
+lower_bound_kind
+upper_bound_kind
+
+```
+
+Remove outliers
+```{r}
+dplyr::count(HH_dt_2, triplength_avg)
+HH_dt_2 <- filter(HH_dt_2,triplength_avg < upper_bound)
+
+dplyr::count(HH_dt_2, nummots)
+
+dplyr::count(HH_dt_2, numlic)
+HH_dt_2 <- filter(HH_dt_2,numLic < 5)
+
+dplyr::count(HH_dt_2, numped)
+HH_dt_2 <- filter(HH_dt_2,numped < 7)
+
+dplyr::count(HH_dt_2, workers)
+HH_dt_2 <- filter(HH_dt_2,workers < 6)
+
+dplyr::count(HH_dt_2, trips)
+HH_dt_2 <- filter(HH_dt_2,trips < 19)
+
+dplyr::count(HH_dt_2, income_numerical)
+HH_dt_2 <- filter(HH_dt_2, income_numerical < 7.9)
+
+dplyr::count(HH_dt_2, anzkind18)
+HH_dt_2 <- filter(HH_dt_2, income_numerical < 4)
+
+dplyr::count(HH_dt_2, anzahl2039)
+
+HH_dt <- filter(HH_dt, num2039 < 3 )
+HH_dt <- filter(HH_dt, num4064 < 5 )
+HH_dt <- filter(HH_dt, num65 < 4 )
+
+#HH_dt <- filter(HH_dt, hhsize != 11 & hhsize!=12 & hhsize!=13 )
+
+```
+
+Testing linearity assumption between dependent variable and continuous independent variables
+http://www.statisticalassociates.com/logistic10.htm
+The right-hand predictor side of the equation must be linear with the left-hand outcome side of the equation. You must test for linearity in the logit (in logistic regression the logit is the outcome side). This is commonly done with the Box-Tidwell Transformation (Test): Add to the logistic model interaction terms which are the crossproduct of each independent times its natural logarithm [(X)ln(X)]. If these terms are significant, then there is nonlinearity in the logit. This method is not sensitive to small nonlinearities.
+```{r}
+#in mnlogit
+#boxTidwell(anzauto ~ trips*log(trips) + triplength_avg*log(triplength_avg) + nummots*log(nummots) + numped*log(numpeds) + numlic*log(numlic) + income_numerical*log(income_numerical) + anzkind18*log(anzkind18) + workers*log(workers) + anzahl2039*log(anzahl2039) + anzahl4064*log(anzahl4064) + anzahl65*log(anzahl65) , ~ education + CS + region2 + bus28 + train28 + metro28 + haustyp + garage + quali_opnv + quali_nv + householdtype_all , data=HH_dt_2)
+
+#transform into long format
+mlogitSample <- mlogit.data(HH_dt_model1, choice = "anzauto", shape = "wide") 
+head(mlogitSample)
+
+#run model to see if linearity holds
+fm3 <- formula(anzauto ~ 1 | anzfs + region2 + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65+ bahn28 + garage + anzahlWege+anzfs:region2+hheink_imp:region2 + CS:region2 + garage:region2 + haustyp:region2 + Weglänge_avg:region2 + berufstaetige:region2  + anzahlWege:region2| 1)
+fit3 <- mnlogit(fm3, mlogitSample2, ncores=4, choiceVar = "alt")
+summary(fit3)
+```
+
+Testing correlation 
+
+```{r}
+# remove hhsize due to correlation
+dplyr::count(HH_dt_model1, hhsize)
+HH_dt_model1[, hhsize := NULL]
+```
+
