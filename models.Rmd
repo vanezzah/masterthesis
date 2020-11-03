@@ -1,0 +1,758 @@
+---
+title: "models"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Libraries
+
+```{r}
+#install.packages('stargazer')
+#install.packages('texreg')
+#install.packages('mnlogit')
+#install.packages("effects")
+#library(stargazer)
+#library(texreg)
+#library(mmlogit)
+#library(effects)
+
+```
+
+
+Model 1
+
+Regression using mnlogit
+
+```{r}
+
+#https://cran.r-project.org/web/packages/mnlogit/vignettes/mnlogit.pdf
+
+HH_dt_2_out$numcars <- as.numeric(as.character(HH_dt_2_out$numcars))
+HH_dt_2_out$numcars <- factor(HH_dt_2_out$numcars)
+
+HH_dt_2_out$sharedrivers <- HH_dt_2_out$numlic / HH_dt_2_out$hhsize
+HH_dt_2_out$shareworkers <- HH_dt_2_out$workers/HH_dt_2_out$hhsize
+
+# transform data to long format
+mnlogit_dt_out <- mlogit.data(HH_dt_2_out, choice = "numcars", shape = "wide") 
+
+# Formula
+
+#The formula should be specified in the format:  responseVar ~ choice specific variables withgeneric coefficients | individual specific variables | choice specific variables with choice specificcoefficients. These are the 3 available variable types.
+#Any type of variables may be omitted. To omit use "1" as a placeholder.
+#An alternative specific intercept is included by default in the estimation. To omit it, use a ’-1’ or’0’ anywhere in the formula.
+
+#NULL MODEL (only intercept)
+fm_null <- formula(numcars ~ 1 | 1 | 1)
+fit_null <- mnlogit(fm_null, mnlogit_dt_out, ncores=4, choiceVar = "alt")
+
+# model formulation normal
+fm1 <- formula(numcars ~ 1 | numlic+ region2 + income_numerical + quali_nv + workers + CSyes + CSmultiple + triplength_avg +nummots + numped+ share2039 + share4064+ housing_type + quali_opnv + train28 + bus28 + metro28 + garage + tripsavg + numch18 + hh_children | 1)
+fit1 <- mnlogit(fm1, mnlogit_dt_out, ncores=4, choiceVar = "alt")
+summary(fit1)
+
+# model formulation after accounting for nonlinearity and multicollinearity
+
+fm_new <- formula(numcars ~  1| income_numerical +triplength_avg+ I(triplength_avg^2) + tripsavg +log(nummots1) + numped  + numch18 +numlic + I(numlic^2)  + workers + parttime + share2039 + share4064 + CSyes + CSmultiple + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children|1)
+fit_new <- mnlogit(fm_new, mnlogit_dt_out, ncores=4, choiceVar = "alt")
+summary(fit_new)
+#fit_new_mlogit<- mlogit(fm_new, mnlogit_dt_out, reflevel = '0')
+
+
+
+# compare normal and nonlinearity model -> non linearity performs better
+LL0 <- logLik(fit1)
+LL1 <- logLik(fit_new)
+N <- nrow(HH_dt_2_out)
+
+lrtest(fit_new, fit1)
+
+#mc fadden pseudo r2 
+as.vector(1 - ((LL1) / (LL0)))
+
+# cox and snell r2 
+as.vector(1 - exp((2/N) * (LL0 - LL1)))
+
+# nagelkerke r2
+as.vector((1 - exp((2/N) * (LL0 - LL1))) / (1 - exp((2/N)*LL0)))
+
+
+
+
+# compare with null model 
+LL0 <- logLik(fit_null)
+LL1 <- logLik(fit_new)
+N <- nrow(HH_dt_2_out)
+
+#http://dwoll.de/rexrepos/posts/regressionMultinom.html#mcfadden-cox-snell-and-nagelkerke-pseudo-r2
+#mc fadden pseudo r2 
+as.vector(1 - ((LL1) / (LL0)))
+
+# cox and snell r2 
+as.vector(1 - exp((2/N) * (LL0 - LL1)))
+
+# nagelkerke r2
+as.vector((1 - exp((2/N) * (LL0 - LL1))) / (1 - exp((2/N)*LL0)))
+
+
+
+```
+
+Model 1 - Model validation
+
+```{r}
+
+# z-statistics and z-tests of individual predictors:
+summary(fit_new)
+
+# Tests against the null-model
+
+# Wald test
+
+waldtest(fit_new, fit_null)
+
+
+# Score test (using mlogit)
+model1 <- mlogit(numcars ~  1| income_numerical +triplength_avg+ I(triplength_avg^2) + tripsavg +log(nummots1) + numped  + numch18 + numlic+ I(numlic^2) + workers + log(parttime1) + share2039 + share4064 + education + CS + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children, data = mnlogit_dt_out)
+model2 <- mlogit(numcars ~ 1 | numlic | 1, data = mnlogit_dt_out)
+
+
+mlogit::scoretest(model2, model1)
+
+# Likelihood ratio test
+
+lrtest(fit_new, fit_null)
+
+
+# AIC:
+AIC(fit_new)
+AIC(fit_null)
+
+
+#format(fitted(fit_new, outcome=FALSE), scientific = FALSE)
+
+
+```
+
+Hosmer and Lemeshow test for goodness of fit (on separate logit models)
+
+```{r}
+
+summary(mylogit)
+summary(mylogit2)
+summary(mylogit3)
+
+#Hosmer and Lemeshow test of model fit
+logitgof(HH_dt_bin1$numcars, fitted(mylogit, outcome = FALSE), g=10, ord=FALSE)
+
+logitgof(HH_dt_bin2$numcars, fitted(mylogit2, outcome=FALSE), g=10, ord=FALSE)
+
+logitgof(HH_dt_bin3$numcars, fitted(mylogit3, outcome=FALSE), g=20, ord=FALSE)
+
+
+
+```
+
+Results - Model 1
+
+Log-odds -> remove education as it is not significant
+```{r}
+# interpreting the intercept? -> leave in
+#The intercept might be interpreted as the estimated baseline log odds when all independent variables are set to 0, or the reference category in case of categorical variables. The probability when all independent variables are set to 0 is log(intercept)/(1+log(intercept)).
+
+# how to interpret:
+# total of 3 models, 1 relative to 0, 2 relative to 0, 3 relative to zero
+
+# output represents log-odds
+# standard interpretation of the multinomial logit is that for a unit change in the predictor variable, the logit of outcome m relative to the referent group is expected to change by its respective parameter estimate (which is in log-odds units) given the variables in the model are held constant.
+summary(fit_new)
+coef(fit_new)
+
+```
+
+Odds ratios
+```{r}
+#relative risk rates / the odds ratio 
+
+# for relative risk ratio (odds) instead of log odds which is the output of the model
+## extract the coefficients from the model and exponentiate
+# The odds ratio of a coefficient indicates how the risk of the outcome falling in the comparison group compared to the risk of the outcome falling in the referent group changes with the variable in question.  An odds ratio > 1 indicates that the risk of the outcome falling in the comparison group relative to the risk of the outcome falling in the referent group increases as the variable increases.  In other words, the comparison outcome is more likely.  An odds ratio < 1 indicates that the risk of the outcome falling in the comparison group relative to the risk of the outcome falling in the referent group decreases as the variable increases.
+
+results_oddsratios <- format(round(exp(coef(fit_new)),4), scientific = FALSE)
+sort(results_oddsratios, decreasing = TRUE)
+as.numeric(results_oddsratios, names=TRUE)
+data.frame(t(results_oddsratios))
+```
+
+Average marginal effects
+
+```{r}
+#https://data.princeton.edu/wws509/r/mlogit
+
+# average marginal effects
+#Marginal effects are a useful way to describe the average effect of changes in explanatory variables on the change in the probability of outcomes in logistic regression and other nonlinear models.
+
+#When comparing some category to the base outcome, a positive coefficient always means you are more likely to be in the comparison category than in the base category. However, when talking about the probability of being in a given category, the marginal effect (that is, the effect on the probability of being in a specific group by increasing the independent variable by one) does not have to be positive. This is because, in the former example, we are only comparing the two categories to one another. On the other hand, in the latter example, we are talking about comparing the probability of being in the comparison category not just to the base outcome (which will always be higher if the coefficient is positive) but also to the probability of being in all the other comparison groups.
+
+#Let's assume we have gropus A, B, and C. A is the base outcome. If a coefficient on variable X is positive for group B, then increasing X will always make you more likely to be in B than A. However, increasing X does not necessarily make you more likely to be in group B, because the effect on the probability of being in group C may be even greater than the probability of being in group B, which means the marginal effect of X may actually be negative for group B (because you are more likely at this point to be in group C), but you are still more likely to be in group B than group A. 
+
+#save.image(file='yoursession.RData')
+library(miscTools)
+
+# numlic
+B <- coef(fit_new)
+probs <- predict(fit_new, type="probs")
+#B <- as.matrix(B)
+b <- c(0,B[c("numlic:1", "numlic:2", "numlic:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+ }
+r<- apply(me, 2, mean)
+r <- c("numlic", r)
+AVE_df <- as.matrix(data.frame(t(r)))
+colnames(AVE_df) <- c("name", "zero_cars","1_car","2_cars","3_cars")
+
+
+b <- c(0,B[c("I(numlic^2):1", "I(numlic^2):2", "I(numlic^2):3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+ }
+r <- apply(me, 2, mean)
+r <- c("I(numlic^2)", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+#We find that the average marginal effect of anzfs on having 2 cars is positive: 0.19. This means that the probability of having 2 cars is on average about 19 percentage points higher for households for a unit increase in drivers licenses in comparison with households with the same other variables. 
+
+#Marginal Effect for Xk = P(Y=1 |X) * P(Y = 0|X) * bk.
+
+b <- c(0,B[c("income_numerical:1", "income_numerical:2", "income_numerical:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+ }
+r<- apply(me, 2, mean)
+r <- c("income_numerical", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+#We find that the average marginal effect of einkommen2 on having 1 car is actually negative: -0.11. This means that the probability of having 1 car is on average about 11 percentage points lower for households in einkommen2 than for households in other einkommen groups with the same other variables. (for 1 car really heterogenous, therefore not that easy interpretable)
+
+
+# marginal effects :
+# To determine the effect of black in the probability scale we need to compute marginal effects, which can be done using continuous or discrete calculations. 
+# We find that the average marginal effect of black on work is actually negative: -0.0406. This means that the probability of working is on average about four percentage points lower for blacks than for non-blacks with the same education and experience. 
+
+# e.g. einkommen: 
+# the log odds for einkommen2 to einkommen1 is 0.54 for having 1 car relative to 0 car, meaning it is more likely to have 1 car for people in einkommen2 than for people in einkommen1
+# the relative risk rate for einkommen 2 to einkommen 1 is 1.72 for having 1 car relative to 0 cars, therefore it is more likely to have 1 car than zero cars when having einkommen2
+# the relative probability of having 1 car rather than having 0 cars for people in einkommen 2 is 72% higher than the relative probability for people in einkommen1 with the same other variables!
+
+
+# e.g. anzfs
+# estimate for a one unit increase in anzfs for 1 car relative to 0 cars. if a household has one more drivers license, the log-odds of having 1 car relative to zero car would be expected to increase by 1.84
+# the relative risk rate for an increase of 1 drivers license is 6.34 for having 1 car relative to 0 cars, therefore it is 6.34 times more likely to have 1 car than 0 cars when you have one drivers license more.
+
+
+b <- c(0,B[c("triplength_avg:1", "triplength_avg:2", "triplength_avg:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+ }
+r<-apply(me, 2, mean)
+r <- c("triplength_avg", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("tripsavg:1", "tripsavg:2", "tripsavg:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("tripsavg")
+r<- apply(me, 2, mean)
+r <- c("tripsavg", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("log(nummots1):1", "log(nummots1):2", "log(nummots1):3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+ }
+r<- apply(me, 2, mean)
+r <- c("log(nummots1)", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("numped:1", "numped:2", "numped:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("numped")
+r<- apply(me, 2, mean)
+r <- c("numpeds", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("numch18:1", "numch18:2", "numch18:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("numch18")
+r<- apply(me, 2, mean)
+r <- c("numch18", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("workers:1", "workers:2", "workers:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("workers")
+r<- apply(me, 2, mean)
+r <- c("workers", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("parttime:1", "parttime:2", "parttime:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("log(parttime)")
+r<- apply(me, 2, mean)
+r <- c("parttime", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("share2039:1", "share2039:2", "share2039:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("share2039")
+r<- apply(me, 2, mean)
+r <- c("share2039", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("share4064:1", "share4064:2", "share4064:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("share4064")
+r<- apply(me, 2, mean)
+r <- c("share4064", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("hh_children1:1", "hh_children1:2", "hh_children1:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("hh_children")
+r<- apply(me, 2, mean)
+r <- c("hh_children", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+
+b <- c(0,B[c("quali_nv2:1", "quali_nv2:2", "quali_nv2:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("quali_nv2")
+r<- apply(me, 2, mean)
+r <- c("quali_nv2", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("quali_nv3:1", "quali_nv3:2", "quali_nv3:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("quali_nv3")
+r<- apply(me, 2, mean)
+r <- c("quali_nv3", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("quali_nv4:1", "quali_nv4:2", "quali_nv4:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("quali_nv4")
+r<- apply(me, 2, mean)
+r <- c("quali_nv4", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+# quali_opnv
+
+b <- c(0,B[c("quali_opnv2:1", "quali_opnv2:2", "quali_opnv2:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("quali_opnv2")
+r<- apply(me, 2, mean)
+r <- c("qualiopnv2", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("quali_opnv3:1", "quali_opnv3:2", "quali_opnv3:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("quali_opnv3")
+r<- apply(me, 2, mean)
+r <- c("quali_opnv3", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("quali_opnv4:1", "quali_opnv4:2", "quali_opnv4:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("quali_opnv4")
+r<- apply(me, 2, mean)
+r <- c("quali_opnv4", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+#garage
+b <- c(0,B[c("garage1:1", "garage1:2", "garage1:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("garage")
+r<- apply(me, 2, mean)
+r <- c("garage", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+#housing_type
+b <- c(0,B[c("housing_typemultifamily_h:1", "housing_typemultifamily_h:2", "housing_typemultifamily_h:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("housing_typemultifamily_h")
+r<- apply(me, 2, mean)
+r <- c("housingtype_multifamilehome", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("housing_typeapartmentbuilding:1", "housing_typeapartmentbuilding:2", "housing_typeapartmentbuilding:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("housing_typeapartmentbuilding")
+r<- apply(me, 2, mean)
+r <- c("housing_type_apartmentbuilding", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("housing_typeother:1", "housing_typeother:2", "housing_typeother:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("housing_typeother")
+r <- apply(me, 2, mean)
+r <- c("housing_typeother", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+#metro
+b <- c(0,B[c("metro28middle:1", "metro28middle:2", "metro28middle:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("metro28middle")
+r<- apply(me, 2, mean)
+r <- c("metro28middle", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("metro28far:1", "metro28far:2", "metro28far:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("metro28far")
+r<- apply(me, 2, mean)
+r <- c("metro28far", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("metro28rfar:1", "metro28rfar:2", "metro28rfar:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("metro28rfar")
+r<- apply(me, 2, mean)
+r <- c("metro28rfar", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+#bus
+b <- c(0,B[c("bus28middle:1", "bus28middle:2", "bus28middle:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("bus28middle")
+r<- apply(me, 2, mean)
+r <- c("bus28middle", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("bus28far:1", "bus28far:2", "bus28far:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("bus28far")
+r<- apply(me, 2, mean)
+r <- c("bus28far", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("bus28rfar:1", "bus28rfar:2", "bus28rfar:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("bus28rfar")
+r<- apply(me, 2, mean)
+r <- c("bus28rfar", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+#train
+b <- c(0,B[c("train28middle:1", "train28middle:2", "train28middle:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("train28middle")
+r<- apply(me, 2, mean)
+r <- c("train28middle", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("train28far:1", "train28far:2", "train28far:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("train28far")
+r<- apply(me, 2, mean)
+r <- c("train28far", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("train28rfar:1", "train28rfar:2", "train28rfar:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("train28rfar")
+r<- apply(me, 2, mean)
+r <- c("train28rfar", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+#region
+b <- c(0,B[c("region2suburban:1", "region2suburban:2", "region2suburban:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("region2suburban")
+r<- apply(me, 2, mean)
+r <- c("suburban", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+b <- c(0,B[c("region2rural:1", "region2rural:2", "region2rural:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("region2rural")
+r<- apply(me, 2, mean)
+r <- c("rural", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+#CS
+b <- c(0,B[c("CSyes:1", "CSyes:2", "CSyes:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("CSyes")
+r<- apply(me, 2, mean)
+r <- c("CSyes", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+
+
+b <- c(0,B[c("CSmultiple:1", "CSmultiple:2", "CSmultiple:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+}
+print("CSmultiple")
+r<- apply(me, 2, mean)
+r <- c("CSmultiple", r)
+AVE_df <- insertRow(AVE_df,1,r)
+
+AVE_df <- as.data.frame(AVE_df)
+AVE_df$zero_cars <- as.numeric(as.character(AVE_df$zero_cars))
+
+AVE_df_ordered <- AVE_df[order(-AVE_df$zero_cars),]
+
+```
+
+
+Average marginal effects anders: funktioniert nicht
+
+```{r}
+
+
+#https://stackoverflow.com/questions/54079553/how-to-get-average-marginal-effects-ames-with-standard-errors-of-a-multinomial
+
+# geht so nur mit numericals
+fit_mlogit <- mlogit(anzauto ~ 1 | anzfs + region2 + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege| 1, data = mlogitSample2, reflevel = "0")
+
+c.names <- names(fit_mlogit$model)[- c(1, 19:21)]
+ME.mnl <- sapply(c.names, function(x) {effects(fit_mlogit, covariate=x, data=mlogitSample)}, simplify=FALSE) 
+
+Me_test2 <-  stats::effects(fit_mlogit, covariate="anzahlWege", data=mlogitSample)
+
+# get AMEs
+AME.mnl <- colMeans(Me_test2)
+AME.mnl
+
+AME.fun <- function(betas) {
+  tmp <- fit_mlogit
+  tmp$coefficients <- betas
+  ME.mnl <- sapply(c.names, function(x) 
+    effects(tmp, covariate = x, data = mlogitSample), simplify = FALSE)
+  c(sapply(ME.mnl, colMeans))
+}
+
+install.packages("numDeriv")
+require(numDeriv)
+grad <- jacobian(AME.fun, fit_mlogit$coef)
+
+(AME.mnl.se <- matrix(sqrt(diag(grad %*% vcov(fit_mlogit) %*% t(grad))), nrow = 16, byrow = TRUE))
+
+# standard errors:
+AME.mnl / AME.mnl.se
+
+```
+
+Weiteres mit effects
+
+```{r}
+myeffects<-function (object, covariate = NULL, type = c("aa", "ar", "rr", 
+                                             "ra"), data = NULL, ...) 
+{
+    type <- match.arg(type)
+    if (is.null(data)) {
+        P <- predict(object, returnData = TRUE)
+        data <- attr(P, "data")
+        attr(P, "data") <- NULL
+    }
+    else P <- predict(object, data)
+    newdata <- data
+    J <- length(P)
+    alt.levels <- names(P)
+    pVar <- substr(type, 1, 1)
+    xVar <- substr(type, 2, 2)
+    cov.list <- strsplit(as.character(attr(formula(object), "rhs")), " + ", fixed = TRUE)
+    rhs <- sapply(cov.list, function(x) length(na.omit(match(x, 
+                                                             covariate))) > 0)
+    rhs <- (1:length(cov.list))[rhs]
+    eps <- 1e-05
+    if (rhs %in% c(1, 3)) {
+        if (rhs == 3) {
+            theCoef <- paste(alt.levels, covariate, sep = ":")
+            theCoef <- coef(object)[theCoef]
+        }
+        else theCoef <- coef(object)[covariate]
+        me <- c()
+        for (l in 1:J) {
+            newdata[l, covariate] <- data[l, covariate] + eps
+            newP <- predict(object, newdata)
+            me <- rbind(me, (newP - P)/eps)
+            newdata <- data
+        }
+        if (pVar == "r") 
+            me <- t(t(me)/P)
+        if (xVar == "r") 
+            me <- me * matrix(rep(data[[covariate]], J), J)
+        dimnames(me) <- list(alt.levels, alt.levels)
+    }
+    if (rhs == 2) {
+        newdata[, covariate] <- data[, covariate] + eps
+        newP <- predict(object, newdata)
+        me <- (newP - P)/eps
+        if (pVar == "r") 
+            me <- me/P
+        if (xVar == "r") 
+            me <- me * data[[covariate]]
+        names(me) <- alt.levels
+    }
+    me
+}
+
+myeffects(fit_mlogit, covariate = "anzfs", data = mlogitSample2)
+```
+
+
+Interaction terms
+
+
+Tabellen 
+```{r}
+library(texreg)
+texreg::extract(fit_new)
+texreg::texreg(fit_new)
+```
+
+Wilcoxon rank sum to test for differences between AMEs
+
+```{r}
+#me2039 <- me
+#me4064 <- me
+res <- wilcox.test(me2039[,4], me4064[,4], paired = TRUE)
+```
+

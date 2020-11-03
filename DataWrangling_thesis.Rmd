@@ -9,6 +9,15 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+Nützliche Befehle
+```{r}
+#save.image(file='yoursession.RData')
+
+#To load this data later you can use:
+
+#load('myEnvironement.RData')
+```
+
 Packages and libraries
 
 ```{r}
@@ -30,26 +39,25 @@ Packages and libraries
 #install.packages("mnlogit")
 #install.packages("Formula")
 
-
-library(reshape2)
-library(interplot)
-library(car)
-library(ggplot2)
-library(mlogit)
-library(nnet)
-library(foreign)
-library(data.table)
-library(magrittr)
-library(tidyr)
-library(dplyr)
-library(mnlogit)
-library(Formula)
-library(mosaic)
-library(Hmisc)
-library(corrplot)
-library(interactions)
-library(PerformanceAnalytics)
-library(Formula)
+#library(reshape2)
+#library(interplot)
+#library(car)
+#library(ggplot2)
+#library(mlogit)
+#library(nnet)
+#library(foreign)
+#library(data.table)
+#library(magrittr)
+#library(tidyr)
+#library(dplyr)
+#library(mnlogit)
+#library(Formula)
+#library(mosaic)
+#library(Hmisc)
+#library(corrplot)
+#library(interactions)
+#library(PerformanceAnalytics)
+#library(Formula)
 ```
 
 Import Data
@@ -129,23 +137,37 @@ HH_dt[, "SKTYP":= NULL]
 Modelling explanatory variables 
 
 1. Number of working people 
+
+berufstätig:
+1: Vollzeit berufstätig
+2: Teilzeit berufstätig, d.h. 18 bis unter 35 Stunden pro Woche
+3: geringfügig beschäftigt
+4: berufstätig als Nebentätigkeit oder im Praktikum
+5: berufstätig ohne Angabe zum Umfang
 ```{r}
 taet_dt <- HH_dt[, c("HP_TAET_1","HP_TAET_2", "HP_TAET_3", "HP_TAET_4","HP_TAET_5","HP_TAET_6","HP_TAET_7","HP_TAET_8")]
 summary(taet_dt)
 taet_dt <- as.data.table(taet_dt)
 
-temp_workers <- taet_dt < 6 & taet_dt > 0
+temp_workers <- taet_dt == 1
 temp_workers <- as.data.table(temp_workers)
 temp_workers <- temp_workers*1
 
+temp_parttime <- taet_dt < 6 & taet_dt > 1
+temp_parttime <- as.data.table(temp_parttime)
+temp_parttime <- temp_parttime*1
+
 sum_workers<- apply(temp_workers,1,sum)
+sum_parttime<- apply(temp_parttime,1,sum)
 # add new column 
 HH_dt$workers <- sum_workers
+HH_dt$parttime <- sum_parttime
 
 # remove old columns
 HH_dt <- HH_dt[, -c("HP_TAET_1","HP_TAET_2", "HP_TAET_3", "HP_TAET_4","HP_TAET_5","HP_TAET_6","HP_TAET_7","HP_TAET_8")]
 
 dplyr::count(HH_dt, workers)
+dplyr::count(HH_dt, parttime)
 
 ```
 
@@ -742,9 +764,58 @@ summary(region2)
 HH_dt_2$region2 <- region2
 summary(HH_dt_2$region2)
 
+setnames(HH_dt_2, "anzauto", "numcars")
+setnames(HH_dt_2, "anzkind18", "numch18")
+
+HH_dt_2$single <- factor(HH_dt_2$single)
+HH_dt_2$couple <- factor(HH_dt_2$couple)
+HH_dt_2$couple_children <- factor(HH_dt_2$couple_children)
+HH_dt_2$single_parent <- factor(HH_dt_2$single_parent)
+HH_dt_2$other_ind <- factor(HH_dt_2$other_ind)
+HH_dt_2$numcars <- factor(HH_dt_2$numcars)
+
 
 ```
 
 
+Rename factor levels 
+
+```{r}
+library(plyr)
+library(dplyr)
+HH_dt_2$income_gr = revalue(HH_dt_2$income_gr, c("1"="low", "2"="middle", "3"="high", "4" = "veryhigh"))
+HH_dt_2$householdtype_all= revalue(HH_dt_2$householdtype_all, c("1"="single", "2"="couple", "3"="couple_children", "4" = "single_parent", "5"="other_ind"))
+HH_dt_2$housing_type = revalue(HH_dt_2$housing_type, c("1"="singlefamily_h", "2"="multifamily_h", "3"="apartmentbuilding", "4" = "other"))
+HH_dt_2$education = revalue(HH_dt_2$education, c("1"="none", "2"="Hauptschule", "3"="Realschule", "4" = "Abitur", "5"="university"))
+HH_dt_2$region2 = revalue(HH_dt_2$region2, c("1"="urban", "2"="suburban", "3"="rural"))
+HH_dt_2$CS = revalue(HH_dt_2$CS, c("1"="yes", "2"="yes_multiple", "3"="no"))
+HH_dt_2$bus28 = revalue(HH_dt_2$bus28, c("1"="near", "2"="middle", "3"="far", "4" = "rfar"))
+HH_dt_2$train28 = revalue(HH_dt_2$train28, c("1"="near", "2"="middle", "3"="far", "4" = "rfar"))
+HH_dt_2$metro28 = revalue(HH_dt_2$metro28, c("1"="near", "2"="middle", "3"="far", "4" = "rfar"))
+
+HH_dt_2$region1 = revalue(HH_dt_2$region1, c("51"="metropole", "52"="regiopole", "53"="city", "54" = "urbanarea", "55"="ruralarea"))
+
+```
+Add share columns
+
+```{r}
+HH_dt_2$share2039 <- HH_dt_2$num2039/HH_dt_2$hhsize
+HH_dt_2$share4064 <- HH_dt_2$num4064/HH_dt_2$hhsize
+HH_dt_2$shareworkers <- HH_dt_2$workers/HH_dt_2$hhsize
+HH_dt_2$shareparttime <- HH_dt_2$parttime/HH_dt_2$hhsize
+HH_dt_2$tripsavg <- HH_dt_2$trips/HH_dt_2$hhsize
+
+```
+
+Add "households with children" column 
+
+```{r}
+HH_dt_2$couple_children <- as.numeric(as.character(HH_dt_2$couple_children))
+HH_dt_2$single_parent <- as.numeric(as.character(HH_dt_2$single_parent))
+HH_dt_2$hh_children<- HH_dt_2$couple_children + HH_dt_2$single_parent
+HH_dt_2$hh_children <- as.factor(HH_dt_2$hh_children)
+HH_dt_2$couple_children <- factor(HH_dt_2$couple_children)
+HH_dt_2$single_parent <- factor(HH_dt_2$single_parent)
 
 
+```

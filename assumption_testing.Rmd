@@ -7,6 +7,16 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+Packages
+
+```{r}
+#install.packages('generalhoslem')
+library(generalhoslem)
+library(dplyr)
+library(broom)
+```
+
+
 Remove outliers from the data (do with and without)
 
 1. Define Quartiles and IQR for the different continuous variables
@@ -14,163 +24,656 @@ Remove outliers from the data (do with and without)
 ```{r cars}
 # triplength_avg
 
-Q <- quantile(HH_dt_2$triplength_avg, probs=c(.05, .95), na.rm = FALSE)
+Q <- quantile(HH_dt_2$triplength_avg, probs=c(.25, .75), na.rm = FALSE)
 iqr <- IQR(HH_dt_2$triplength_avg)
-lower_bound <- Q[1]-1.5*iqr # -12
-upper_bound <- Q[2]+1.5*iqr # 54
+lower_bound <- Q[1]-2.2*iqr # -18
+upper_bound <- Q[2]+2.2*iqr # 34
+lower_bound
+upper_bound
 
 
 # nummots
-Q2<- quantile(HH_dt_2$nummots, probs=c(.05, .99), na.rm = FALSE)
+Q2<- quantile(HH_dt_2$nummots, probs=c(.25, .75), na.rm = FALSE)
 iqr2 <- IQR(HH_dt_2$nummots)
-lower_bound2 <- Q2[1]-1.5*iqr2  #0
-upper_bound2 <- Q2[2]+1.5*iqr2 #3
+lower_bound2 <- Q2[1]-2.2*iqr2  #0
+upper_bound2 <- Q2[2]+2.2*iqr2 #3
 lower_bound2
 upper_bound2
 
 
 #numlic
-Q3 <- quantile(HH_dt_2$numlic, probs=c(.05, .95), na.rm = FALSE)
+Q3 <- quantile(HH_dt_2$numlic, probs=c(.25, .75), na.rm = FALSE)
 iqr3 <- IQR(HH_dt_2$numlic)
-lower_bound_3 <- Q3[1]-1.5*iqr3 # -0.5
-upper_bound_3 <- Q3[2]+1.5*iqr3 # 4.5
+lower_bound_3 <- Q3[1]-2.2*iqr3 # -1.2
+upper_bound_3 <- Q3[2]+2.2*iqr3 # 6
 lower_bound_3
 upper_bound_3
 
-# hhsize
-Q4 <- quantile(HH_dt_2$hhsize, probs=c(.05, .95), na.rm = FALSE)
-iqr4 <- IQR(HH_dt_2$hhsize)
-lower_bound_4 <- Q4[1]-1.5*iqr4 #0.5
-upper_bound_4 <- Q4[2]+1.5*iqr4 #5.5
-lower_bound_4
-upper_bound_4
 
 #numpeds
-Q5<- quantile(HH_dt_2$numped, probs=c(.25, .99), na.rm = FALSE)
+Q5<- quantile(HH_dt_2$numped, probs=c(.25, .75), na.rm = FALSE)
 iqr5 <- IQR(HH_dt_2$numped)
-lower_bound5 <- Q5[1]-1.5*iqr5  #-2
-upper_bound5 <- Q5[2]+1.5*iqr5  #8
+lower_bound5 <- Q5[1]-2.2*iqr5  #-4
+upper_bound5 <- Q5[2]+2.2*iqr5  #8
 lower_bound5 
 upper_bound5 
 
 
 # workers:
-Q6 <- quantile(HH_dt_2$workers, probs=c(.25, .95), na.rm = FALSE)
+Q6 <- quantile(HH_dt_2$workers, probs=c(.25, .75), na.rm = FALSE)
 iqr6 <- IQR(HH_dt_2$workers)
-lower_bound_6 <- Q6[1]-1.5*iqr6  #-3
-upper_bound_6 <- Q6[2]+1.5*iqr6  #5
+lower_bound_6 <- Q6[1]-2.2*iqr6  #-3
+upper_bound_6 <- Q6[2]+2.2*iqr6  #5
 lower_bound_6 
 upper_bound_6
 
 # age
-Q65 <- quantile(HH_dt_2$num65, probs=c(.25, .95), na.rm = FALSE)
+Q65 <- quantile(HH_dt_2$num65, probs=c(.25, .75), na.rm = FALSE)
 iqr65 <- IQR(HH_dt_2$num65)
-lower_bound65 <- Q65[1]-1.5*iqr65  #-1.5
-upper_bound65 <- Q65[2]+1.5*iqr65  #3.5
+lower_bound65 <- Q65[1]-2.2*iqr65  #-2.2
+upper_bound65 <- Q65[2]+2.2*iqr65  #4
 lower_bound65 
 upper_bound65
 
-?
-Q40 <- quantile(HH_dt_2$anzahl4064, probs=c(.25, .99), na.rm = FALSE)
-iqr40 <- IQR(HH_dt_2$anzahl4064)
-lower_bound40 <- Q40[1]-1.5*iqr40 #-3
-upper_bound40 <- Q40[2]+1.5*iqr40 #5 
+
+Q40 <- quantile(HH_dt_2$num4064, probs=c(.25, .75), na.rm = FALSE)
+iqr40 <- IQR(HH_dt_2$num4064)
+lower_bound40 <- Q40[1]-2.2*iqr40 #-5
+upper_bound40 <- Q40[2]+2.2*iqr40 #5
 lower_bound40
 upper_bound40
 
-Q20 <- quantile(HH_dt_2$anzahl2039, probs=c(.25, .95), na.rm = FALSE)
-iqr20 <- IQR(HH_dt_2$anzahl2039)
-lower_bound20 <- Q20[1]-1.5*iqr20 # 0
-upper_bound20 <- Q20[2]+1.5*iqr20 # 2
+Q20 <- quantile(HH_dt_2$num2039, probs=c(.25, .75), na.rm = FALSE)
+iqr20 <- IQR(HH_dt_2$num2039)
+lower_bound20 <- Q20[1]-2.2*iqr20 # 0
+upper_bound20 <- Q20[2]+2.2*iqr20 # 2
 lower_bound20 
 upper_bound20 
 
-# number of trips
+# average number of trips
 
-Q_trips <- quantile(HH_dt_2$trips, probs=c(.25, .95), na.rm = FALSE)
-iqrtrips <- IQR(HH_dt_2$trips)
-lower_boundtrips <- Q_trips[1]-1.5*iqrtrips # -6
-upper_boundtrips <- Q_trips[2]+1.5*iqrtrips # 18
+Q_trips <- quantile(HH_dt_2$tripsavg, probs=c(.25, .75), na.rm = FALSE)
+iqrtrips <- IQR(HH_dt_2$tripsavg)
+lower_boundtrips <- Q_trips[1]-2.2*iqrtrips # -10
+upper_boundtrips <- Q_trips[2]+2.2*iqrtrips # 23
 lower_boundtrips
 upper_boundtrips
 
 
 # income numerical 
-Q_inc<- quantile(HH_dt_2$income_numerical, probs=c(.25, .95), na.rm = FALSE)
+Q_inc<- quantile(HH_dt_2$income_numerical, probs=c(.25, .75), na.rm = FALSE)
 iqr_inc <- IQR(HH_dt_2$income_numerical)
-lower_bound_inc <- Q_inc[1]-1.5*iqr_inc #-1
-upper_bound_inc <- Q_inc[2]+1.5*iqr_inc #10.3
+lower_bound_inc <- Q_inc[1]-2.2*iqr_inc #-3
+upper_bound_inc <- Q_inc[2]+2.2*iqr_inc #11.84
 lower_bound_inc
 upper_bound_inc
 
 
 #anzkind18
-Q_kind<- quantile(HH_dt_2$anzkind18, probs=c(.25, .95), na.rm = FALSE)
-iqr_kind <- IQR(HH_dt_2$anzkind18)
-lower_bound_kind <- Q_kind[1]-1.5*iqr_kind #0
-upper_bound_kind <- Q_kind[2]+1.5*iqr_kind #0
+Q_kind<- quantile(HH_dt_2$numch18, probs=c(.25, .75), na.rm = FALSE)
+iqr_kind <- IQR(HH_dt_2$numch18)
+lower_bound_kind <- Q_kind[1]-2.2*iqr_kind #0
+upper_bound_kind <- Q_kind[2]+2.2*iqr_kind #2
 lower_bound_kind
 upper_bound_kind
 
 ```
 
-Remove outliers
+remove outliers according to outlier labeling rule or to the rule of at least 10 observations per category
 ```{r}
-dplyr::count(HH_dt_2, triplength_avg)
-HH_dt_2 <- filter(HH_dt_2,triplength_avg < upper_bound)
 
-dplyr::count(HH_dt_2, nummots)
+HH_dt_2_out <- HH_dt_2
+#dplyr::count(HH_dt_2, triplength_avg) # ok
+HH_dt_2_out <- filter(HH_dt_2_out,triplength_avg < upper_bound)
 
-dplyr::count(HH_dt_2, numlic)
-HH_dt_2 <- filter(HH_dt_2,numLic < 5)
+# 3 und 4 haben relative wenige bei 0
+#dplyr::count(HH_dt_2, nummots, by=numcars) 
+HH_dt_2_out <- filter(HH_dt_2_out,nummots < 5)
 
-dplyr::count(HH_dt_2, numped)
-HH_dt_2 <- filter(HH_dt_2,numped < 7)
 
-dplyr::count(HH_dt_2, workers)
-HH_dt_2 <- filter(HH_dt_2,workers < 6)
+#dplyr::count(HH_dt_2_out, numlic, by=numcars) #ok
+HH_dt_2_out <- filter(HH_dt_2_out,numlic < 5)
 
-dplyr::count(HH_dt_2, trips)
-HH_dt_2 <- filter(HH_dt_2,trips < 19)
+dplyr::count(HH_dt_2_out, numped, by = numcars) # ok
+HH_dt_2_out <- filter(HH_dt_2_out,numped < 11)
 
-dplyr::count(HH_dt_2, income_numerical)
-HH_dt_2 <- filter(HH_dt_2, income_numerical < 7.9)
+# no zero car observations for 4 workers
+#dplyr::count(HH_dt_2, workers, by = numcars)
+HH_dt_2_out <- filter(HH_dt_2_out,workers < 5)
 
-dplyr::count(HH_dt_2, anzkind18)
-HH_dt_2 <- filter(HH_dt_2, income_numerical < 4)
+dplyr::count(HH_dt_2_out, parttime, by = numcars)
+HH_dt_2_out <- filter(HH_dt_2_out,parttime < 4)
 
-dplyr::count(HH_dt_2, anzahl2039)
+HH_dt_2_out <- filter(HH_dt_2_out,tripsavg < upper_boundtrips)
 
-HH_dt <- filter(HH_dt, num2039 < 3 )
-HH_dt <- filter(HH_dt, num4064 < 5 )
-HH_dt <- filter(HH_dt, num65 < 4 )
+#dplyr::count(HH_dt_2, income_numerical)#ok
+HH_dt_2_out <- filter(HH_dt_2_out, income_numerical < upper_bound_inc)
 
-#HH_dt <- filter(HH_dt, hhsize != 11 & hhsize!=12 & hhsize!=13 )
+# 8 instead of 10 observations for four children and zero cars
+dplyr::count(HH_dt_2, numch18, by = numcars) #ok
+HH_dt_2_out <- filter(HH_dt_2_out, numch18 < 5)
 
-```
+dplyr::count(HH_dt_2, num2039,  by=numcars)
+dplyr::count(HH_dt_2, num4064, by=numcars)
+#dplyr::count(HH_dt_2, num65,  by=numcars)
 
-Testing linearity assumption between dependent variable and continuous independent variables
-http://www.statisticalassociates.com/logistic10.htm
-The right-hand predictor side of the equation must be linear with the left-hand outcome side of the equation. You must test for linearity in the logit (in logistic regression the logit is the outcome side). This is commonly done with the Box-Tidwell Transformation (Test): Add to the logistic model interaction terms which are the crossproduct of each independent times its natural logarithm [(X)ln(X)]. If these terms are significant, then there is nonlinearity in the logit. This method is not sensitive to small nonlinearities.
-```{r}
-#in mnlogit
-#boxTidwell(anzauto ~ trips*log(trips) + triplength_avg*log(triplength_avg) + nummots*log(nummots) + numped*log(numpeds) + numlic*log(numlic) + income_numerical*log(income_numerical) + anzkind18*log(anzkind18) + workers*log(workers) + anzahl2039*log(anzahl2039) + anzahl4064*log(anzahl4064) + anzahl65*log(anzahl65) , ~ education + CS + region2 + bus28 + train28 + metro28 + haustyp + garage + quali_opnv + quali_nv + householdtype_all , data=HH_dt_2)
+HH_dt_2_out <- filter(HH_dt_2_out, num2039 < 5)
+HH_dt_2_out <- filter(HH_dt_2_out, num4064 < 4)
 
-#transform into long format
-mlogitSample <- mlogit.data(HH_dt_model1, choice = "anzauto", shape = "wide") 
-head(mlogitSample)
+#categorical variables: 
 
-#run model to see if linearity holds
-fm3 <- formula(anzauto ~ 1 | anzfs + region2 + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65+ bahn28 + garage + anzahlWege+anzfs:region2+hheink_imp:region2 + CS:region2 + garage:region2 + haustyp:region2 + Weglänge_avg:region2 + berufstaetige:region2  + anzahlWege:region2| 1)
-fit3 <- mnlogit(fm3, mlogitSample2, ncores=4, choiceVar = "alt")
-summary(fit3)
+#dplyr::count(HH_dt_2, CS,  by=numcars)#ok
+#dplyr::count(HH_dt_2, bus28,  by=numcars)#ok
+#dplyr::count(HH_dt_2, metro28,  by=numcars)#ok
+#dplyr::count(HH_dt_2, train28,  by=numcars)#OK
+#dplyr::count(HH_dt_2, hh_children,  by=numcars) #ok
+#dplyr::count(HH_dt_2, education,  by=numcars) #ok
+#dplyr::count(HH_dt_2, quali_nv,  by=numcars) #ok
+#dplyr::count(HH_dt_2, quali_opnv,  by=numcars) #ok
+dplyr::count(HH_dt_2_out,housing_type,  by=numcars) #ok
+#dplyr::count(HH_dt_2, garage,  by=numcars) # ok
 ```
 
 Testing correlation 
 
+1. Numerical/Ordinal by Numerical/ordinal correlation
+
 ```{r}
+# Source: http://www.sthda.com/english/wiki/correlation-matrix-a-quick-start-guide-to-analyze-format-and-visualize-a-correlation-matrix-using-r-software
+
+
+# correlation between all numerical and ordinal variables
+# spearman correlation coefficient
+
+corr_dt <- HH_dt_2[, c("trips", "numlic", "numch18", "workers", "parttime", "triplength_avg", "income_gr","hhsize", "nummots", "numped", "income_numerical", "bus28", "metro28", "train28","quali_opnv", "quali_nv", "num2039", "num4064", "num65")]
+
+
+# transform factors to ranks
+corr_dt$income_gr <- as.numeric(corr_dt$income_gr)
+corr_dt$bus28 <- as.numeric(corr_dt$bus28)
+corr_dt$train28 <- as.numeric(corr_dt$train28)
+corr_dt$metro28 <- as.numeric(corr_dt$metro28)
+corr_dt$quali_nv <- as.numeric(corr_dt$quali_nv)
+corr_dt$quali_opnv <- as.numeric(corr_dt$quali_opnv)
+
+corr_dt_out <- HH_dt_2_out[, c("trips", "numlic", "numch18", "workers", "triplength_avg", "income_gr","hhsize", "nummots", "numped", "income_numerical", "bus28", "metro28", "train28","quali_opnv", "quali_nv", "num2029", "num4064", "num65")]
+
+# show correlation-plot
+corr2 <- rcorr(as.matrix(corr_dt), type="spearman")
+
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+
+flattenCorrMatrix(corr2$r, corr2$P)
+corrplot(corr2$r, type="upper", order="hclust", sig.level = 0.01, insig = "blank")
+
+
 # remove hhsize due to correlation
-dplyr::count(HH_dt_model1, hhsize)
-HH_dt_model1[, hhsize := NULL]
+HH_dt_2[, hhsize := NULL]
+
+#remove num65 due to correlation
+HH_dt_2[, num65 := NULL]
+
 ```
+
+Categorical/ordinal by categorical/ordinal correlation 
+
+```{r}
+#Kategorische Variablen 
+#Using Cramer's V if one variable is more than 2, if both are dichotomous: cramers phi
+#can be used for nominal and ordinal variables
+
+#Packages for Cramers V 
+install.packages("vcd")
+library(vcd)
+
+#Codesource: https://stackoverflow.com/questions/22515525/is-it-possible-to-speed-up-my-function-for-creating-a-correlation-matrix
+
+# import all categorical and ordinal columns
+
+corrcat_dt <- HH_dt_2[, c("CS","income_gr", "bus28", "train28", "metro28", "housing_type", "garage", "quali_opnv", "quali_nv","single", "couple", "couple_children", "single_parent", "other_ind", "region1", "region2", "education", "trips", "numlic", "numch18", "workers" , "num2039", "num4064", "nummots", "numped", "householdtype_all")]
+corrcat_dt <- as.data.frame(corrcat_dt)
+
+# convert into factor columns
+for(i in 1:ncol(corrcat_dt)){
+
+corrcat_dt[,i] <- as.factor(corrcat_dt[,i])
+
+}
+
+#calculate Cramers_V for all pairs of categorical variables in the table:
+cv <- function(x, y) {
+  t <- table(x, y)
+  print(t)
+  chi <- suppressWarnings(chisq.test(t))$statistic
+  cramer <- sqrt(chi / (NROW(x) * (min(dim(t)) - 1)))
+  cramer
+}
+
+get.V3<-function(y, fill = TRUE){
+  col.y<-ncol(y)
+  V<-matrix(ncol=col.y,nrow=col.y)
+  for(i in 1:(col.y - 1)){
+    print(i)
+    for(j in (i + 1):col.y){
+      print(j)
+      V[i,j]<-cv(y[,i],y[,j])
+    }
+  }
+  diag(V) <- 1 
+  if (fill) {
+    for (i in 1:ncol(V)) {
+      V[, i] <- V[i, ]
+    }
+  }
+  V
+}
+
+
+cramer_table <- get.V3(corrcat_dt)
+
+test2 <- as.data.frame(test2)
+colnames(cramer_table) <- colnames(corrcat_dt)
+rownames(cramer_table) <- colnames(corrcat_dt)
+
+# add degress of freedom
+levels <- c(1:ncol(corrcat_dt))
+for(i in 1:ncol(corrcat_dt)){
+
+levels[i] <- nlevels(corrcat_dt[,i])
+
+}
+
+cramer_table$df <- levels
+cramer_table <- rbind(round(levels,0),cramer_table)
+
+# check thresholds:
+#http://www.real-statistics.com/chi-square-and-f-distributions/effect-size-chi-square/
+
+cramer_table
+```
+
+Numerical vs. categorical 
+
+```{r}
+#look at correlation between predicted numerical values for triplength_avg and actual values by a linear model using the categorical variable as a predictor
+
+#https://stats.stackexchange.com/questions/119835/correlation-between-a-nominal-iv-and-a-continuous-dv-variable/124618#124618
+
+
+# all really small, no correlation
+
+model.lm <- lm(triplength_avg ~ CS, data = HH_dt_2)
+summary(model.lm)
+rsq <- summary(model.lm)$r.squared
+sqrt(rsq)
+
+model.lm <- lm(triplength_avg ~ householdtype_all, data = HH_dt_2)
+summary(model.lm)
+rsq <- summary(model.lm)$r.squared
+sqrt(rsq)
+
+model.lm <- lm(triplength_avg ~ education, data = HH_dt_2)
+summary(model.lm)
+rsq <- summary(model.lm)$r.squared
+sqrt(rsq)
+
+model.lm <- lm(triplength_avg ~ region1, data = HH_dt_2)
+summary(model.lm)
+rsq <- summary(model.lm)$r.squared
+sqrt(rsq)
+
+model.lm <- lm(triplength_avg ~ region2, data = HH_dt_2)
+summary(model.lm)
+rsq <- summary(model.lm)$r.squared
+sqrt(rsq)
+
+model.lm <- lm(triplength_avg ~ housing_type, data = HH_dt_2)
+summary(model.lm)
+rsq <- summary(model.lm)$r.squared
+sqrt(rsq)
+
+model.lm <- lm(triplength_avg ~ garage, data = HH_dt_2)
+summary(model.lm)
+rsq <- summary(model.lm)$r.squared
+sqrt(rsq)
+
+```
+
+VIF
+
+```{r}
+#VIF
+#The VIF may be calculated for each predictor by doing a linear regression of that predictor on all the other predictors, and then obtaining the R2 from that regression. The VIF is just 1/(1-R2).
+# for dummies square gvif^(1/2...) and apply same rule as to VIF
+
+
+HH_dt_2_out$numcars <- as.numeric(as.character(HH_dt_2_out$numcars))
+x_reg <- lm(numcars ~  numlic + region2 + income_numerical + quali_nv + workers + parttime +  hh_children + CS + triplength_avg + nummots + numped + num2039 + num4064 + education + housing_type + quali_opnv + train28 + bus28 + metro28 + garage + tripsavg + numch18 , data = HH_dt_2_out)
+x <- vif(x_reg)
+
+x
+
+```
+
+Make binary models for further analysis
+
+Testing linearity assumption between dependent variable and continuous independent variables
+http://www.statisticalassociates.com/logistic10.htm
+The right-hand predictor side of the equation must be linear with the left-hand outcome side of the equation. You must test for linearity in the logit (in logistic regression the logit is the outcome side). 
+Done via separate logistic regression between 0 and 1 cars, 0 and 2 cars, 0 and 3 cars
+
+```{r}
+HH_dt_bin1  <- filter(HH_dt_2_out, (numcars == 0 | numcars ==1))
+HH_dt_bin2 <- filter(HH_dt_2_out, (numcars == 0 | numcars ==2))
+HH_dt_bin3 <- filter(HH_dt_2_out, (numcars == 0 | numcars ==3))
+#dplyr::count(HH_dt_bin1, numcars)
+#dplyr::count(HH_dt_bin2, numcars)
+#dplyr::count(HH_dt_bin3, numcars)
+
+HH_dt_bin2$numcars <- as.numeric(as.character(HH_dt_bin2$numcars))
+HH_dt_bin2$numcars <- HH_dt_bin2$numcars/2
+
+HH_dt_bin3$numcars <- as.numeric(as.character(HH_dt_bin3$numcars))
+HH_dt_bin3$numcars <- HH_dt_bin3$numcars/3
+
+
+mylogit <- glm(numcars ~  income_numerical + triplength_avg  +tripsavg + nummots  + numped   + numch18   + numlic + workers + parttime + share2039  + share4064  + education + CS + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children, data = HH_dt_bin1, family = "binomial")
+
+mylogit2 <- glm(numcars ~  income_numerical + triplength_avg  +tripsavg + nummots  + numped   + numch18   + numlic + workers + share2039  + share4064  + education + CS + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv +hh_children, data = HH_dt_bin2, family = "binomial")
+
+mylogit3 <- glm(numcars ~  income_numerical + triplength_avg  +tripsavg + nummots  + numped   + numch18   + numlic + workers + share2039  + share4064  + education + CS + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children, data = HH_dt_bin3, family = "binomial")
+
+
+```
+
+
+Plot continuous variables against the logit
+```{r}
+
+
+#http://www.sthda.com/english/articles/36-classification-methods-essentials/148-logistic-regression-assumptions-and-diagnostics-in-r/
+
+
+#logit1
+probabilities <- predict(mylogit, type = "response")
+mydata <- HH_dt_bin1[,c('shareworkers')]
+predictors <- colnames(mydata)
+
+#c('numlic', 'workers', 'parttime', 'nummots', 'triplength_avg', 'income_numerical', 'tripsavg', 'share2039', 'share4064')
+mydata <- mydata %>%
+  mutate(logit = log(probabilities/(1-probabilities))) %>%
+  gather(key = "predictors", value = "predictor.value", -logit)
+
+ggplot(mydata, aes(logit, predictor.value))+
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess" ,span = 0.005, size = 1) + 
+  theme_bw() + 
+  facet_wrap(~predictors, scales = "free_y")
+
+```
+
+```{r}
+# logit2
+probabilities <- predict(mylogit2, type = "response")
+mydata <- HH_dt_bin2[,c('numlic', 'workers', 'parttime', 'nummots', 'triplength_avg', 'income_numerical', 'tripsavg', 'share2039', 'share4064')]
+predictors <- colnames(mydata)
+
+mydata <- mydata %>%
+  mutate(logit = log(probabilities/(1-probabilities))) %>%
+  gather(key = "predictors", value = "predictor.value", -logit)
+
+ggplot(mydata, aes(logit, predictor.value))+
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess",span = 0.005, size = 1) + 
+  theme_bw() + 
+  facet_wrap(~predictors, scales = "free_y")
+```
+
+
+
+```{r}
+
+# logit 3
+probabilities <- predict(mylogit3, type = "response")
+mydata <- HH_dt_bin3[,c('numlic', 'workers', 'parttime', 'nummots', 'triplength_avg', 'income_numerical', 'tripsavg', 'share2039', 'share4064')]
+predictors <- colnames(mydata)
+
+mydata <- mydata %>%
+  mutate(logit = log(probabilities/(1-probabilities))) %>%
+  gather(key = "predictors", value = "predictor.value", -logit)
+
+ggplot(mydata, aes(logit, predictor.value))+
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess",span = 0.005, size = 1) + 
+  theme_bw() + 
+  facet_wrap(~predictors, scales = "free_y")
+```
+
+
+Making binned plots and look at residuals
+
+Binned plots logit 1 (look at them before and after inserting transformations)
+```{r}
+
+x <- predict(mylogit, type="response")
+y <- resid(mylogit, type= "response")
+
+#library(arm)
+binnedplot(HH_dt_bin1$triplength_avg,y) #ok
+binnedplot(HH_dt_bin1$income_numerical,y)#ok
+binnedplot(HH_dt_bin1$sharedrivers,y)#ok
+binnedplot(HH_dt_bin1$tripsavg,y)#ok
+binnedplot(HH_dt_bin1$share4064,y)#ok
+binnedplot(HH_dt_bin1$share2039,y)#ok
+binnedplot(HH_dt_bin1$shareworkers,y)#ok
+binnedplot(HH_dt_bin1$parttime,y)#ok
+binnedplot(HH_dt_bin1$nummots,y) #ok
+binnedplot(HH_dt_bin1$numped,y) # ok
+binnedplot(HH_dt_bin1$numch18,y) #ok
+#binnedplot(HH_dt_bin1$num2039,y) # ok
+#binnedplot(HH_dt_bin1$num4064,y) # ok
+binnedplot(x,y)
+
+
+
+
+```
+
+Binned plots logit 2 (look at them before and after inserting transformations)
+
+```{r}
+x2 <- predict(mylogit2, type="response")
+y2 <- resid(mylogit2, type= "response")
+
+binnedplot(HH_dt_bin2$triplength_avg,y2) #ok
+binnedplot(HH_dt_bin2$income_numerical,y2)#ok
+binnedplot(HH_dt_bin2$sharedrivers,y2)#ok
+binnedplot(HH_dt_bin2$tripsavg,y2)#ok
+binnedplot(HH_dt_bin2$nummots,y2) #ok
+binnedplot(HH_dt_bin2$numped,y2) # ok
+binnedplot(HH_dt_bin2$numch18,y2) #ok
+binnedplot(HH_dt_bin2$share2039,y2) # ok
+binnedplot(HH_dt_bin2$share4064,y2) # ok
+binnedplot(x2,y2)
+```
+
+Binned plots logit 3 (look at them before and after inserting transformations)
+
+```{r}
+
+x3 <- predict(mylogit3, type="response")
+y3 <- resid(mylogit3, type= "response")
+binnedplot(x3,y3)
+binnedplot(HH_dt_bin3$sharedrivers,y3)#ok
+binnedplot(HH_dt_bin3$triplength_avg,y3) #ok
+binnedplot(HH_dt_bin3$income_numerical,y3)#ok
+binnedplot(HH_dt_bin3$tripsavg,y3)#ok
+binnedplot(HH_dt_bin3$nummots,y3) #ok
+binnedplot(HH_dt_bin3$numped,y3) # ok
+binnedplot(HH_dt_bin3$numch18,y3) #ok
+binnedplot(HH_dt_bin3$share2039,y3) # ok
+binnedplot(HH_dt_bin3$share4064,y3) # ok
+
+
+
+```
+
+
+Change logits according to nonlinear associatons: logit1 
+```{r}
+# only add a small constant to 0 values of a column 
+
+HH_dt_bin1$nummots1 = HH_dt_bin1$nummots
+HH_dt_bin1$nummots1[HH_dt_bin1$nummots == 0] <- HH_dt_bin1$nummots1[HH_dt_bin1$nummots == 0] + 0.0001
+
+HH_dt_bin1$parttime1 = HH_dt_bin1$parttime
+HH_dt_bin1$parttime1[HH_dt_bin1$parttime == 0] <- HH_dt_bin1$parttime1[HH_dt_bin1$parttime == 0] + 0.0001
+
+HH_dt_bin1$shareworkers <- HH_dt_bin1$workers / HH_dt_bin1$hhsize
+
+HH_dt_bin1$sharedrivers1 = HH_dt_bin1$sharedrivers
+HH_dt_bin1$sharedrivers1[HH_dt_bin1$sharedrivers == 0] <- HH_dt_bin1$sharedrivers1[HH_dt_bin1$sharedrivers == 0] + 0.0001
+
+mylogit <- glm(numcars ~  income_numerical +triplength_avg+ I(triplength_avg^2) + tripsavg +log(nummots1) + numped  + numch18 + numlic + I(numlic^2) + workers + parttime + share2039 + share4064 + education + CS + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children, data = HH_dt_bin1, family = "binomial")
+
+
+plot(mylogit)
+#29082
+#39403
+#20850
+#19955
+#19252
+
+#19834
+#37739
+#19138
+
+model.data1 <- augment(mylogit) %>% 
+dplyr::mutate(index = 1:n()) 
+model.data1 %>% top_n(3, .cooksd)
+model.data1$HHID <- HH_dt_bin1$HH_ID
+influentials1 = model.data1 %>% 
+filter(abs(.std.resid) > 3)
+influentials1
+
+templogit1 <- c(19834, 37739, 19138)
+HHID_logit1 <- influentials1$HHID[influentials1$index %in% templogit1]
+
+HH_dt_bin1 <- filter(HH_dt_bin1, !(HH_ID %in% HHID_logit1))
+
+
+mylogit <- glm(numcars ~ income_numerical +triplength_avg+ I(triplength_avg^2) + tripsavg +log(nummots1) + numped  + numch18 + numlic+ I(numlic^2) + workers + log(parttime1) + share2039 + share4064 + education + CS + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children, data = HH_dt_bin1, family = "binomial")
+
+
+
+```
+
+
+Change logits according to nonlinear associatons: logit2
+
+```{r}
+
+
+HH_dt_bin2$nummots1 = HH_dt_bin2$nummots
+HH_dt_bin2$nummots1[HH_dt_bin2$nummots == 0] <- HH_dt_bin2$nummots1[HH_dt_bin2$nummots == 0] + 0.0001
+
+HH_dt_bin2$parttime1 = HH_dt_bin2$parttime
+HH_dt_bin2$parttime1[HH_dt_bin2$parttime == 0] <- HH_dt_bin2$parttime1[HH_dt_bin2$parttime == 0] + 0.0001
+
+HH_dt_bin2$sharedrivers1 = HH_dt_bin2$sharedrivers
+HH_dt_bin2$sharedrivers1[HH_dt_bin2$sharedrivers == 0] <- HH_dt_bin2$sharedrivers1[HH_dt_bin2$sharedrivers == 0] + 0.0001
+
+mylogit2 <- glm(numcars ~ income_gr +triplength_avg+ I(triplength_avg^2) + tripsavg +log(nummots1) + numped  + numch18 + numlic + I(numlic^2) + workers + parttime+ share2039 + share4064 + education + CS + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children, data = HH_dt_bin2, family = "binomial")
+
+plot(mylogit2)
+#15347
+#20378
+#14313
+
+model.data2 <- augment(mylogit2) %>% 
+dplyr::mutate(index = 1:n()) 
+model.data2 %>% top_n(3, .cooksd)
+model.data2$HHID <- HH_dt_bin2$HH_ID
+influentials2 = model.data2 %>% 
+filter(abs(.std.resid) > 3)
+
+templogit2 <- c(15347,20378,14313)
+HHID_logit2 <- influentials2$HHID[influentials2$index %in% templogit2]
+
+HH_dt_bin2 <- filter(HH_dt_bin2, !(HH_ID %in% HHID_logit2))
+
+mylogit2 <- glm(numcars ~  income_gr +triplength_avg+ I(triplength_avg^2) + tripsavg +log(nummots1) + numped  + numch18 + numlic+ I(numlic^2) + workers + log(parttime1) + share2039 + share4064 + education + CS + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children, data = HH_dt_bin2, family = "binomial")
+
+
+```
+
+
+Change logits according to nonlinear associatons: logit3
+
+```{r}
+
+HH_dt_bin3$nummots1 = HH_dt_bin3$nummots
+HH_dt_bin3$nummots1[HH_dt_bin3$nummots == 0] <- HH_dt_bin3$nummots1[HH_dt_bin3$nummots == 0] + 0.0001
+
+HH_dt_bin3$parttime1 = HH_dt_bin3$parttime
+HH_dt_bin3$parttime1[HH_dt_bin3$parttime == 0] <- HH_dt_bin3$parttime1[HH_dt_bin3$parttime == 0] + 0.0001
+
+
+mylogit3 <- glm(numcars ~  income_gr +triplength_avg+ I(triplength_avg^2) + tripsavg +log(nummots1) + numped  + numch18 + numlic + I(numlic^2) + workers + parttime + share2039 + share4064 + education + CS + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children, data = HH_dt_bin3, family = "binomial")
+
+
+#Extract model results logit3 and remove all influential points as here are less and more heterogenous observations
+#plot(mylogit3)
+model.data <- augment(mylogit3) %>% 
+dplyr::mutate(index = 1:n()) 
+model.data %>% top_n(3, .cooksd)
+model.data$HHID <- HH_dt_bin3$HH_ID
+influentials = model.data %>% 
+filter(abs(.std.resid) > 3)
+
+HH_dt_bin3 <- filter(HH_dt_bin3, !(HH_ID %in% influentials$HHID))
+
+mylogit3 <- glm(numcars ~   income_numerical +triplength_avg+ I(triplength_avg^2) + tripsavg +log(nummots1) + numped  + numch18 + numlic+ I(numlic^2) + workers + log(parttime1) + share2039 + share4064 + education + CS + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children, data = HH_dt_bin3, family = "binomial")
+
+```
+
+Merge all higly influential points to remove them from the big dataframe
+
+```{r}
+#http://www.sthda.com/english/articles/36-classification-methods-essentials/148-logistic-regression-assumptions-and-diagnostics-in-r/ ( for higly influential points)
+
+
+influential_HHID <- influentials$HHID
+influential_HHID <- as.numeric(as.character(influentials$HHID))
+HHID_logit1 <- as.numeric(as.character(HHID_logit1))
+HHID_logit2 <- as.numeric(as.character(HHID_logit2))
+temp100 = c(influential_HHID,HHID_logit1, HHID_logit2)
+HH_dt_2_out <- filter(HH_dt_2_out,!(HH_ID %in% temp100))
+
+HH_dt_2_out$nummots1 = HH_dt_2_out$nummots
+HH_dt_2_out$nummots1[HH_dt_2_out$nummots == 0] <- HH_dt_2_out$nummots1[HH_dt_2_out$nummots == 0] + 0.0001
+
+HH_dt_2_out$parttime1 = HH_dt_2_out$parttime
+HH_dt_2_out$parttime1[HH_dt_2_out$parttime == 0] <- HH_dt_2_out$parttime1[HH_dt_2_out$parttime == 0] + 0.0001
+
+HH_dt_2_out$CSno <- 0
+HH_dt_2_out$CSno[HH_dt_2_out$CS == "no"] <- HH_dt_2_out$CSno[HH_dt_2_out$CS == "no"] + 1
+
+HH_dt_2_out$CSyes <- 0 
+HH_dt_2_out$CSyes[HH_dt_2_out$CS == "yes"] <- HH_dt_2_out$CSyes[HH_dt_2_out$CS == "yes"] + 1
+
+HH_dt_2_out$CSmultiple  <- 0
+HH_dt_2_out$CSmultiple[HH_dt_2_out$CS == "yes_multiple"] <- HH_dt_2_out$CSmultiple[HH_dt_2_out$CS == "yes_multiple"] + 1
+```
+
+
+
 

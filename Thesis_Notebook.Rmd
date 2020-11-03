@@ -1497,7 +1497,7 @@ HH_dt_model1$anzauto <- as.factor(HH_dt_model1$anzauto)
 datamlogit <- mlogit.data(HH_dt_model1, choice = "anzauto", shape = "wide")
 
 
-model1 <- mlogit(anzauto ~ 1 | quali_opnv, data = datamlogit, reflevel = "0")
+
 
 install.packages('margins')
 library(margins)
@@ -1645,217 +1645,7 @@ summary(test)
 ?
 ```
 
-Regression using mnlogit
-```{r}
-#https://cran.r-project.org/web/packages/mnlogit/vignettes/mnlogit.pdf
 
-HH_dt_model1$tram28 <- factor(HH_dt_model1$tram28, ordered = FALSE)
-HH_dt_model1$bahn28 <- factor(HH_dt_model1$bahn28, ordered = FALSE)
-HH_dt_model1$bus28 <- factor(HH_dt_model1$bus28, ordered = FALSE)
-
-# needs data in long format (like mlogit)
-mlogitSample <- mlogit.data(HH_dt_model1, choice = "anzauto", shape = "wide") 
-head(mlogitSample)
-
-library(mlogit)
-# needs data in long format (like mlogit)
-mlogitSample2 <- mlogit.data(HH_dt_model2, choice = "anzauto", shape = "wide") 
-head(mlogitSample2)
-
-
-
-# ANZAUTO als factor -> kein unterschied
-#HH_dt_model3 <- HH_dt_model1
-#HH_dt_model3$anzauto <- as.factor(HH_dt_model3$anzauto)
-#mlogitSample3 <- mlogit.data(HH_dt_model3, choice = "anzauto", shape = "wide") 
-#fitfactor <- mnlogit(fm, mlogitSample3, ncores=4, choiceVar = "alt")
-
-# formula
-
-# 1.  The data must be in the ’long’ format.  This means that for each observation there must be asmany rows as there are alternatives (which should be grouped together).
-#2.   The formula should be specified in the format:  responseVar ~ choice specific variables withgeneric coefficients | individual specific variables | choice specific variables with choice specificcoefficients. These are the 3 available variable types.
-#3. Any type of variables may be omitted. To omit use "1" as a placeholder.
-#4. An alternative specific intercept is included by default in the estimation. To omit it, use a ’-1’ or’0’ anywhere in the formula.
-
-#NULL MODEL (only intercept)
-fm2 <- formula(anzauto ~ 1 | 1 | 1)
-fit2 <- mnlogit(fm2, mlogitSample, ncores=2, choiceVar = "alt")
-
-# ganz kleines bisschen besser!
-fm3 <- formula(anzauto ~ 1 | anzfs + region2 + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65+ bahn28 + garage + anzahlWege+anzfs:region2+hheink_imp:region2 + CS:region2 + garage:region2 + haustyp:region2 + Weglänge_avg:region2 + berufstaetige:region2  + anzahlWege:region2| 1)
-fit3 <- mnlogit(fm3, mlogitSample2, ncores=4, choiceVar = "alt")
-summary(fit3)
-
-library(mnlogit)
-install.packages("effects")
-library(effects)
-
-
-fm <- formula(anzauto ~ 1 | anzfs + region2 + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege| 1)
-fit <- mnlogit(fm, mlogitSample2, ncores=4, choiceVar = "alt")
-summary(fit)
-
-#ohne region: 
-#fm_ohneregion <- formula(anzauto ~ 1 | anzfs + einkommen + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege + | 1)
-#fit_ohneregion <- mnlogit(fm_ohneregion, mlogitSample, ncores=4, choiceVar = "alt")
-#summary(fit_ohneregion)
-
-
-#mc fadden pseudo r2 (cox and snell, nagelkerke?): 
-as.vector(1 - (logLik(fit) / logLik(fit2)))
-
-#0.3495484 garage
-# 116680
-
-# print coefficients
-summary(fit)
-
-print(fit, what = "eststat")
-print(fit, what = "modsize")
-
-
-#VIF
-#The VIF may be calculated for each predictor by doing a linear regression of that predictor on all the other predictors, and then obtaining the R2 from that regression. The VIF is just 1/(1-R2).
-# for dummies square gvif^(1/2...) and apply same rule as to VIF
-
-library(car)
-x_reg <- lm(anzauto ~  anzfs + region2 + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65+ bahn28 + garage + anzahlWege+anzfs:region2+hheink_imp:region2 + CS:region2 + garage:region2 + haustyp:region2 + Weglänge_avg:region2 + berufstaetige:region2  + anzahlWege:region2, data = HH_dt_model2)
-vif(x_reg)
-
-
-
-#relative risk rates / the odds ratio 
-format(exp(coef(fit)), scientific = FALSE)
-
-#https://data.princeton.edu/wws509/r/mlogit
-
-# average marginal effects
-#Marginal effects are a useful way to describe the average effect of changes in explanatory variables on the change in the probability of outcomes in logistic regression and other nonlinear models.
-
-#When comparing some category to the base outcome, a positive coefficient always means you are more likely to be in the comparison category than in the base category. However, when talking about the probability of being in a given category, the marginal effect (that is, the effect on the probability of being in a specific group by increasing the independent variable by one) does not have to be positive. This is because, in the former example, we are only comparing the two categories to one another. On the other hand, in the latter example, we are talking about comparing the probability of being in the comparison category not just to the base outcome (which will always be higher if the coefficient is positive) but also to the probability of being in all the other comparison groups.
-
-#Let's assume we have gropus A, B, and C. A is the base outcome. If a coefficient on variable X is positive for group B, then increasing X will always make you more likely to be in B than A. However, increasing X does not necessarily make you more likely to be in group B, because the effect on the probability of being in group C may be even greater than the probability of being in group B, which means the marginal effect of X may actually be negative for group B (because you are more likely at this point to be in group C), but you are still more likely to be in group B than group A. 
-
-save.image(file='yoursession.RData')
-
-# anzfs
-B <- coef(fit)
-probs <- predict(fit, type="probs")
-#B <- as.matrix(B)
-b <- c(0,B[c("anzfs:1", "anzfs:2", "anzfs:3")])
-pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
-me <- matrix(0, nrow(probs), ncol(probs))
-for(j in 1:4) {
-  me[,j] <- probs[,j] * (b[j] - pb)
- }
-apply(me, 2, mean)
-
-#We find that the average marginal effect of anzfs on having 2 cars is positive: 0.19. This means that the probability of having 2 cars is on average about 19 percentage points higher for households for a unit increase in drivers licenses in comparison with households with the same other variables. 
-
-#Marginal Effect for Xk = P(Y=1 |X) * P(Y = 0|X) * bk.
-
-b <- c(0,B[c("region23:1", "region23:2", "region23:3")])
-pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
-me <- matrix(0, nrow(probs), ncol(probs))
-for(j in 1:4) {
-  me[,j] <- probs[,j] * (b[j] - pb)
- }
-apply(me, 2, mean)
-
-#We find that the average marginal effect of einkommen2 on having 1 car is actually negative: -0.11. This means that the probability of having 1 car is on average about 11 percentage points lower for households in einkommen2 than for households in other einkommen groups with the same other variables. (for 1 car really heterogenous, therefore not that easy interpretable)
-
-
-
-# how to interpret:
-# total of 3 models, 1 relative to 0, 2 relative to 0, 3 relative to zero
-
-# output represents log-odds
-# standard interpretation of the multinomial logit is that for a unit change in the predictor variable, the logit of outcome m relative to the referent group is expected to change by its respective parameter estimate (which is in log-odds units) given the variables in the model are held constant.
-
-# for relative risk ratio (odds) instead of log odds which is the output of the model
-## extract the coefficients from the model and exponentiate
-# The odds ratio of a coefficient indicates how the risk of the outcome falling in the comparison group compared to the risk of the outcome falling in the referent group changes with the variable in question.  An odds ratio > 1 indicates that the risk of the outcome falling in the comparison group relative to the risk of the outcome falling in the referent group increases as the variable increases.  In other words, the comparison outcome is more likely.  An odds ratio < 1 indicates that the risk of the outcome falling in the comparison group relative to the risk of the outcome falling in the referent group decreases as the variable increases.
-
-# marginal effects :
-# To determine the effect of black in the probability scale we need to compute marginal effects, which can be done using continuous or discrete calculations. 
-# We find that the average marginal effect of black on work is actually negative: -0.0406. This means that the probability of working is on average about four percentage points lower for blacks than for non-blacks with the same education and experience. 
-
-# e.g. einkommen: 
-# the log odds for einkommen2 to einkommen1 is 0.54 for having 1 car relative to 0 car, meaning it is more likely to have 1 car for people in einkommen2 than for people in einkommen1
-# the relative risk rate for einkommen 2 to einkommen 1 is 1.72 for having 1 car relative to 0 cars, therefore it is more likely to have 1 car than zero cars when having einkommen2
-# the relative probability of having 1 car rather than having 0 cars for people in einkommen 2 is 72% higher than the relative probability for people in einkommen1 with the same other variables!
-
-
-# e.g. anzfs
-# estimate for a one unit increase in anzfs for 1 car relative to 0 cars. if a household has one more drivers license, the log-odds of having 1 car relative to zero car would be expected to increase by 1.84
-# the relative risk rate for an increase of 1 drivers license is 6.34 for having 1 car relative to 0 cars, therefore it is 6.34 times more likely to have 1 car than 0 cars when you have one drivers license more.
-
-
-# interpreting the intercept? -> leave in
-#The intercept might be interpreted as the estimated baseline log odds when all independent variables are set to 0, or the reference category in case of categorical variables. The probability when all independent variables are set to 0 is log(intercept)/(1+log(intercept)).
-
-
-
-
-
-print(fit)
-predict(fit)
-
-#tests
-waldtest(fit, fit2)
-
-model11 <- mlogit(anzauto_gr2 ~ 1 | hheink_gr2 | 1, data = datamlogit, reflevel = "0", alt.subset = c("0","1", "2"))
-
-fit <- mnlogit(fm, mlogitSample, ncores=4, choiceVar = "alt")
-
-model_constrained <- mnlogit(fm, data = mlogitSample, ncores = 4, reflevel = "0", alt.subset = c("0","1", "2"), choiceVar = "alt")
-scoretest(fit, model_constrained)
-
-lrtest(fit3,fit)
-
-
-hmftest(fit)
-```
-Average marginal effects anders: funktioniert nicht
-
-```{r}
-
-
-#https://stackoverflow.com/questions/54079553/how-to-get-average-marginal-effects-ames-with-standard-errors-of-a-multinomial
-
-# geht so nur mit numericals
-fit_mlogit <- mlogit(anzauto ~ 1 | anzfs + region2 + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege| 1, data = mlogitSample2, reflevel = "0")
-
-
-
-
-c.names <- names(fit_mlogit$model)[- c(1, 19:21)]
-ME.mnl <- sapply(c.names, function(x) {effects(fit_mlogit, covariate=x, data=mlogitSample)}, simplify=FALSE) 
-
-Me_test2 <-  stats::effects(fit_mlogit, covariate="anzahlWege", data=mlogitSample)
-
-# get AMEs
-AME.mnl <- colMeans(Me_test2)
-AME.mnl
-
-AME.fun <- function(betas) {
-  tmp <- fit_mlogit
-  tmp$coefficients <- betas
-  ME.mnl <- sapply(c.names, function(x) 
-    effects(tmp, covariate = x, data = mlogitSample), simplify = FALSE)
-  c(sapply(ME.mnl, colMeans))
-}
-
-install.packages("numDeriv")
-require(numDeriv)
-grad <- jacobian(AME.fun, fit_mlogit$coef)
-
-(AME.mnl.se <- matrix(sqrt(diag(grad %*% vcov(fit_mlogit) %*% t(grad))), nrow = 16, byrow = TRUE))
-
-# standard errors:
-AME.mnl / AME.mnl.se
-
-```
 
 ```{r}
 myeffects<-function (object, covariate = NULL, type = c("aa", "ar", "rr", 
@@ -1915,6 +1705,10 @@ myeffects(fit_mlogit, covariate = "anzfs", data = mlogitSample2)
 ```
 
 
+
+
+
+
 Regional models 
 
 ```{r}
@@ -1939,6 +1733,8 @@ Rural_dt$region <- as.numeric(Rural_dt$region)
 Rural_dt$region <- as.factor(Rural_dt$region)
 dplyr::count(Rural_dt, region)
 str(Rural_dt)
+
+
 
 
 # data in long format (like mlogit)
@@ -1989,6 +1785,7 @@ HH_dt_model2$anzauto <- relevel(HH_dt_model2$anzauto, ref = "0")
 # this value multiplied by two is seen in summary as residual deviance and can be used in comparisons (look into that!)
 fit_multinom <- multinom(anzauto ~ 1 +anzfs + region + hheink_imp + quali_nv + berufstaetige + householdtype + CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege + region:quali_opnv, data = HH_dt_model2)
 
+
 # test significance
 Anova(fit_multinom)
 
@@ -1997,9 +1794,9 @@ z <- summary(fit_multinom)$coefficients/summary(fit_multinom)$standard.errors
 p <- (1 - pnorm(abs(z), 0, 1)) * 2
 p
 
-#effects plot
-plot(effect("region:quali_opnv", fit_multinom), multiline=TRUE, x.var = "quali_opnv", rug=FALSE)
-plot(effect("hheink_imp", fit_multinom), multiline=TRUE, rug=FALSE)
+
+
+
 
 # comparison:
 
@@ -2010,7 +1807,15 @@ fm_test <- formula(anzauto ~ 1 | anzfs + region + hheink_imp + quali_nv + berufs
 fit_test <- mnlogit(fm_test, mlogitSample_test, ncores=2, choiceVar = "alt")
 summary(fit_test)
 
+predict(fit_multitest)
+pred_accuracy = mean(predict(fit_multitest)==HH_dt_model2$anzauto)
+pred_accuracy
 
+logitgof(HH_dt_model2$anzauto, fitted(fit_multitest), g=10, ord=FALSE)
+
+install.packages('rms')
+library(rms)
+mod1b <- lrm(anzauto ~ anzfs + region + hheink_imp+ quali_nv + berufstaetige + householdtype + CS, data = HH_dt_model2)
 
 fit_multitest <- multinom(anzauto ~ anzfs + region + hheink_imp+ quali_nv + berufstaetige + householdtype + CS, data = HH_dt_model2)
 #multitest.cf <- coef(fit_multitest)
@@ -2041,7 +1846,6 @@ plot(effect("anzfs", fit_multitest2), multiline=TRUE, x.var = "anzfs", rug=FALSE
 Validating the model 
 
 ```{r}
-#Hausman test for IIA
 
 # Information criteria?
 
@@ -2051,7 +1855,6 @@ Validating the model
 
 #Likelihood ratio test
 
-#VIF
 
 
 ```
@@ -2065,4 +1868,79 @@ Marginal effects
 
 ```
 
+
+Binned plots
+
+```{r}
+
+HH_dt_2_bt <- HH_dt_2
+HH_dt_2_bt$numcars <- HH_dt_2$numcars
+HH_dt_2_bt$trips <- HH_dt_2$trips + 1
+HH_dt_2_bt$triplength_avg <- HH_dt_2$triplength_avg + 1
+HH_dt_2_bt$nummots <- HH_dt_2$nummots + 1
+HH_dt_2_bt$numped <- HH_dt_2$numped + 1
+HH_dt_2_bt$numlic <- HH_dt_2$numlic + 1
+HH_dt_2_bt$income_numerical <- HH_dt_2$income_numerical + 1
+HH_dt_2_bt$numch18 <- HH_dt_2$numch18 + 1
+HH_dt_2_bt$workers <- HH_dt_2$workers + 1
+HH_dt_2_bt$num2039 <- HH_dt_2$num2039+ 1
+HH_dt_2_bt$num4064 <- HH_dt_2$num4064+ 1
+HH_dt_2_bt$num65 <- HH_dt_2$num65+ 1
+
+HH_dt_2_bt <- HH_dt_2_out
+HH_dt_2_bt$numcars <- HH_dt_2_out$numcars
+HH_dt_2_bt$trips <- HH_dt_2_out$trips + 1
+HH_dt_2_bt$triplength_avg <- HH_dt_2_out$triplength_avg + 1
+HH_dt_2_bt$nummots <- HH_dt_2_out$nummots + 1
+HH_dt_2_bt$numped <- HH_dt_2_out$numped + 1
+HH_dt_2_bt$numlic <- HH_dt_2_out$numlic + 1
+HH_dt_2_bt$income_numerical <- HH_dt_2_out$income_numerical + 1
+HH_dt_2_bt$numch18 <- HH_dt_2_out$numch18 + 1
+HH_dt_2_bt$workers <- HH_dt_2_out$workers + 1
+HH_dt_2_bt$num2039 <- HH_dt_2_out$num2039+ 1
+HH_dt_2_bt$num4064 <- HH_dt_2_out$num4064+ 1
+HH_dt_2_bt$num65 <- HH_dt_2_out$num65+ 1
+
+
+
+#in mnlogit
+boxTidwell(numcars ~  triplength_avg + income_numerical  , ~ education + CS + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + householdtype_all , data=HH_dt_2_bt)
+
+#triplength raus
+# num4064 raus
+#numlic raus
+
+boxTidwell(numcars ~  triplength_avg + income_numerical  , ~ trips + numch18 + workers + num2039 + num65 + education + CS + + nummots+ numped +region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + householdtype_all , data=HH_dt_2_bt)
+
+#transform into long format
+HH_dt_2_bt$log.triplength  <- log(HH_dt_2_bt$triplength_avg)
+HH_dt_2_bt$log.triplength <- HH_dt_2_bt$log.triplength - mean(HH_dt_2_bt$log.triplength)
+
+
+
+mlogit_testlin <- mlogit.data(HH_dt_2_bt, choice = "numcars", shape = "wide") 
+
+#run model to see if linearity holds
+fm_testlin <- formula(numcars ~ 1 |  trips + trips:log(trips) + nummots + nummots:log(nummots) + numped + numped:log(numped) + numlic + numlic:log(numlic) + numch18 + numch18:log(numch18) + workers + workers:log(workers) + num2039 +  num2039:log(num2039) + num65 + num65:log(num65) + education + CS + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + householdtype_all| 1)
+fit_testlin <- mnlogit(fm_testlin, mlogit_testlin, ncores=4, choiceVar = "alt", verbose = T)
+summary(fit_testlin)
+
+#only real continuous variables 
+fm_testlin <- formula(numcars ~ 1 | log(income_numerical) + log.triplength  + trips +trips*trips + nummots  + numped + numlic + numch18  + log(workers) + num2039 +  num65 + education + CS + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + householdtype_all| 1)
+fit_testlin <- mnlogit(fm_testlin, mlogit_testlin, ncores=4, choiceVar = "alt", verbose = T)
+summary(fit_testlin)
+
+x1 <- predict(fit_testlin)
+x2 <- x1[,2]
+y <- resid(fit_testlin, type="response")
+library(arm)
+binnedplot(x2,y2)
+
+arm::binnedplot(x2, 
+                y)
+
+#ausprobieren mit numlogit
+
+coefs <- as.data.frame(fit_testlin$coefficients)
+```
 

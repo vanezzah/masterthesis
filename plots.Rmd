@@ -1,0 +1,128 @@
+---
+title: "Plot"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Effect plots model 1
+
+Making mnlogit output the same as multinom (example)
+
+```{r}
+#Source: https://stackoverflow.com/questions/43623076/multinomial-logit-in-r-mlogit-versus-nnet/43697814
+
+mlogitSample_test <- mlogit.data(HH_dt_model2, choice = "anzauto", shape = "wide") 
+
+fm_test <- formula(anzauto ~ 1 | anzfs + region + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage)
+fit_test <- mnlogit(fm_test, mlogitSample_test, ncores=2, choiceVar = "alt")
+
+fit_multitest <- multinom(anzauto ~ anzfs + region + hheink_imp+ quali_nv + berufstaetige + householdtype + CS +Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage, data = HH_dt_model2)
+
+
+fit_multitest <- multinom(anzauto ~ anzfs  + berufstaetige +, data = HH_dt_model2)
+fm_test <- formula(anzauto ~ 1| anzfs + berufstaetige )
+fit_test <- mnlogit(fm_test, mlogitSample_test, ncores=2, choiceVar = "alt")
+
+#substitution of coefficients
+fit_multitest2 <- fit_multitest
+cf <- matrix(fit_multitest2$wts, nrow=4) # 1 + die anzahl an variablen
+fit_test.cf <- coef(fit_test)
+cf[2:nrow(cf), 2:ncol(cf)] <- (matrix(fit_test.cf,nrow=3)) #anzahl der levels der dependent variable -1
+
+# Substitution of probabilities
+fit_multitest2$wts <- c(cf)
+fit_multitest2$fitted.values <- fit_test$probabilities
+
+plot(effect("anzfs", fit_multitest2), multiline=TRUE, x.var = "anzfs", rug=FALSE)
+
+# für andere
+plot(effect("hheink_imp", fit_multinom), multiline=TRUE, rug=FALSE)
+
+```
+
+
+Making mnlogit output the same as multinom (normal)
+```{r}
+fit_multinom <- multinom(numcars ~ income_numerical +triplength_avg+ I(triplength_avg^2) + tripsavg +log(nummots1) + numped  + numch18 + numlic + I(numlic^2) + workers + parttime + share2039 + share4064 + CSyes + CSmultiple+ region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children, data = HH_dt_2_out)
+
+fm_new <- formula(numcars ~   1| income_numerical +triplength_avg+ I(triplength_avg^2) + tripsavg +log(nummots1) + numped  + numch18 +numlic + I(numlic^2)  + workers + parttime + share2039 + share4064 + CSyes + CSmultiple + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children|1)
+fit_new <- mnlogit(fm_new, mnlogit_dt_out, ncores=4, choiceVar = "alt")
+
+
+#substitution of coefficients
+fit_multinom2 <- fit_multinom
+cf2 <- matrix(fit_multinom2$wts, nrow=39) # davor 39 
+fit_new.cf <- coef(fit_new)
+cf2[2:nrow(cf2), 2:ncol(cf2)] <- (matrix(fit_new.cf,nrow=3))
+
+# Substitution of probabilities
+fit_multinom2$wts <- c(cf2)
+fit_multinom2$fitted.values <- fit_new$probabilities
+
+plot(effect("triplength_avg", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("income_numerical", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("sharedrivers", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("tripsavg", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("log(nummots1)", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("numped", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("numch18", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("workers", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("parttime", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("share2039", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("share4064", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("CSyes", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("CSmultiple", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("region2", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("bus28", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("metro28", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("train28", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("housing_type", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("garage", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("quali_opnv", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("quali_nv", fit_multinom2), multiline=TRUE, rug=FALSE)
+plot(effect("hh_children", fit_multinom2), multiline=TRUE, rug=FALSE)
+
+```
+
+
+Effect plots interaction effects and normal effects
+
+```{r}
+library(effects)
+
+#effects plot
+plot(effect("quali_nv", fit_multitest), multiline=TRUE, x.var = "quali_nv", rug=FALSE)
+
+
+```
+
+interplot
+
+```{r}
+install.packages('interplot')
+library(interplot)
+# https://cran.r-project.org/web/packages/interplot/vignettes/interplot-vignette.html
+
+# https://cran.r-project.org/web/packages/sjPlot/vignettes/plot_marginal_effects.html
+
+#https://lost-stats.github.io/Presentation/marginal_effects_plots_for_interactions_with_continuous_variables.html
+
+#interplot(m = fit_multinom, var1 = "trips", var2 = "income_numerical")
+
+
+```
+```{r}
+ProbCat <- predict(fit_new)
+categHat <- levels(HH_dt_2_out$numcars)[max.col(ProbCat)]
+
+facHat <- factor(categHat, levels=levels(HH_dt_2_out$numcars))
+cTab   <- table(HH_dt_2_out$numcars, facHat, dnn=c("Ycateg", "facHat"))
+addmargins(cTab)
+
+(CCR <- sum(diag(cTab)) / sum(cTab))
+
+```
+
