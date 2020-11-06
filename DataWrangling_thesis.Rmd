@@ -819,3 +819,21 @@ HH_dt_2$single_parent <- factor(HH_dt_2$single_parent)
 
 
 ```
+
+Make separate columns out of CS column 
+```{r}
+HH_dt_2$CSno <- 0
+HH_dt_2$CSno[HH_dt_2$CS == "no"] <- HH_dt_2$CSno[HH_dt_2$CS == "no"] + 1
+
+HH_dt_2$CSyes <- 0 
+HH_dt_2$CSyes[HH_dt_2$CS == "yes"] <- HH_dt_2$CSyes[HH_dt_2$CS == "yes"] + 1
+
+HH_dt_2$CSmultiple  <- 0
+HH_dt_2$CSmultiple[HH_dt_2$CS == "yes_multiple"] <- HH_dt_2$CSmultiple[HH_dt_2$CS == "yes_multiple"] + 1
+
+#as factors
+HH_dt_2$CSmultiple <- factor(HH_dt_2$CSmultiple)
+HH_dt_2$CSyes <- factor(HH_dt_2$CSyes)
+HH_dt_2$CSno <- factor(HH_dt_2$CSno)
+```
+

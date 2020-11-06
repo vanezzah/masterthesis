@@ -14,10 +14,9 @@ Libraries
 #install.packages('texreg')
 #install.packages('mnlogit')
 #install.packages("effects")
-#library(stargazer)
-#library(texreg)
-#library(mmlogit)
-#library(effects)
+library(stargazer)
+library(texreg)
+library(effects)
 
 ```
 
@@ -35,6 +34,8 @@ HH_dt_2_out$numcars <- factor(HH_dt_2_out$numcars)
 
 HH_dt_2_out$sharedrivers <- HH_dt_2_out$numlic / HH_dt_2_out$hhsize
 HH_dt_2_out$shareworkers <- HH_dt_2_out$workers/HH_dt_2_out$hhsize
+
+
 
 # transform data to long format
 mnlogit_dt_out <- mlogit.data(HH_dt_2_out, choice = "numcars", shape = "wide") 
@@ -56,7 +57,7 @@ summary(fit1)
 
 # model formulation after accounting for nonlinearity and multicollinearity
 
-fm_new <- formula(numcars ~  1| income_numerical +triplength_avg+ I(triplength_avg^2) + tripsavg +log(nummots1) + numped  + numch18 +numlic + I(numlic^2)  + workers + parttime + share2039 + share4064 + CSyes + CSmultiple + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children|1)
+fm_new <- formula(numcars ~  1| income_numerical +triplength_avg+ I(triplength_avg^2) + tripsavg +log(nummots1) + numped +numlic + I(numlic^2)  + numch18 + workers + parttime + share2039 + share4064 + CSyes + CSmultiple + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv|1)
 fit_new <- mnlogit(fm_new, mnlogit_dt_out, ncores=4, choiceVar = "alt")
 summary(fit_new)
 #fit_new_mlogit<- mlogit(fm_new, mnlogit_dt_out, reflevel = '0')
@@ -78,8 +79,6 @@ as.vector(1 - exp((2/N) * (LL0 - LL1)))
 
 # nagelkerke r2
 as.vector((1 - exp((2/N) * (LL0 - LL1))) / (1 - exp((2/N)*LL0)))
-
-
 
 
 # compare with null model 
@@ -155,6 +154,15 @@ logitgof(HH_dt_bin3$numcars, fitted(mylogit3, outcome=FALSE), g=20, ord=FALSE)
 
 
 ```
+
+Hosmer-Lemeshow standardization for large samples
+```{r}
+index <- sample(1:nrow(iris), 5)
+
+```
+
+
+
 
 Results - Model 1
 
@@ -330,7 +338,7 @@ me <- matrix(0, nrow(probs), ncol(probs))
 for(j in 1:4) {
   me[,j] <- probs[,j] * (b[j] - pb)
 }
-print("log(parttime)")
+print("parttime")
 r<- apply(me, 2, mean)
 r <- c("parttime", r)
 AVE_df <- insertRow(AVE_df,1,r)
@@ -609,7 +617,7 @@ r <- c("rural", r)
 AVE_df <- insertRow(AVE_df,1,r)
 
 #CS
-b <- c(0,B[c("CSyes:1", "CSyes:2", "CSyes:3")])
+b <- c(0,B[c("CSyes1:1", "CSyes1:2", "CSyes1:3")])
 pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
 me <- matrix(0, nrow(probs), ncol(probs))
 for(j in 1:4) {
@@ -622,7 +630,7 @@ AVE_df <- insertRow(AVE_df,1,r)
 
 
 
-b <- c(0,B[c("CSmultiple:1", "CSmultiple:2", "CSmultiple:3")])
+b <- c(0,B[c("CSmultiple1:1", "CSmultiple1:2", "CSmultiple1:3")])
 pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
 me <- matrix(0, nrow(probs), ncol(probs))
 for(j in 1:4) {
@@ -634,9 +642,7 @@ r <- c("CSmultiple", r)
 AVE_df <- insertRow(AVE_df,1,r)
 
 AVE_df <- as.data.frame(AVE_df)
-AVE_df$zero_cars <- as.numeric(as.character(AVE_df$zero_cars))
 
-AVE_df_ordered <- AVE_df[order(-AVE_df$zero_cars),]
 
 ```
 
@@ -754,5 +760,64 @@ Wilcoxon rank sum to test for differences between AMEs
 #me2039 <- me
 #me4064 <- me
 res <- wilcox.test(me2039[,4], me4064[,4], paired = TRUE)
+```
+
+Interaction effects
+
+```{r}
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+Forward selection (normal model)
+
+```{r}
+fm_new <- formula(numcars ~  1| numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + share4064 + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28|1)
+fit_new <- mnlogit(fm_new, mnlogit_dt_out, ncores=4, choiceVar = "alt")
+as.vector(1 - (logLik(fit_new) / LL0))
+
+summary(fit_new)
+
+logitgof(HH_dt_2_out$numcars, fitted(fit_interaction, outcome = FALSE))
+
+#mc fadden:
+as.vector(1 - (logLik(fit_new) / LL0))
+
+
+
+
+
+```
+
+
+Forward selection (interaction model)
+
+```{r}
+
+fm_adapted <- formula(numcars ~  1| numlic + I(numlic^2) + region2 + income_numerical+ I(income_numerical^2) + quali_nv + CSyes + CSmultiple + workers + I(workers^2) + triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + I(share2039^2)+ share4064 + I(share4064^2) +hh_children + garage + metro28 + train28 + tripsavg + I(tripsavg^2)+ parttime + I(parttime^2)+ numped + I(numped^2)+ bus28 |1)
+fit_adapated <- mnlogit(fm_adapted, mnlogit_dt_out, ncores=4, choiceVar = "alt")
+
+fm_interaction <-formula(numcars ~  1|region2 + numlic + I(numlic^2) + region2:numlic + region2:I(numlic^2) + income_numerical +I(income_numerical^2)+ region2:income_numerical + region2:I(income_numerical^2) + quali_nv + region2:quali_nv + CSyes + region2:CSyes + workers+ I(workers^2)+region2:workers + triplength_avg+ I(triplength_avg^2)+ region2:triplength_avg+ region2:I(triplength_avg^2) + log(nummots1) + housing_type + garage + quali_opnv + share2039 + I(share2039^2)  +  region2:share2039 + region2:I(share2039^2) + share4064 + CSmultiple+ hh_children + region2:hh_children + metro28 +tripsavg + parttime + train28 +numped + I(numped^2) + region2:numped + region2:I(numped^2) |1)
+fit_interaction <- mnlogit(fm_interaction, mnlogit_dt_out, ncores=4, choiceVar = "alt")
+as.vector(1 - ((logLik(fit_interaction)) / (logLik(fit_null))))
+
+#fm_interaction <- formula(numcars ~  1| numlic + I(numlic^2) + region2 + income_numerical+ I(income_numerical^2) + quali_nv + CSyes + CSmultiple + workers + I(workers^2) + triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + I(share2039^2)+ share4064 + I(share4064^2) +hh_children + garage + metro28 + train28 + tripsavg + parttime + I(parttime^2)+ numped + I(numped^2)+ bus28 + region2:income_numerical + region2:I(income_numerical^2) + region2:quali_nv + region2:CSyes + region2:workers + region2:triplength_avg + region2:numped + region2:garage + region2:share2039 + region2:share4064 + region2:parttime + region2:numlic + region2:I(numlic^2) |1)
+
+fit_interaction <- mnlogit(fm_interaction, mnlogit_dt_out, ncores=4, choiceVar = "alt")
+summary(fit_interaction)
+
+#mc fadden pseudo r2 
+as.vector(1 - ((logLik(fit_interaction)) / (logLik(fit_null))))
+
+AIC(fit_interaction) - AIC(fit_adapated)
+
 ```
 
