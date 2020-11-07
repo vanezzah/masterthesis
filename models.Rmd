@@ -35,7 +35,7 @@ HH_dt_2_out$numcars <- factor(HH_dt_2_out$numcars)
 HH_dt_2_out$sharedrivers <- HH_dt_2_out$numlic / HH_dt_2_out$hhsize
 HH_dt_2_out$shareworkers <- HH_dt_2_out$workers/HH_dt_2_out$hhsize
 
-
+library(mlogit)
 
 # transform data to long format
 mnlogit_dt_out <- mlogit.data(HH_dt_2_out, choice = "numcars", shape = "wide") 
@@ -765,8 +765,8 @@ res <- wilcox.test(me2039[,4], me4064[,4], paired = TRUE)
 Interaction effects
 
 ```{r}
-
-
+res <- wilcox.test(merural[,1]	,mesuburban[,1], paired = TRUE)
+res
 ```
 
 
@@ -819,5 +819,66 @@ as.vector(1 - ((logLik(fit_interaction)) / (logLik(fit_null))))
 
 AIC(fit_interaction) - AIC(fit_adapated)
 
+```
+
+quali_nv separate levels
+
+```{r}
+HH_dt_2_out$qualinv1 <- 0
+HH_dt_2_out$qualinv1[HH_dt_2_out$quali_nv == "1"] <- HH_dt_2_out$qualinv1[HH_dt_2_out$quali_nv == "1"] + 1
+
+HH_dt_2_out$qualinv2 <- 0
+HH_dt_2_out$qualinv2[HH_dt_2_out$quali_nv == "2"] <- HH_dt_2_out$qualinv2[HH_dt_2_out$quali_nv == "2"] + 1
+
+HH_dt_2_out$qualinv3  <- 0
+HH_dt_2_out$qualinv3[HH_dt_2_out$quali_nv == "3"] <- HH_dt_2_out$qualinv3[HH_dt_2_out$quali_nv == "3"] + 1
+
+HH_dt_2_out$qualinv4  <- 0
+HH_dt_2_out$qualinv4[HH_dt_2_out$quali_nv == "4"] <- HH_dt_2_out$qualinv4[HH_dt_2_out$quali_nv == "4"] + 1
+
+HH_dt_2_out$qualinv1 <- factor(HH_dt_2_out$qualinv1)
+HH_dt_2_out$qualinv2 <- factor(HH_dt_2_out$qualinv2)
+HH_dt_2_out$qualinv3 <- factor(HH_dt_2_out$qualinv3)
+HH_dt_2_out$qualinv4 <- factor(HH_dt_2_out$qualinv4)
+```
+
+#Average marginal effects for interaction effects
+
+```{r}
+B <- coef(fit_int)
+probs <- predict(fit_int, type="probs")
+#B <- as.matrix(B)
+
+b <- c(0,B[c("region2suburban:numlic:1", "region2suburban:numlic:2", "region2suburban:numlic:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+ }
+apply(me, 2, mean)
+mesuburban <- me
+
+b <- c(0,B[c("region2rural:numlic:1", "region2rural:numlic:2", "region2rural:numlic:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+ }
+apply(me, 2, mean)
+merural <- me
+
+
+b <- c(0,B[c("numlic:1", "numlic:2", "numlic:3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+ }
+apply(me, 2, mean)
+meurban <- me
+
+#r <- c("suburban:numlic", r)
+#AVE_df <- as.matrix(data.frame(t(r)))
+#colnames(AVE_df) <- c("name", "zero_cars","1_car","2_cars","3_cars")
 ```
 

@@ -15,7 +15,7 @@ Nützliche Befehle
 
 #To load this data later you can use:
 
-#load('myEnvironement.RData')
+#load('yoursession.RData')
 ```
 
 Packages and libraries
@@ -39,25 +39,26 @@ Packages and libraries
 #install.packages("mnlogit")
 #install.packages("Formula")
 
-#library(reshape2)
-#library(interplot)
-#library(car)
-#library(ggplot2)
-#library(mlogit)
-#library(nnet)
-#library(foreign)
-#library(data.table)
-#library(magrittr)
-#library(tidyr)
-#library(dplyr)
-#library(mnlogit)
-#library(Formula)
-#library(mosaic)
-#library(Hmisc)
-#library(corrplot)
-#library(interactions)
-#library(PerformanceAnalytics)
-#library(Formula)
+library(reshape2)
+library(interplot)
+library(car)
+library(ggplot2)
+library(mlogit)
+library(nnet)
+library(foreign)
+library(data.table)
+library(magrittr)
+library(tidyr)
+library(dplyr)
+library(mnlogit)
+library(Formula)
+library(mosaic)
+library(Hmisc)
+library(corrplot)
+library(interactions)
+library(PerformanceAnalytics)
+library(Formula)
+library(effects)
 ```
 
 Import Data
@@ -835,5 +836,27 @@ HH_dt_2$CSmultiple[HH_dt_2$CS == "yes_multiple"] <- HH_dt_2$CSmultiple[HH_dt_2$C
 HH_dt_2$CSmultiple <- factor(HH_dt_2$CSmultiple)
 HH_dt_2$CSyes <- factor(HH_dt_2$CSyes)
 HH_dt_2$CSno <- factor(HH_dt_2$CSno)
+
+
+#make separate columns out of quali_nv:
+HH_dt_2$qualinv1 <- 0
+HH_dt_2$qualinv1[HH_dt_2$quali_nv == "1"] <- HH_dt_2$qualinv1[HH_dt_2$quali_nv == "1"] + 1
+
+HH_dt_2$qualinv2 <- 0
+HH_dt_2$qualinv2[HH_dt_2$quali_nv == "2"] <- HH_dt_2$qualinv2[HH_dt_2$quali_nv == "2"] + 1
+
+HH_dt_2$qualinv3  <- 0
+HH_dt_2$qualinv3[HH_dt_2$quali_nv == "3"] <- HH_dt_2$qualinv3[HH_dt_2$quali_nv == "3"] + 1
+
+HH_dt_2$qualinv4  <- 0
+HH_dt_2$qualinv4[HH_dt_2$quali_nv == "4"] <- HH_dt_2$qualinv4[HH_dt_2$quali_nv == "4"] + 1
+
+HH_dt_2$qualinv1 <- factor(HH_dt_2$qualinv1)
+HH_dt_2$qualinv2 <- factor(HH_dt_2$qualinv2)
+HH_dt_2$qualinv3 <- factor(HH_dt_2$qualinv3)
+HH_dt_2$qualinv4 <- factor(HH_dt_2$qualinv4)
+
+
+
 ```
 
