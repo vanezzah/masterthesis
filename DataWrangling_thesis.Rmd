@@ -39,8 +39,12 @@ Packages and libraries
 #install.packages("mnlogit")
 #install.packages("Formula")
 
+library(margins)
+library(ggpubr)
 library(reshape2)
 library(interplot)
+library(miscTools)
+library(MASS)
 library(car)
 library(ggplot2)
 library(mlogit)

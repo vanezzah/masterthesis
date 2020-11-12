@@ -162,8 +162,6 @@ index <- sample(1:nrow(iris), 5)
 ```
 
 
-
-
 Results - Model 1
 
 Log-odds -> remove education as it is not significant
@@ -658,7 +656,7 @@ Average marginal effects anders: funktioniert nicht
 fit_mlogit <- mlogit(anzauto ~ 1 | anzfs + region2 + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege| 1, data = mlogitSample2, reflevel = "0")
 
 c.names <- names(fit_mlogit$model)[- c(1, 19:21)]
-ME.mnl <- sapply(c.names, function(x) {effects(fit_mlogit, covariate=x, data=mlogitSample)}, simplify=FALSE) 
+ME.mnl <- sapply(c.names, function(x) {stats::effects(fit_mlogit, covariate="region2", data=mlogitSample2)}, simplify=FALSE) 
 
 Me_test2 <-  stats::effects(fit_mlogit, covariate="anzahlWege", data=mlogitSample)
 
@@ -762,24 +760,253 @@ Wilcoxon rank sum to test for differences between AMEs
 res <- wilcox.test(me2039[,4], me4064[,4], paired = TRUE)
 ```
 
-Interaction effects
+Average marginal effects mit margins
 
 ```{r}
-res <- wilcox.test(merural[,1]	,mesuburban[,1], paired = TRUE)
-res
+AME_df <- as.matrix(data.frame(t(c("name", "zero_cars","1_car","2_cars","3_cars"))))
+colnames(AME_df) <- c("name", "zero_cars","one_car","two_cars","three_cars")
+
+a.names <- names(fit_new$model)[- c(1, 23:25)]
+
+names_num <- a.names[c(1,3,5:8,12:15,18:20)]
+names_cat <- a.names[c(4,10:11,16:17,21)]
+#region alleine
+
+
+
+  for(i in names_num){
+  
+  a <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = i,category="0")
+  a_mean <- mean(a[,1])
+  b <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = i,category="1")
+  b_mean <- mean(b[,1])
+  c <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = i,category="2")
+  c_mean <- mean(c[,1])
+  d <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables =i,category="3")
+  d_mean <- mean(d[,1])
+  v <- c(i,a_mean,b_mean,c_mean,d_mean)
+  AME_df <- insertRow(AME_df,1,v)
+}
+
+  for(i in names_cat){
+  
+  a <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = i,category="0")
+  a_mean <- mean(a[,1])
+  a_mean2 <- mean(a[,2])
+  a_mean3 <- mean(a[,3])
+  b <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = i,category="1")
+  b_mean <- mean(b[,1])
+  b_mean2 <- mean(b[,2])
+  b_mean3 <- mean(b[,3])
+  c <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = i,category="2")
+  c_mean <- mean(c[,1])
+  c_mean2 <- mean(c[,2])
+  c_mean3 <- mean(c[,3])
+  d <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables =i,category="3")
+  d_mean <- mean(d[,1])
+  d_mean2 <- mean(d[,2])
+  d_mean3 <- mean(d[,3])
+
+  v <- c(paste0(i,"2"),a_mean,b_mean,c_mean,d_mean)
+  v2 <- c(paste0(i,"3"),a_mean2,b_mean2,c_mean2,d_mean2)
+  v3 <- c(paste0(i,"4"),a_mean3,b_mean3,c_mean3,d_mean3)
+  AME_df <- insertRow(AME_df,1,v)
+  AME_df <- insertRow(AME_df,1,v2)
+  AME_df <- insertRow(AME_df,1,v3)
+  }
+
+
+# region
+
+ a <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = "region2",category="0")
+  a_mean <- mean(a[,1])
+  a_mean2 <- mean(a[,2])
+  b <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = "region2",category="1")
+  b_mean <- mean(b[,1])
+  b_mean2 <- mean(b[,2])
+  c <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = "region2",category="2")
+  c_mean <- mean(c[,1])
+  c_mean2 <- mean(c[,2])
+  d <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = "region2",category="3")
+  d_mean <- mean(d[,1])
+  d_mean2 <- mean(d[,2])
+
+  v <- c(paste0("region2","suburban"),a_mean,b_mean,c_mean,d_mean)
+  v2 <- c(paste0("region2","rural"),a_mean2,b_mean2,c_mean2,d_mean2)
+  
+   AME_df <- insertRow(AME_df,1,v)
+  AME_df <- insertRow(AME_df,1,v2)
+  
+
+# log nummots
+#interpreting log transformed variables:
+  #https://stats.stackexchange.com/questions/8318/interpretation-of-log-transformed-predictors-in-logistic-regression
+#https://stats.stackexchange.com/questions/215599/log-transformation-logistic-regression
+
+b <- c(0,B[c("log(nummots1):1", "log(nummots1):2", "log(nummots1):3")])
+pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+me <- matrix(0, nrow(probs), ncol(probs))
+for(j in 1:4) {
+  me[,j] <- probs[,j] * (b[j] - pb)
+ }
+r<- apply(me, 2, mean)
+v <- c("log(nummots1)", r)
+AME_df <- insertRow(AME_df,1,v)
+
+AME_df <- AME_df[-c(36),]
+
+AME_df <- as.data.frame(AME_df)
+AME_df$zero_cars <- as.numeric(as.character((AME_df$zero_cars)))
+AME_df$zero_cars <- round(AME_df$zero_cars,3)
+
+AME_df$one_car <- as.numeric(as.character((AME_df$one_car)))
+AME_df$one_car <- round(AME_df$one_car,3)
+
+AME_df$two_cars <- as.numeric(as.character((AME_df$two_cars)))
+AME_df$two_cars <- round(AME_df$two_cars,3)
+
+AME_df$three_cars <- as.numeric(as.character((AME_df$three_cars)))
+AME_df$three_cars <- round(AME_df$three_cars,3)
 ```
 
 
+alt AMEs
+
 ```{r}
+a <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = "CSmultiple",category="0")
+a_mean <- mean(a$dydx_CSmultiple1)
+b <- margins(data=HH_dt_2_out, fit_multinom2, variables = "CSmultiple",category="1")
+c <- margins(data=HH_dt_2_out, fit_multinom2, variables = "CSmultiple",category="2")
+d <- margins(data=HH_dt_2_out, fit_multinom2, variables = "CSmultiple",category="3")
+v <- c("CSmultiple",a,b,c,d)
 
 
+
+
+
+
+
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "CSyes",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "CSyes",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "CSyes",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "CSyes",category="3")
+
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "income_numerical",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "income_numerical",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "income_numerical",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "income_numerical",category="3")
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "share2039",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "share2039",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "share2039",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "share2039",category="3")
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "share4064",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "share4064",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "share4064",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "share4064",category="3")
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "numlic",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "numlic",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "numlic",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "numlic",category="3")
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "triplength_avg",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "triplength_avg",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "triplength_avg",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "triplength_avg",category="3")
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "tripsavg",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "tripsavg",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "tripsavg",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "tripsavg",category="3")
+
+#how does margins treat transformed variables?
+margins(data=HH_dt_2_out, fit_multinom2, variables = "nummots1",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "nummots1",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "nummots1",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "nummots1",category="3")
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "numped",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "numped",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "numped",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "numped",category="3")
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "workers",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "workers",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "workers",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "workers",category="3")
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "parttime",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "parttime",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "partime",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "parttime",category="3")
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "hh_children",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "hh_children",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "hh_children",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "hh_children",category="3")
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "quali_nv",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "quali_nv",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "quali_nv",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "quali_nv",category="3")
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "quali_opnv",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "quali_opnv",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "quali_opnv",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "quali_opnv",category="3")
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "garage",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "garage",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "garage",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "garage",category="3")
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "housing_type",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "housing_type",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "housing_type",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "housing_type",category="3")
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "metro28",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "metro28",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "metro28",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "metro28",category="3")
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "bus28",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "bus28",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "bus28",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "bus28",category="3")
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "train28",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "train28",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "train28",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "train28",category="3")
+
+margins(data=HH_dt_2_out, fit_multinom2, variables = "region2",category="0")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "region2",category="1")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "region2",category="2")
+margins(data=HH_dt_2_out, fit_multinom2, variables = "region2",category="3")
 
 ```
+
+
 
 
 Forward selection (normal model)
 
 ```{r}
+
+fm_full <- formula(numcars ~  1| numlic+ region2 + income_numerical+ quali_nv)
+fit_full <-  mlogit(fm_full, mnlogit_dt_out, ncores=4, choiceVar = "alt")
+
+fit_multinom_test <- multinom(numcars ~ numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + share4064 + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28 + education + numch18, data = HH_dt_2_out)
+
+fit_multinom_null <- multinom(numcars ~ 1, data = HH_dt_2_out)
+
+stepAIC(fit_multinom_null, direction="forward", scope = list(upper = ~ numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + share4064 + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28 + education + numch18))
+
 fm_new <- formula(numcars ~  1| numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + share4064 + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28|1)
 fit_new <- mnlogit(fm_new, mnlogit_dt_out, ncores=4, choiceVar = "alt")
 as.vector(1 - (logLik(fit_new) / LL0))
@@ -790,10 +1017,6 @@ logitgof(HH_dt_2_out$numcars, fitted(fit_interaction, outcome = FALSE))
 
 #mc fadden:
 as.vector(1 - (logLik(fit_new) / LL0))
-
-
-
-
 
 ```
 
@@ -842,43 +1065,185 @@ HH_dt_2_out$qualinv3 <- factor(HH_dt_2_out$qualinv3)
 HH_dt_2_out$qualinv4 <- factor(HH_dt_2_out$qualinv4)
 ```
 
-#Average marginal effects for interaction effects
+#Average marginal effects for interaction effects (Beispiel numlic)
+#https://stackoverflow.com/questions/45421196/replicating-the-stata-marginlist-argument-using-r-margins-package
 
 ```{r}
-B <- coef(fit_int)
-probs <- predict(fit_int, type="probs")
-#B <- as.matrix(B)
 
-b <- c(0,B[c("region2suburban:numlic:1", "region2suburban:numlic:2", "region2suburban:numlic:3")])
-pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
-me <- matrix(0, nrow(probs), ncol(probs))
-for(j in 1:4) {
-  me[,j] <- probs[,j] * (b[j] - pb)
- }
-apply(me, 2, mean)
-mesuburban <- me
-
-b <- c(0,B[c("region2rural:numlic:1", "region2rural:numlic:2", "region2rural:numlic:3")])
-pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
-me <- matrix(0, nrow(probs), ncol(probs))
-for(j in 1:4) {
-  me[,j] <- probs[,j] * (b[j] - pb)
- }
-apply(me, 2, mean)
-merural <- me
+AME_int <- as.matrix(data.frame(t(c("name", "urban","suburban","rural","pvalue1", "pvalue2", "pvalue3"))))
+colnames(AME_int) <- c("name", "urban","suburban","rural","pvalue1", "pvalue2", "pvalue3")
 
 
-b <- c(0,B[c("numlic:1", "numlic:2", "numlic:3")])
-pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
-me <- matrix(0, nrow(probs), ncol(probs))
-for(j in 1:4) {
-  me[,j] <- probs[,j] * (b[j] - pb)
- }
-apply(me, 2, mean)
-meurban <- me
+  for(i in names_num){
+  tempurb <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], multinom_int2,variables= i,category = "0")  
+  mean_urb <- mean(tempurb[,1])
+  tempsub <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], multinom_int2,variables= i,category = "0")  
+  mean_sub <- mean(tempsub[,1])
+  temprur <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], multinom_int2,variables= i,category = "0")  
+  mean_rur <- mean(temprur[,1])
+  
+  testa <- wilcox.test(tempurb[,1],tempsub[,1], paired = FALSE)
+  testb <- wilcox.test(tempurb[,1],temprur[,1], paired = FALSE)
+  testc <- wilcox.test(tempsub[,1],temprur[,1], paired = FALSE)
+  
+  res1 = round(mean_urb - mean_sub,3)
+  if(testa$p.value < 0.01) 
+  {res1 = paste0(round(mean_urb - mean_sub,3),"*")}
+  
+  res2 = round(mean_urb - mean_rur,3)
+  if(testb$p.value < 0.01) 
+  {res2 = paste0(round(mean_urb - mean_rur,3),"*")}
+  
+  res3 = round(mean_sub - mean_rur,3)
+  if(testc$p.value < 0.01) 
+  {res3 = paste0(round(mean_sub - mean_rur,3),"*")}
+  
+  w <- c(i,round(mean_urb,3),round(mean_sub,3),round(mean_rur,3), res1, res2, res3)
+  AME_int <- insertRow(AME_int,1,w)
+  }
 
-#r <- c("suburban:numlic", r)
-#AVE_df <- as.matrix(data.frame(t(r)))
-#colnames(AVE_df) <- c("name", "zero_cars","1_car","2_cars","3_cars")
+for(i in names_cat){
+  tempurb <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], multinom_int2,variables= i,category = "0")  
+  mean_urb <- mean(tempurb[,1])
+  mean_urb2<- mean(tempurb[,2])
+  mean_urb3 <- mean(tempurb[,3])
+  tempsub <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], multinom_int2,variables= i,category = "0")  
+  mean_sub <- mean(tempsub[,1])
+  mean_sub2<- mean(tempsub[,2])
+  mean_sub3<- mean(tempsub[,3])
+  temprur <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], multinom_int2,variables= i,category = "0")  
+  mean_rur <- mean(temprur[,1])
+  mean_rur2<- mean(temprur[,2])
+  mean_rur3<- mean(temprur[,3])
+  
+  testa <- wilcox.test(tempurb[,1],tempsub[,1], paired = FALSE)
+  testb <- wilcox.test(tempurb[,1],temprur[,1], paired = FALSE)
+  testc <- wilcox.test(tempsub[,1],temprur[,1], paired = FALSE)
+  
+  testa2 <- wilcox.test(tempurb[,2],tempsub[,2], paired = FALSE)
+  testb2 <- wilcox.test(tempurb[,2],temprur[,2], paired = FALSE)
+  testc2 <- wilcox.test(tempsub[,2],temprur[,2], paired = FALSE)
+  
+  testa3 <- wilcox.test(tempurb[,3],tempsub[,3], paired = FALSE)
+  testb3 <- wilcox.test(tempurb[,3],temprur[,3], paired = FALSE)
+  testc3 <- wilcox.test(tempsub[,3],temprur[,3], paired = FALSE)
+  
+  res1 = round(mean_urb - mean_sub,3)
+  if(testa$p.value < 0.01) 
+  {res1 = paste0(round(mean_urb - mean_sub,3),"*")}
+  res2 = round(mean_urb - mean_rur,3)
+  if(testb$p.value < 0.01) 
+  {res2 = paste0(round(mean_urb - mean_rur,3),"*")}
+  res3 = round(mean_sub - mean_rur,3)
+  if(testc$p.value < 0.01) 
+  {res3 = paste0(round(mean_sub - mean_rur,3),"*")}
+  
+    res1a = round(mean_urb2 - mean_sub2,3)
+  if(testa2$p.value < 0.01) 
+  {res1a = paste0(round(mean_urb2 - mean_sub2,3),"*")}
+  res2a = round(mean_urb2 - mean_rur2,3)
+  if(testb2$p.value < 0.01) 
+  {res2a = paste0(round(mean_urb2 - mean_rur2,3),"*")}
+  res3a = round(mean_sub2 - mean_rur2,3)
+  if(testc2$p.value < 0.01) 
+  {res3a = paste0(round(mean_sub2 - mean_rur2,3),"*")}
+  
+    res1b = round(mean_urb3 - mean_sub3,3)
+  if(testa3$p.value < 0.01) 
+  {res1b = paste0(round(mean_urb3 - mean_sub3,3),"*")}
+  res2b = round(mean_urb3 - mean_rur3,3)
+  if(testb3$p.value < 0.01) 
+  {res2b = paste0(round(mean_urb3 - mean_rur3,3),"*")}
+  res3b = round(mean_sub3 - mean_rur3,3)
+  if(testc3$p.value < 0.01) 
+  {res3b = paste0(round(mean_sub3 - mean_rur3,3),"*")}
+  
+  w <- c(i,round(mean_urb,3),round(mean_sub,3),round(mean_rur,3), res1, res2, res3)
+  w2 <- c(i,round(mean_urb2,3),round(mean_sub2,3),round(mean_rur2,3), res1a, res2a, res3a)
+  w3 <- c(i,round(mean_urb3,3),round(mean_sub3,3),round(mean_rur3,3), res1b, res2b, res3b)
+  
+  AME_int <- insertRow(AME_int,1,w)
+  AME_int <- insertRow(AME_int,1,w2)
+  AME_int <- insertRow(AME_int,1,w3)
+  }
+
+
+
+```
+
+alt
+
+```{r}
+#just AME
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "housing_type")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "numlic")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "numlic")
+
+#AME with distributions
+#margins(multinom_int2,category=1)
+temp <- dydx(data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], multinom_int2, "numlic", category = "0")
+
+temp2 <- dydx(data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], multinom_int2, "numlic", category = "0", type="response")
+
+temp3 <- dydx(data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], multinom_int2, "numlic", category = "0", type="response")
+```
+
+
+Interaction effects
+
+```{r}
+wilcox.test(temp2$dydx_numlic	,temp$dydx_numlic, paired = FALSE)
+wilcox.test(temp2$dydx_numlic	,temp3$dydx_numlic, paired = FALSE)
+wilcox.test(temp3$dydx_numlic	,temp$dydx_numlic, paired = FALSE)
+
+```
+CS
+```{r}
+
+#just AME
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "CSyes")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "CSyes")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "CSyes")
+
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "CSyes",category="1")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "CSyes",category="1")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "CSyes",category="1")
+
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "CSyes",category="2")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "CSyes",category="2")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "CSyes",category="2")
+
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "CSyes",category="3")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "CSyes",category="3")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "CSyes",category="3")
+
+#AME with distributions
+#margins(multinom_int2,category=1)
+temp <- dydx(data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], multinom_int2, "numlic", category = "0", type="response")
+
+temp2 <- dydx(data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], multinom_int2, "numlic", category = "0", type="response")
+
+temp3 <- dydx(data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], multinom_int2, "numlic", category = "0", type="response")
+```
+
+Share 20-to 39 year olds
+
+```{r}
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "share2039", category="0")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "share2039", category="0")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "share2039", category="0")
+
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "share2039", category="1")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "share2039", category="1")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "share2039", category="1")
+
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "share2039", category="2")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "share2039", category="2")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "share2039", category="2")
+
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "share2039", category="3")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "share2039", category="3")
+margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "share2039", category="3")
+
 ```
 
