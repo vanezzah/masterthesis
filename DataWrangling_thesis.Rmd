@@ -51,6 +51,9 @@ library(mlogit)
 library(nnet)
 library(foreign)
 library(data.table)
+library(generalhoslem)
+library(dplyr)
+library(broom)
 library(magrittr)
 library(tidyr)
 library(dplyr)
@@ -240,10 +243,16 @@ result2 <- as.data.table(result2)
 result2 <- result2*1
 anzahl65 <- apply(result2,1,sum)
 
+result4 <- temp > 39 & temp < 150
+result4 <- as.data.table(result4)
+result4 <- result4*1
+anzahlold <- apply(result4,1,sum)
+
 # create new columns
 HH_dt$num2039 <- anzahl2039
 HH_dt$num4064 <- anzahl4064
 HH_dt$num65 <- anzahl65
+HH_dt$anzahlold <- anzahlold
 
 
 #remove old columns
@@ -806,6 +815,7 @@ Add share columns
 ```{r}
 HH_dt_2$share2039 <- HH_dt_2$num2039/HH_dt_2$hhsize
 HH_dt_2$share4064 <- HH_dt_2$num4064/HH_dt_2$hhsize
+HH_dt_2$shareold <- HH_dt_2$anzahlold/HH_dt_2_out$hhsize
 HH_dt_2$shareworkers <- HH_dt_2$workers/HH_dt_2$hhsize
 HH_dt_2$shareparttime <- HH_dt_2$parttime/HH_dt_2$hhsize
 HH_dt_2$tripsavg <- HH_dt_2$trips/HH_dt_2$hhsize

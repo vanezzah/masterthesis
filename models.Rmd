@@ -34,6 +34,11 @@ HH_dt_2_out$numcars <- factor(HH_dt_2_out$numcars)
 
 HH_dt_2_out$sharedrivers <- HH_dt_2_out$numlic / HH_dt_2_out$hhsize
 HH_dt_2_out$shareworkers <- HH_dt_2_out$workers/HH_dt_2_out$hhsize
+HH_dt_2_out$shareold <- HH_dt_2_out$anzahlold/HH_dt_2_out$hhsize
+HH_dt_2_out$share2039_v2 <- HH_dt_2_out$num2039/(HH_dt_2_out$hhsize-HH_dt_2_out$numch18)
+HH_dt_2_out$youngHH <- "0"
+HH_dt_2_out$youngHH[HH_dt_2_out$share2039_v2 > 0.5] <- "1"
+HH_dt_2_out$youngHH <- factor(HH_dt_2_out$youngHH)
 
 library(mlogit)
 
@@ -56,8 +61,9 @@ fit1 <- mnlogit(fm1, mnlogit_dt_out, ncores=4, choiceVar = "alt")
 summary(fit1)
 
 # model formulation after accounting for nonlinearity and multicollinearity
+#now with shareold instead of share4064
 
-fm_new <- formula(numcars ~  1| income_numerical +triplength_avg+ I(triplength_avg^2) + tripsavg +log(nummots1) + numped +numlic + I(numlic^2)  + numch18 + workers + parttime + share2039 + share4064 + CSyes + CSmultiple + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv|1)
+fm_new <- formula(numcars ~  1| numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + shareold + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28|1)
 fit_new <- mnlogit(fm_new, mnlogit_dt_out, ncores=4, choiceVar = "alt")
 summary(fit_new)
 #fit_new_mlogit<- mlogit(fm_new, mnlogit_dt_out, reflevel = '0')
@@ -145,6 +151,7 @@ summary(mylogit2)
 summary(mylogit3)
 
 #Hosmer and Lemeshow test of model fit
+
 logitgof(HH_dt_bin1$numcars, fitted(mylogit, outcome = FALSE), g=10, ord=FALSE)
 
 logitgof(HH_dt_bin2$numcars, fitted(mylogit2, outcome=FALSE), g=10, ord=FALSE)
@@ -157,7 +164,52 @@ logitgof(HH_dt_bin3$numcars, fitted(mylogit3, outcome=FALSE), g=20, ord=FALSE)
 
 Hosmer-Lemeshow standardization for large samples
 ```{r}
-index <- sample(1:nrow(iris), 5)
+#n = 70661
+#event number = 4
+#target sample size= 500
+#k=1000
+
+#Sample a dataset with 500 rows from the big dataset that has the same distribution of outcomes as the real dataset
+#do model on it
+# do test on it 
+# save HL statistic
+# find distribution of HL statistic
+
+dplyr::count(HH_dt_2_out,numcars)
+#0:7513 -> 10.6% ->53
+#1:35921 -> 50.9 -> 254
+#2:21804 -> 30.8 ->154
+#3:5423 -> 7.7 -> 39
+
+HL_dist <- as.matrix(data.frame(t(c("1"))))
+colnames(HL_dist) <- c("Stat")
+
+for (i in 1:10){
+ a<- sample(subset(HH_dt_2_out, numcars == "0"), 53)
+ b<- sample(subset(HH_dt_2_out, numcars == "1"), 254)
+ c <- sample(subset(HH_dt_2_out, numcars == "2"), 154)
+ d<- sample(subset(HH_dt_2_out, numcars == "3"), 39)
+ df_test <- rbind(a,b,c,d)
+ 
+ 
+ fit_HLsim <- multinom(numcars ~numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + youngHH + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28, data = df_test)
+ 
+HLtest <- logitgof(df_test$numcars, fitted(fit_HLsim))
+HLstat <- HLtest$statistic
+
+HL_dist <- rbind(HL_dist, HLstat)
+
+}
+
+HL_dist <- as.data.frame(HL_dist)
+HL_dist$Stat <- as.numeric(as.character(HL_dist$Stat))
+hist(HL_dist$Stat)
+
+#Xiquadrat verteilung für Xi8(10-2) für 95% quantil: 15.51 / 2.73
+
+prob = 1 - ecdf(HL_dist$Stat)(2.73)
+prob
+runif(1)
 
 ```
 
@@ -1003,9 +1055,14 @@ fit_full <-  mlogit(fm_full, mnlogit_dt_out, ncores=4, choiceVar = "alt")
 
 fit_multinom_test <- multinom(numcars ~ numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + share4064 + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28 + education + numch18, data = HH_dt_2_out)
 
-fit_multinom_null <- multinom(numcars ~ 1, data = HH_dt_2_out)
+fit_multinom_null <- multinom(numcars ~ 1, data = HH_dt_2_out,maxit=200)
 
-stepAIC(fit_multinom_null, direction="forward", scope = list(upper = ~ numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + share4064 + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28 + education + numch18))
+stepAIC(fit_multinom_null, direction="forward", scope = list(upper = ~ numlic + I(numlic^2) + region2 + income_numerical + quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + share4064 + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28 + education + numch18))
+
+#statt rotate x axis ding:
+# scale_x_discrete(guide = guide_axis(n.dodge = 2))
+
+
 
 fm_new <- formula(numcars ~  1| numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + share4064 + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28|1)
 fit_new <- mnlogit(fm_new, mnlogit_dt_out, ncores=4, choiceVar = "alt")
