@@ -1,0 +1,323 @@
+---
+title: "Predictive capability"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(knitr) # for better tables in the Markdown
+require(caTools) # for sample.split function
+require(ROCR) # for the ROC curve 
+require(caret) # for confusionmatrix() 
+require(ROSE) # for downsampling
+require(rpart) # for decision tree 
+```
+
+
+#out of sample prediction
+
+Split into training and test set
+
+```{r}
+set.seed(6) 
+train_index <- sample.split(Y = HH_dt_2_out$numcars , SplitRatio = 0.7)
+
+train_data <- HH_dt_2_out[train_index, ]
+test_data <- HH_dt_2_out[!train_index, ]
+
+# make mlogit objects
+traindata_ml <- mlogit.data(train_data, choice="numcars", shape="wide")
+
+testdata_ml <- mlogit.data(test_data, choice="numcars", shape="wide")
+```
+
+```{r}
+set.seed(7)
+
+fm_new <- formula(numcars ~  1| numlic + region2 + income_numerical + 
+    I(numlic^2) + quali_nv + I(income_numerical^2) + CSyes + 
+    workers + CSmultiple + log(nummots1) + triplength_avg + housing_type + 
+    quali_opnv + I(triplength_avg^2) + oldHH + parttime + hh_children + 
+    I(workers^2) + numped + tripsavg + metro28 + train28 + garage + 
+    bus28|1)
+
+MNL_model <- mnlogit(fm_new, traindata_ml, ncores=4, choiceVar = "alt")
+
+
+```
+
+Prediction with response
+
+```{r}
+MNL_pred <- predict(object = MNL_model,
+                      newdata = testdata_ml ,
+                      type = "response", probability=F,choiceVar="alt")
+
+table(test_data$numcars, MNL_pred)
+confusionMatrix(reference=test_data$numcars, MNL_pred)
+```
+
+Prediction with percentage 
+
+```{r}
+MNL_pred2 <- predict(object = MNL_model,
+                      newdata = testdata_ml,choiceVar="alt")
+
+table(test_data$numcars)
+
+categ <- levels(test_data$numcars)[max.col(MNL_pred2)]
+categ2 <- factor(categ, levels=levels(test_data$numcars))
+
+confusionMatrix(data = categ2 ,
+                reference =  test_data$numcars)
+
+library(CARRoT)
+install.packages('CARRoT')
+
+preds <- t(get_predictions(MNL_pred2,21118,0.2,'det','multin'))
+preds <- factor(preds)
+
+conf <-confusionMatrix(data = preds ,
+                reference =  test_data$numcars)
+conf
+
+#mean of balanced accuracy
+mean(conf$byClass[,"Balanced Accuracy"])
+```
+
+Downsampling
+
+```{r}
+summary(train_data$numcars)
+set.seed(234)
+dtrain<- downSample(x = train_data,
+                     y = train_data$numcars)
+
+summary(dtrain$numcars)
+
+dtraindata_ml <- mlogit.data(dtrain, choice="numcars", shape="wide")
+
+MNL_model_down <- mnlogit(fm_new, dtraindata_ml, ncores=4, choiceVar = "alt")
+
+MNL_pred_down <- predict(object = MNL_model_down,
+                      newdata = testdata_ml,
+                      type = "response", probability=F,choiceVar="alt")
+
+conf2 <- confusionMatrix(reference=test_data$numcars, MNL_pred_down)
+conf2
+
+mean(conf2$byClass[,"Balanced Accuracy"])
+```
+
+Upsampling
+
+```{r}
+set.seed(235)
+utrain<- upSample(x = train_data,
+                     y = train_data$numcars)
+
+summary(utrain$numcars)
+
+utraindata_ml <- mlogit.data(utrain, choice="numcars", shape="wide")
+
+MNL_model_up <- mnlogit(fm_new, utraindata_ml, ncores=4, choiceVar = "alt")
+
+MNL_pred_up <- predict(object = MNL_model_up,
+                      newdata = testdata_ml,
+                      type = "response", probability=F,choiceVar="alt")
+
+conf3 <- confusionMatrix(reference=test_data$numcars, MNL_pred_up)
+conf3
+
+mean(conf3$byClass[,"Balanced Accuracy"])
+
+```
+
+Up and down sampling including crossvalidation
+
+```{r}
+ctrl <- caret::trainControl(method = "repeatedcv",
+                   number = 5,
+                   repeats=5,
+                   verboseIter = FALSE,
+                   summaryFunction = multiClassSummary,
+                   sampling = "down")
+
+ctrl2 <- trainControl(method = "repeatedcv", number = 5, repeats = 10)
+
+set.seed(42)
+
+
+fit_cv <- caret::train(numcars ~ numlic + region2 + income_numerical + 
+    I(numlic^2) + quali_nv + I(income_numerical^2) + CSyes + 
+    workers + CSmultiple + log(nummots1) + triplength_avg + housing_type + 
+    quali_opnv + I(triplength_avg^2) + oldHH + parttime  + hh_children + 
+    I(workers^2) + numped + tripsavg + metro28 + train28 + garage + 
+    bus28, data = HH_dt_2_out, method = "multinom", trControl = ctrl, trace = FALSE)
+
+fit_cv
+
+confusionMatrix(fit_cv)
+
+```
+
+
+Random Forest
+```{r}
+ctrl <- caret::trainControl(method = "repeatedcv",
+                   number = 5,
+                   repeats=2,
+                   verboseIter = FALSE,
+                   summaryFunction = multiClassSummary,
+                   sampling = "down")
+ntree = 3
+
+df_rf <- HH_dt_2_out[,c("numcars","numlic","region2","income_numerical","quali_nv","CSyes","workers","CSmultiple","nummots1","triplength_avg","housing_type","quali_opnv","oldHH","parttime","hh_children","numped","tripsavg","metro28","train28","garage","bus28")]
+
+set.seed(123)  
+fit_rf <- train(numcars ~ .,  data = df_rf, method = "rf", ntree = 500, trControl = ctrl, trace = FALSE)
+
+fit_rf
+
+confusionMatrix(fit_rf)
+```
+
+Compare
+
+```{r}
+rs <- resamples(list(mlr = fit_cv, rf = fit_rf))
+summary(rs)
+```
+
+
+RF Tuning
+
+#Number of trees: ntree
+#Number of splitting variables: mtry
+#Maximum tree depth:
+
+```{r}
+library(randomForest)
+library(mlbench)
+library(caret)
+library(e1071)
+
+df_rf <- as.data.frame(df_rf)
+x <- df_rf[,2:21]
+y <- df_rf[,1]
+####
+
+set.seed(1)
+bestMtry <- tuneRF(df_rf[,2:21],df_rf[,1], stepFactor = 1, improve = 1e-5, ntree = 500)
+
+###
+
+ctrl3 <- caret::trainControl(method = "repeatedcv",
+                   number = 5,
+                   repeats=2,
+                   verboseIter = FALSE,
+                   summaryFunction = multiClassSummary,
+                   sampling = "down",
+                   search='grid')
+
+rfGrid2 <-  expand.grid(.mtry = c(5,8,17,20))
+rfGrid <-  expand.grid(.mtry = (5:20))
+
+set.seed(123)  
+fit_rf_grid <- train(numcars ~ .,  data = df_rf, method = "rf", ntree = 500, trControl = ctrl3, tuneGrid=rfGrid, trace = FALSE)
+
+set.seed(123)
+fit_rf_grid2 <- train(numcars ~ .,  data = df_rf, method = "rf", ntree = 500, trControl = ctrl3, tuneGrid=rfGrid2, trace = FALSE)
+
+
+print(fit_rf_grid)
+
+
+#https://www.guru99.com/r-random-forest-tutorial.html
+#https://stackoverflow.com/questions/57939453/building-a-randomforest-with-caret
+
+
+
+```
+
+Tune number of trees, nodeSize and mtlr simultaneously
+```{r}
+#https://stackoverflow.com/questions/57939453/building-a-randomforest-with-caret
+
+df_rf_test <- df_rf[1:10000,]
+df_rf_train <- df_rf[10001:70390,]
+
+set.seed(1234)
+cv_folds <- createFolds(df_rf_train$numcars, k = 5, returnTrain = TRUE)
+
+#create tune control:
+
+tuneGrid <- expand.grid(.mtry = c(5 : 12))
+
+ctrl4 <- trainControl(method = "repeatedcv",
+                     number = 5,
+                     repeats =2,
+                     search = 'grid',
+                     verboseIter = FALSE,
+                    summaryFunction = multiClassSummary,
+                      sampling = "down",
+                     classProbs = TRUE,
+                     savePredictions = "final",
+                     index = cv_folds)
+
+ntrees <- c(500, 1000, 1500)    
+nodesize <- c(1,3,5,7,9)
+
+params <- expand.grid(ntrees = ntrees,
+                      nodesize = nodesize)
+
+store_maxnode <- vector("list", nrow(params))
+for(i in 1:nrow(params)){
+  nodesize <- params[i,2]
+  ntree <- params[i,1]
+  set.seed(65)
+  rf_model <- train(numcars~.,
+                       data = df_rf_train,
+                       method = "rf",
+                       importance=TRUE,
+                       tuneGrid = tuneGrid,
+                       trControl = ctrl4,
+                       ntree = ntree,
+                       nodesize = nodesize)
+  store_maxnode[[i]] <- rf_model
+}
+
+#combine results
+
+results_mtry <- resamples(store_maxnode)
+
+summary(results_mtry)
+
+#To get the best mtry for each model:
+
+lapply(store_maxnode, print)
+
+
+```
+
+Compare variable importance
+
+```{r}
+
+#for MNL: standardised coefficients (zegras, vin ha)
+#VarImp() for random forest
+varImp(fit_rf_grid)
+# as table
+```
+
+
+Plots
+```{r}
+# ein plot je treesize, x-achse mtlr und farbe nodeSize
+
+#Different mtrs 
+#different number of trees
+#different maxnodes
+```
+
+

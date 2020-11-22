@@ -55,16 +55,26 @@ plot(effect("hheink_imp", fit_multinom), multiline=TRUE, rug=FALSE)
 Making mnlogit output the same as multinom (normal)
 ```{r}
 
-fit_multinom <- multinom(numcars ~numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + youngHH + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28, data = HH_dt_2_out)
+fit_multinom <- multinom(numcars ~ numlic + region2 + income_numerical + 
+    I(numlic^2) + quali_nv + I(income_numerical^2) + CSyes + 
+    workers + CSmultiple + log(nummots1) + triplength_avg + housing_type + 
+    quali_opnv + I(triplength_avg^2) + oldHH + parttime  + hh_children + 
+    I(workers^2) + numped + tripsavg + metro28 + train28 + garage + 
+    bus28, data = HH_dt_2_out,maxit=250)
 
-#+ share2039 + share4064
-fm_new <- formula(numcars ~  1| numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + share4064 + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28|1)
+
+fm_new <- formula(numcars ~  1| numlic + region2 + income_numerical + 
+    I(numlic^2) + quali_nv + I(income_numerical^2) + CSyes + 
+    workers + CSmultiple + log(nummots1) + triplength_avg + housing_type + 
+    quali_opnv + I(triplength_avg^2) + oldHH + parttime + hh_children + 
+    I(workers^2) + numped + tripsavg + metro28 + train28 + garage + 
+    bus28|1)
 fit_new <- mnlogit(fm_new, mnlogit_dt_out, ncores=4, choiceVar = "alt")
 
 
 #substitution of coefficients
 fit_multinom2 <- fit_multinom
-cf2 <- matrix(fit_multinom2$wts, nrow=38) # davor 39 
+cf2 <- matrix(fit_multinom2$wts, nrow=39) # davor 39 
 fit_new.cf <- coef(fit_new)
 cf2[2:nrow(cf2), 2:ncol(cf2)] <- (matrix(fit_new.cf,nrow=3))
 
@@ -75,7 +85,7 @@ fit_multinom2$fitted.values <- fit_new$probabilities
 
 e1 = effect("triplength_avg", fit_multinom2)
 e1 = as.data.frame(e1)
-e2 = effect("income_numerical", fit_multinom2)
+e2 = effect("income_numerical", fit_multinom2, xlevels = 20)
 e2 = as.data.frame(e2)
 e3 = effect("numlic", fit_multinom2)
 e3 <- as.data.frame(e3)
@@ -84,25 +94,16 @@ e4 <- as.data.frame(e4)
 
 e5 = effect("log(nummots1)", fit_multinom2)
 e5 <- as.data.frame(e5)
-e6 = effect("numped", fit_multinom2)
+e6 = effect("numped", fit_multinom)
 e6 <- as.data.frame(e6)
 
-#e7 = effect("numch18", fit_multinom2)#?
-
-e10 =  effect("workers", fit_multinom)
+e10 =  effect("workers", fit_multinom, xlevels=4)
 e10 <- as.data.frame(e10)
-e11 =effect("parttime", fit_multinom2)
+e11 =effect("parttime", fit_multinom, xlevels =4)
 e11 <- as.data.frame(e11)
 
-e12 = effect("share2039", fit_multinom)
-e12 <- as.data.frame(e12)
-#welches von beidem?
-#e13 = effect("share4064", fit_multinom2)
-#e13 <- as.data.frame(e13)
-e13 = effect("shareold", fit_multinom2)
-e13 <- as.data.frame(e13)
 
-e13 = effect("youngHH", fit_multinom)
+e13 = effect("oldHH", fit_multinom)
 e13 <- as.data.frame(e13)
 
 e14 = effect("CSyes", fit_multinom2)
@@ -136,28 +137,6 @@ e24 <- as.data.frame(e24)
 
 
 
-plot(effect("triplength_avg", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("income_numerical", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("sharedrivers", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("tripsavg", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("log(nummots1)", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("numped", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("numch18", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("workers", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("parttime", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("share2039", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("share4064", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("CSyes", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("CSmultiple", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("region2", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("bus28", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("metro28", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("train28", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("housing_type", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("garage", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("quali_opnv", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("quali_nv", fit_multinom2), multiline=TRUE, rug=FALSE)
-plot(effect("hh_children", fit_multinom2), multiline=TRUE, rug=FALSE)
 
 ```
 
@@ -259,11 +238,11 @@ CS2_plot <-ggplot(data=e15, aes(x=CSmultiple, group=1))+
 
 
 
-figure_trips <- ggarrange(CS1_plot, CS2_plot,common.legend = TRUE, legend = "none",
+figure_CS <- ggarrange(CS1_plot, CS2_plot,common.legend = TRUE, legend = "none",
           ncol = 2, nrow = 1)%>% gridExtra::grid.arrange(get_legend(CS2_plot), heights = unit(c(60, 5), "mm"))
 
 
-annotate_figure(figure_trips,
+annotate_figure(figure_CS,
                 left = text_grob("Predicted Probability", color = "black", rot = 90)
 )
 ```
@@ -327,14 +306,14 @@ workers and parttime
 
 workers_plot <-ggplot(data=e10, aes(x=workers))+
       geom_line(aes(y=prob.X0, color="Zero cars")) + 
-      geom_point(aes(y=prob.X1, color="One car")) + 
+      geom_line(aes(y=prob.X1, color="One car")) + 
       geom_line(aes(y=prob.X2, color ="Two cars"))+
       geom_line(aes(y=prob.X3, color ="Three cars"))+
       ylab("")+
       xlab("Number of fulltime workers")+
       ggtitle("Number of workers")+
       labs(color = "Number of cars owned") +
-      coord_fixed(ratio=2)+
+      coord_fixed(ratio=1.5)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
@@ -375,24 +354,9 @@ shares
 
 ```{r}
 
-share1_plot <-ggplot(data=e12, aes(x=share2039))+
-      geom_line(aes(y=prob.X0, color="Zero cars")) + 
-      geom_line(aes(y=prob.X1, color="One car")) + 
-      geom_point(aes(y=prob.X2, color ="Two cars"))+
-      geom_line(aes(y=prob.X3, color ="Three cars"))+
-      ylab("")+
-      xlab("Share of 20- to 39 year-olds")+
-      ggtitle("")+
-      labs(color = "Number of cars owned") +
-      coord_fixed(ratio=1)+
-      scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
-      theme_bw()+ 
-        theme(panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank())+
-      scale_fill_grey()
-share1_plot
 
-share2_plot <-ggplot(data=e13, aes(x=youngHH, group=1))+
+
+share2_plot <-ggplot(data=e13, aes(x=oldHH, group=1))+
       geom_line(aes(y=prob.X0, color="Zero cars")) + 
       geom_line(aes(y=prob.X1, color="One car")) + 
       geom_line(aes(y=prob.X2, color ="Two cars"))+
@@ -403,6 +367,8 @@ share2_plot <-ggplot(data=e13, aes(x=youngHH, group=1))+
       labs(color = "Number of cars owned") +
       coord_fixed(ratio=1)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      #scale_x_discrete(labels = c("0" = "young household", "1" = "old household"))+
+      scale_x_discrete(limits=c("0","1"),labels = c("0" = "young household", "1" = "old household"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
@@ -410,14 +376,13 @@ share2_plot <-ggplot(data=e13, aes(x=youngHH, group=1))+
 share2_plot
 
 
-figure_shares<- ggarrange(share1_plot, share2_plot,common.legend = TRUE, legend = "right", 
-          labels = c("Share 20-39", "Share 40-64"), vjust=6,
-          ncol = 2, nrow = 1)
+#figure_shares<- ggarrange(share2_plot,common.legend = TRUE, legend = "right", 
+          #labels = c("Share 20-39", "Share 40-64"), vjust=6,
+          #ncol = 2, nrow = 1)
 
 
-annotate_figure(figure_shares,
-                left = text_grob("Predicted Probability", color = "black", rot = 90)
-)
+#annotate_figure(figure_shares,
+           #     left = text_grob("Predicted Probability", color = "black", rot = 90))
 ```
 
 hh_children and region
@@ -712,7 +677,7 @@ Effect plots interaction effects
 
 ```{r}
 
-multinom_int <- multinom(numcars ~ region2 + numlic + I(numlic^2) + region2:numlic + region2:I(numlic^2) + income_numerical +I(income_numerical^2)+ region2:income_numerical + region2:I(income_numerical^2) + quali_nv + region2:quali_nv + CSyes + region2:CSyes + workers+ I(workers^2)+region2:workers + triplength_avg+ I(triplength_avg^2)+ region2:triplength_avg+ region2:I(triplength_avg^2) + log(nummots1) + housing_type + garage + quali_opnv + share2039 + I(share2039^2)  +  region2:share2039 + region2:I(share2039^2) + share4064 + CSmultiple+ hh_children + region2:hh_children + metro28 +tripsavg + parttime + train28 +numped + I(numped^2) + region2:numped + region2:I(numped^2) + bus28, data = HH_dt_2_out)
+multinom_int <- multinom(numcars ~ region2 + numlic + I(numlic^2) + region2:numlic + region2:I(numlic^2) + income_numerical +I(income_numerical^2)+ region2:income_numerical + region2:I(income_numerical^2) + quali_nv + region2:quali_nv + CSyes + region2:CSyes + workers+ I(workers^2)+region2:workers +region2:I(workers^2)+ triplength_avg+ I(triplength_avg^2)+ region2:triplength_avg+ region2:I(triplength_avg^2) + log(nummots1) + region2:log(nummots1) +housing_type + region2:housing_type+ garage +region2:garage+ quali_opnv + region2:quali_opnv+oldHH + region2:oldHH +CSmultiple+region2:CSmultiple+ hh_children + region2:hh_children + metro28 + region2:metro28+tripsavg + I(tripsavg^2)+region2:tripsavg+ parttime + I(parttime^2) + region2:parttime+ train28 + region2:train28 +numped + I(numped^2) + region2:numped + region2:I(numped^2) + bus28+ region2:bus28, data = HH_dt_2_out, maxit=700)
 
 fm_int <- formula(numcars ~  1|region2 + numlic + I(numlic^2) + region2:numlic + region2:I(numlic^2) + income_numerical +I(income_numerical^2)+ region2:income_numerical + region2:I(income_numerical^2) + quali_nv + region2:quali_nv+CSyes + region2:CSyes + workers+ I(workers^2)+ region2:workers + triplength_avg+ I(triplength_avg^2)+ region2:triplength_avg+ region2:I(triplength_avg^2) + log(nummots1) + housing_type + garage + quali_opnv + share2039 + I(share2039^2)  +  region2:share2039 + region2:I(share2039^2) + share4064 + CSmultiple+ hh_children + region2:hh_children + metro28 +tripsavg + parttime + train28 +numped + I(numped^2) + region2:numped + region2:I(numped^2) +bus28|1)
 #qualinv2 + qualinv3 + qualinv4+ region2:qualinv2 + region2:qualinv3  + region2:qualinv4
@@ -737,16 +702,13 @@ ef <- effect("region2:quali_nv", multinom_int2) #nur rural and urban und nur 1 u
 ef <- as.data.frame(ef)
 
 #numlic
-ef2 <- effect("region2:numlic", multinom_int2,se=TRUE, confidence.level=.95, typical=mean)
+ef2 <- effect("region2:numlic", multinom_int2)
 ef2 <- as.data.frame(ef2)
 
 
 #income_numerical
 ef3 <- effect("region2:income_numerical", multinom_int2)#bei rural nicht 1
 ef3 <- as.data.frame(ef3)
-ef3_rural <- filter(ef3, region2 == "rural")
-ef3_urban <- filter(ef3, region2 == "urban")
-ef3_suburban <- filter(ef3, region2 == "suburban")
 
 #Csyes
 ef4 <- effect("region2:CSyes", multinom_int2) #nursuburban, alle
@@ -756,11 +718,13 @@ ef4 <- as.data.frame(ef4)
 
 ef5 <- effect("region2:workers", multinom_int2) # alles 
 ef5 <- as.data.frame(ef5)
+ef12 <- effect("region2:parttime", multinom_int2) # alles 
+ef12 <- as.data.frame(ef12)
 
 ef6 <- effect("region2:triplength_avg", multinom_int2) #nur suburban significant, alle levels
 ef6 <- as.data.frame(ef6)
 
-ef7 <- effect("region2:share2039", multinom_int2) #nur rural, alle levels
+ef7 <- effect("region2:oldHH", multinom_int2) #nur rural, alle levels
 ef7 <- as.data.frame(ef7)
 
 ef8 <- effect("region2:hh_children", multinom_int2) #nur carownership 2 bei suburban, 2 und 3 bei rural
@@ -770,6 +734,30 @@ ef8 <- as.data.frame(ef8)
 ef9 <- effect("region2:numped", multinom_int2) #bei rural level1 nicht (2 plots)
 ef9 <- as.data.frame(ef9)
 
+
+ef10 <- effect("region2:quali_opnv", multinom_int2) #bei rural level1 nicht (2 plots)
+ef10 <- as.data.frame(ef10)
+
+ef11 <- effect("region2:CSmultiple", multinom_int2) #bei rural level1 nicht (2 plots)
+ef11 <- as.data.frame(ef11)
+
+ef13 <- effect("region2:housing_type", multinom_int2) #bei rural level1 nicht (2 plots)
+ef13 <- as.data.frame(ef13)
+
+ef18 <- effect("region2:garage", multinom_int2) #bei rural level1 nicht (2 plots)
+ef18 <- as.data.frame(ef18)
+
+ef14 <- effect("region2:metro28", multinom_int2) #bei rural level1 nicht (2 plots)
+ef14 <- as.data.frame(ef14)
+
+ef15 <- effect("region2:train28", multinom_int2) #bei rural level1 nicht (2 plots)
+ef15 <- as.data.frame(ef15)
+
+ef16 <- effect("region2:bus28", multinom_int2) #bei rural level1 nicht (2 plots)
+ef16 <- as.data.frame(ef16)
+
+ef17 <- effect("region2:tripsavg", multinom_int2) #bei rural level1 nicht (2 plots)
+ef17 <- as.data.frame(ef17)
 
 #effects plot normal mit plot
 #quali_nv4: only urban rural significantnand only for levels 0 vs.1 and 0 vs. 2, other qualinvs not significant
@@ -843,7 +831,7 @@ Plot.numlic1<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-#Plot.numlic1
+Plot.numlic1
 
 Plot.numlic2<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
@@ -998,7 +986,7 @@ Plot.income3 <-ggplot(data=ef3, aes(x=income_numerical, group=region2, color=reg
 ```{r}
 figure_income <- ggarrange(Plot.income0, Plot.income1, Plot.income2,common.legend = TRUE, legend = "right", 
           labels = c("Zero cars", "One car", "Two cars"), vjust=7,
-          ncol = 3, nrow = 1)
+          ncol = 4, nrow = 1)
 
 
 
@@ -1233,7 +1221,7 @@ Plot.work0 <-ggplot(data=ef5, aes(x=workers, group=region2, color=region2))+
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-#Plot.work0
+Plot.work0
 
 Plot.work1 <-ggplot(data=ef5, aes(x=workers, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
@@ -1252,7 +1240,7 @@ Plot.work1 <-ggplot(data=ef5, aes(x=workers, group=region2, color=region2))+
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-#Plot.work1
+Plot.work1
 
 Plot.work2 <-ggplot(data=ef5, aes(x=workers, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
@@ -1290,7 +1278,7 @@ Plot.work3<-ggplot(data=ef5, aes(x=workers, group=region2, color=region2))+
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-#Plot.work3
+Plot.work3
 ```
 
 ```{r}
@@ -1498,6 +1486,104 @@ annotate_figure(figure_share,
 )
 ```
 
+Share old
+
+```{r}
+Plot.share0 <-ggplot(data=ef7, aes(x=oldHH, group=region2, color=region2))+
+#For ylim, specify the range of your DV (in our case, 0-4)
+      #facet_wrap(~region2)+
+      geom_line(aes(y=prob.X0)) + 
+      #geom_line(aes(y=prob.X1, color="prob.X1")) + 
+      #geom_line(aes(y=prob.X2, color ="prob.X2"))+
+      #scale_color_manual(labels = c("0 car","1 car", "2 cars"),values= c("blue", "red", "orange"))+
+      geom_ribbon(aes(ymin=prob.X0-se.prob.X0, ymax=prob.X0+se.prob.X0),alpha=.2, linetype =0)+
+      labs(color = "region")+
+       ylab("")+
+      xlab("")+
+      ggtitle("")+
+      coord_fixed(ratio=2)+
+      scale_y_continuous(limits=c(0,0.5),breaks = c(0.1,0.2,0.3,0.4))+
+      #scale_x_continuous(limits=c(0,1),breaks = c(0.5))+
+      theme_bw()+ 
+        theme(panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank())+
+      scale_fill_grey()
+Plot.share0
+
+Plot.share1 <-ggplot(data=ef7, aes(x=oldHH, group=region2, color=region2))+
+#For ylim, specify the range of your DV (in our case, 0-4)
+      #facet_wrap(~region2)+
+      geom_line(aes(y=prob.X1)) + 
+      labs(color = "region") +
+      #geom_line(aes(y=prob.X1, color="prob.X1")) + 
+      #geom_line(aes(y=prob.X2, color ="prob.X2"))+
+      #scale_color_manual(labels = c("0 car","1 car", "2 cars"),values= c("blue", "red", "orange"))+
+      geom_ribbon(aes(ymin=prob.X1-se.prob.X1, ymax=prob.X1+se.prob.X1),alpha=.2, linetype =0)+
+       ylab("")+
+      xlab("")+
+      ggtitle("")+
+      coord_fixed(ratio=1)+
+      scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      #scale_x_continuous(limits=c(0,1),breaks = c(0.5))+
+      theme_bw()+ 
+        theme(panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank())+
+      scale_fill_grey()
+Plot.share1
+
+Plot.share2 <-ggplot(data=ef7, aes(x=oldHH, group=region2, color=region2))+
+#For ylim, specify the range of your DV (in our case, 0-4)
+      #facet_wrap(~region2)+
+      geom_line(aes(y=prob.X2)) +
+      labs(color = "region")+
+      #geom_line(aes(y=prob.X1, color="prob.X1")) + 
+      #geom_line(aes(y=prob.X2, color ="prob.X2"))+
+      #scale_color_manual(labels = c("0 car","1 car", "2 cars"),values= c("blue", "red", "orange"))+
+      geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2, linetype =0)+
+       ylab("")+
+      xlab("")+
+      ggtitle("")+
+      coord_fixed(ratio=1)+
+      scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      #scale_x_continuous(limits=c(0,1),breaks = c(0.5))+
+      theme_bw()+ 
+        theme(panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank())+
+      scale_fill_grey()
+Plot.share2
+
+Plot.share3<-ggplot(data=ef7, aes(x=oldHH, group=region2, color=region2))+
+#For ylim, specify the range of your DV (in our case, 0-4)
+      #facet_wrap(~region2)+
+      geom_line(aes(y=prob.X3)) + 
+      labs(color = "region")+
+      #geom_line(aes(y=prob.X1, color="prob.X1")) + 
+      #geom_line(aes(y=prob.X2, color ="prob.X2"))+
+      #scale_color_manual(labels = c("0 car","1 car", "2 cars"),values= c("blue", "red", "orange"))+
+      geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2, linetype =0)+
+      labs(color = "region")+
+      scale_y_continuous(limits=c(0,0.5),breaks = c(0.1,0.2,0.3,0.4))+
+      #scale_x_continuous(limits=c(0,1),breaks = c(0.5))+
+      theme_bw()+ 
+        theme(panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank())+
+      scale_fill_grey()
+Plot.share3
+```
+```{r}
+figure_share <- ggarrange( Plot.share0, Plot.share1, Plot.share2, Plot.share3, common.legend = TRUE, legend = "right", 
+          labels = c("Zero cars", "One car", "Two cars", "Three cars"), vjust=10,
+          ncol = 4, nrow = 1)
+
+
+annotate_figure(figure_share,
+                top = text_grob("Shareof 20 to 39 year olds and region as predictors of car ownership", color = "black", size = 14, vjust=8),
+                left = text_grob("Predicted Probability", color = "black", rot = 90),
+                bottom = text_grob("Share of 20 to 39 year olds", vjust=-10),
+)
+```
+
+
 hh_children
 ```{r}
 Plot.children0 <-ggplot(data=ef8, aes(x=hh_children, group=region2, color=region2))+
@@ -1690,6 +1776,8 @@ annotate_figure(figure_ped,
                 bottom = text_grob("Number of bicycles/pedelecs", vjust=-8),
 )
 ```
+
+
 
 
 

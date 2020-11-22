@@ -131,11 +131,12 @@ HH_dt_2_out <- filter(HH_dt_2_out,numlic < 5)
 HH_dt_2_out <- filter(HH_dt_2_out,numped < 11)
 
 # no zero car observations for 4 workers
-#dplyr::count(HH_dt_2, workers, by = numcars)
-HH_dt_2_out <- filter(HH_dt_2_out,workers < 5)
+dplyr::count(HH_dt_2, workersall, by = numcars)
+HH_dt_2_out <- filter(HH_dt_2_out,workersall < 4)
+
 
 #dplyr::count(HH_dt_2_out, parttime, by = numcars)
-HH_dt_2_out <- filter(HH_dt_2_out,parttime < 4)
+#HH_dt_2_out <- filter(HH_dt_2_out,parttime < 4)
 
 HH_dt_2_out <- filter(HH_dt_2_out,tripsavg < upper_boundtrips)
 
@@ -148,11 +149,14 @@ HH_dt_2_out <- filter(HH_dt_2_out, income_numerical < upper_bound_inc)
 
 #dplyr::count(HH_dt_2, num2039,  by=numcars)
 #dplyr::count(HH_dt_2, num4064, by=numcars)
-dplyr::count(HH_dt_2, anzahlold, by=numcars)
 
-HH_dt_2_out <- filter(HH_dt_2_out, num2039 < 5)
-HH_dt_2_out <- filter(HH_dt_2_out, num4064 < 4)
+dplyr::count(HH_dt_2_out, numlic, by=numcars)
+#dplyr::count(HH_dt_2, oldHH, by=numcars)
+
+#HH_dt_2_out <- filter(HH_dt_2_out, num2039 < 5)
+#HH_dt_2_out <- filter(HH_dt_2_out, num4064 < 4)
 #HH_dt_2_out <- filter(HH_dt_2_out, anzahlold < 4)
+
 
 #categorical variables: 
 
@@ -181,18 +185,15 @@ Testing correlation
 # correlation between all numerical and ordinal variables
 # spearman correlation coefficient
 
-corr_dt <- HH_dt_2[, c("trips", "numlic", "numch18", "workers", "parttime", "triplength_avg", "income_gr","hhsize", "nummots", "numped", "income_numerical", "bus28", "metro28", "train28","quali_opnv", "quali_nv", "num2039", "num4064", "num65","anzahlold")]
+corr_dt <- HH_dt_2_out[, c("trips", "numlic", "numch18", "workersall", "parttime", "triplength_avg","hhsize", "nummots", "numped", "income_numerical", "bus28", "metro28", "train28","quali_opnv", "quali_nv")]
 
 
 # transform factors to ranks
-corr_dt$income_gr <- as.numeric(corr_dt$income_gr)
 corr_dt$bus28 <- as.numeric(corr_dt$bus28)
 corr_dt$train28 <- as.numeric(corr_dt$train28)
 corr_dt$metro28 <- as.numeric(corr_dt$metro28)
 corr_dt$quali_nv <- as.numeric(corr_dt$quali_nv)
 corr_dt$quali_opnv <- as.numeric(corr_dt$quali_opnv)
-
-corr_dt_out <- HH_dt_2_out[, c("trips", "numlic", "numch18", "workers", "triplength_avg", "income_gr","hhsize", "nummots", "numped", "income_numerical", "bus28", "metro28", "train28","quali_opnv", "quali_nv", "num2039", "num4064", "num65")]
 
 # show correlation-plot
 corr2 <- rcorr(as.matrix(corr_dt), type="spearman")
@@ -214,8 +215,6 @@ corrplot(corr2$r, type="upper", order="hclust", sig.level = 0.01, insig = "blank
 # remove hhsize due to correlation
 HH_dt_2[, hhsize := NULL]
 
-#remove num65 due to correlation
-HH_dt_2[, num65 := NULL]
 
 ```
 
@@ -351,7 +350,7 @@ VIF
 
 
 HH_dt_2_out$numcars <- as.numeric(as.character(HH_dt_2_out$numcars))
-x_reg <- lm(numcars ~  numlic + region2 + income_numerical + quali_nv + workers + parttime +  hh_children + CS + triplength_avg + nummots + numped + num2039 + anzahlold + education + housing_type + quali_opnv + train28 + bus28 + metro28 + garage + tripsavg, data = HH_dt_2_out)
+x_reg <- lm(numcars ~  numlic + region2 + income_numerical + quali_nv + workers + parttime +  hh_children +CSyes + CSmultiple + triplength_avg + nummots + numped + oldHH + education + housing_type + quali_opnv + train28 + bus28 + metro28 + garage + tripsavg + education, data = HH_dt_2_out)
 x <- vif(x_reg)
 
 x
@@ -384,11 +383,11 @@ HH_dt_bin3$numcars <- as.numeric(as.character(HH_dt_bin3$numcars))
 HH_dt_bin3$numcars <- HH_dt_bin3$numcars/3
 
 
-mylogit <- glm(numcars ~  income_numerical + triplength_avg  +tripsavg + nummots  + numped   + numch18   + numlic + workers + parttime + share2039  + share4064  + education + CSyes + CSmultiple + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children, data = HH_dt_bin1, family = "binomial")
+mylogit <- glm(numcars ~  income_numerical + triplength_avg  +tripsavg + nummots  + numped  + numlic + workers + parttime + oldHH + education + CSyes + CSmultiple + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children + education, data = HH_dt_bin1, family = "binomial")
 
-mylogit2 <- glm(numcars ~  income_numerical + triplength_avg  +tripsavg + nummots  + numped   + numch18   + numlic + workers + share2039  + share4064  + education + CSyes + CSmultiple + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv +hh_children, data = HH_dt_bin2, family = "binomial")
+mylogit2 <- glm(numcars ~ income_numerical + triplength_avg  +tripsavg + nummots  + numped + numlic + workers + parttime + oldHH + education + CSyes + CSmultiple + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children + education, data = HH_dt_bin2, family = "binomial")
 
-mylogit3 <- glm(numcars ~  income_numerical + triplength_avg  +tripsavg + nummots  + numped   + numch18   + numlic + workers + share2039  + share4064  + education + CSyes + CSmultiple + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children, data = HH_dt_bin3, family = "binomial")
+mylogit3 <- glm(numcars ~  income_numerical + triplength_avg  +tripsavg + nummots  + numped + numlic + workers + parttime + oldHH + education + CSyes + CSmultiple + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children + education, data = HH_dt_bin3, family = "binomial")
 
 
 ```
@@ -401,12 +400,12 @@ Plot continuous variables against the logit
 #http://www.sthda.com/english/articles/36-classification-methods-essentials/148-logistic-regression-assumptions-and-diagnostics-in-r/
 
 
+
 #logit1
 probabilities <- predict(mylogit, type = "response")
-mydata <- HH_dt_bin1[,c('shareworkers')]
+mydata <- HH_dt_bin1[,c('numlic', 'workers', 'parttime', 'nummots', 'triplength_avg', 'income_numerical', 'tripsavg', 'numped')]
 predictors <- colnames(mydata)
 
-#c('numlic', 'workers', 'parttime', 'nummots', 'triplength_avg', 'income_numerical', 'tripsavg', 'share2039', 'share4064')
 mydata <- mydata %>%
   mutate(logit = log(probabilities/(1-probabilities))) %>%
   gather(key = "predictors", value = "predictor.value", -logit)
@@ -468,15 +467,12 @@ y <- resid(mylogit, type= "response")
 #library(arm)
 binnedplot(HH_dt_bin1$triplength_avg,y) #ok
 binnedplot(HH_dt_bin1$income_numerical,y)#ok
-binnedplot(HH_dt_bin1$sharedrivers,y)#ok
+binnedplot(HH_dt_bin1$numlic,y)#ok
 binnedplot(HH_dt_bin1$tripsavg,y)#ok
-binnedplot(HH_dt_bin1$share4064,y)#ok
-binnedplot(HH_dt_bin1$share2039,y)#ok
-binnedplot(HH_dt_bin1$shareworkers,y)#ok
+binnedplot(HH_dt_bin1$workers,y)#ok
 binnedplot(HH_dt_bin1$parttime,y)#ok
 binnedplot(HH_dt_bin1$nummots,y) #ok
 binnedplot(HH_dt_bin1$numped,y) # ok
-binnedplot(HH_dt_bin1$numch18,y) #ok
 #binnedplot(HH_dt_bin1$num2039,y) # ok
 #binnedplot(HH_dt_bin1$num4064,y) # ok
 binnedplot(x,y)
@@ -494,13 +490,10 @@ y2 <- resid(mylogit2, type= "response")
 
 binnedplot(HH_dt_bin2$triplength_avg,y2) #ok
 binnedplot(HH_dt_bin2$income_numerical,y2)#ok
-binnedplot(HH_dt_bin2$sharedrivers,y2)#ok
+binnedplot(HH_dt_bin2$numlic,y2)#ok
 binnedplot(HH_dt_bin2$tripsavg,y2)#ok
 binnedplot(HH_dt_bin2$nummots,y2) #ok
 binnedplot(HH_dt_bin2$numped,y2) # ok
-binnedplot(HH_dt_bin2$numch18,y2) #ok
-binnedplot(HH_dt_bin2$share2039,y2) # ok
-binnedplot(HH_dt_bin2$share4064,y2) # ok
 binnedplot(x2,y2)
 ```
 
@@ -533,15 +526,19 @@ Change logits according to nonlinear associatons: logit1
 HH_dt_bin1$nummots1 = HH_dt_bin1$nummots
 HH_dt_bin1$nummots1[HH_dt_bin1$nummots == 0] <- HH_dt_bin1$nummots1[HH_dt_bin1$nummots == 0] + 0.0001
 
-HH_dt_bin1$parttime1 = HH_dt_bin1$parttime
-HH_dt_bin1$parttime1[HH_dt_bin1$parttime == 0] <- HH_dt_bin1$parttime1[HH_dt_bin1$parttime == 0] + 0.0001
+#HH_dt_bin1$parttime1 = HH_dt_bin1$parttime
+#HH_dt_bin1$parttime1[HH_dt_bin1$parttime == 0] <- HH_dt_bin1$parttime1[HH_dt_bin1$parttime == 0] + 0.0001
 
-HH_dt_bin1$shareworkers <- HH_dt_bin1$workers / HH_dt_bin1$hhsize
+#HH_dt_bin1$shareworkers <- HH_dt_bin1$workers / HH_dt_bin1$hhsize
 
-HH_dt_bin1$sharedrivers1 = HH_dt_bin1$sharedrivers
-HH_dt_bin1$sharedrivers1[HH_dt_bin1$sharedrivers == 0] <- HH_dt_bin1$sharedrivers1[HH_dt_bin1$sharedrivers == 0] + 0.0001
+#HH_dt_bin1$sharedrivers1 = HH_dt_bin1$sharedrivers
+#HH_dt_bin1$sharedrivers1[HH_dt_bin1$sharedrivers == 0] <- HH_dt_bin1$sharedrivers1[HH_dt_bin1$sharedrivers == 0] + 0.0001
 
-mylogit <- glm(numcars ~  numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +numch18 +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + share4064 + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28, data = HH_dt_bin1, family = "binomial")
+mylogit <- glm(numcars ~ numlic + region2 + income_numerical + 
+    I(numlic^2) + quali_nv + I(income_numerical^2) + CSyes + 
+    workersall + CSmultiple + log(nummots1) + triplength_avg + housing_type+
+    quali_opnv + I(triplength_avg^2) + oldHH + hh_children + numped + tripsavg + metro28 + train28 + garage + 
+    bus28, data = HH_dt_bin1, family = "binomial")
 
 
 plot(mylogit)
@@ -559,14 +556,14 @@ influentials1 = model.data1 %>%
 filter(abs(.std.resid) > 3)
 influentials1
 
-templogit1 <- c(19833 ,37738, 19137)
-templogit1 <- c(19130, 19824,14918)
+
+templogit1 <- c(14925,14947, 37742)
 HHID_logit1 <- influentials1$HHID[influentials1$index %in% templogit1]
 
 HH_dt_bin1 <- filter(HH_dt_bin1, !(HH_ID %in% HHID_logit1))
-HH_dt_bin1 <- filter(HH_dt_bin1, !(HH_ID %in% influentials1$HHID))
+#HH_dt_bin1 <- filter(HH_dt_bin1, !(HH_ID %in% influentials1$HHID))
 
-mylogit <- glm(numcars ~  numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + shareold + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28, data = HH_dt_bin1, family = "binomial")
+mylogit <- glm(numcars ~  numlic + I(numlic^2) + region2 + income_numerical+quali_nv + CSyes + CSmultiple + workers + I(workers^2) + triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + oldHH+ hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + I(numped^2)+ bus28, data = HH_dt_bin1,family = "binomial")
 
 
 
@@ -581,13 +578,13 @@ Change logits according to nonlinear associatons: logit2
 HH_dt_bin2$nummots1 = HH_dt_bin2$nummots
 HH_dt_bin2$nummots1[HH_dt_bin2$nummots == 0] <- HH_dt_bin2$nummots1[HH_dt_bin2$nummots == 0] + 0.0001
 
-HH_dt_bin2$parttime1 = HH_dt_bin2$parttime
-HH_dt_bin2$parttime1[HH_dt_bin2$parttime == 0] <- HH_dt_bin2$parttime1[HH_dt_bin2$parttime == 0] + 0.0001
+#HH_dt_bin2$parttime1 = HH_dt_bin2$parttime
+#HH_dt_bin2$parttime1[HH_dt_bin2$parttime == 0] <- HH_dt_bin2$parttime1[HH_dt_bin2$parttime == 0] + 0.0001
 
-HH_dt_bin2$sharedrivers1 = HH_dt_bin2$sharedrivers
-HH_dt_bin2$sharedrivers1[HH_dt_bin2$sharedrivers == 0] <- HH_dt_bin2$sharedrivers1[HH_dt_bin2$sharedrivers == 0] + 0.0001
+#HH_dt_bin2$sharedrivers1 = HH_dt_bin2$sharedrivers
+#HH_dt_bin2$sharedrivers1[HH_dt_bin2$sharedrivers == 0] <- HH_dt_bin2$sharedrivers1[HH_dt_bin2$sharedrivers == 0] + 0.0001
 
-mylogit2 <- glm(numcars ~ income_gr +triplength_avg+ I(triplength_avg^2) + tripsavg +log(nummots1) + numped + numlic + I(numlic^2) + workers + parttime+ share2039 + shareold + education + CSyes + CSmultiple + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children, data = HH_dt_bin2, family = "binomial")
+mylogit2 <- glm(numcars ~ numlic + region2 + income_numerical +  I(numlic^2) + quali_nv + I(income_numerical^2) + CSyes +workers + CSmultiple + log(nummots1) + triplength_avg + housing_type + quali_opnv + I(triplength_avg^2) + oldHH + parttime +hh_children + numped + tripsavg + metro28 + train28 + garage + bus28, data = HH_dt_bin2, family = "binomial")
 
 plot(mylogit2)
 #15347
@@ -601,8 +598,7 @@ model.data2$HHID <- HH_dt_bin2$HH_ID
 influentials2 = model.data2 %>% 
 filter(abs(.std.resid) > 3)
 
-templogit2 <- c(15347,20378,7235)
-templogit2 <- c(15299,7207,20325)
+templogit2 <- c(15349,10847,14315)
 HHID_logit2 <- influentials2$HHID[influentials2$index %in% templogit2]
 
 HH_dt_bin2 <- filter(HH_dt_bin2, !(HH_ID %in% HHID_logit2))
@@ -624,11 +620,11 @@ Change logits according to nonlinear associatons: logit3
 HH_dt_bin3$nummots1 = HH_dt_bin3$nummots
 HH_dt_bin3$nummots1[HH_dt_bin3$nummots == 0] <- HH_dt_bin3$nummots1[HH_dt_bin3$nummots == 0] + 0.0001
 
-HH_dt_bin3$parttime1 = HH_dt_bin3$parttime
-HH_dt_bin3$parttime1[HH_dt_bin3$parttime == 0] <- HH_dt_bin3$parttime1[HH_dt_bin3$parttime == 0] + 0.0001
+#HH_dt_bin3$parttime1 = HH_dt_bin3$parttime
+#HH_dt_bin3$parttime1[HH_dt_bin3$parttime == 0] <- HH_dt_bin3$parttime1[HH_dt_bin3$parttime == 0] + 0.0001
 
 
-mylogit3 <- glm(numcars ~  numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + shareold + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28, data = HH_dt_bin3, family = "binomial")
+mylogit3 <- glm(numcars ~  numlic + region2 + income_numerical +  I(numlic^2) + quali_nv + I(income_numerical^2) + CSyes +workers + CSmultiple + log(nummots1) + triplength_avg + housing_type + quali_opnv + I(triplength_avg^2) + oldHH + parttime +hh_children + numped + tripsavg + metro28 + train28 + garage + bus28, data = HH_dt_bin3, family = "binomial")
 
 
 #Extract model results logit3 and remove all influential points as here are less and more heterogenous observations
@@ -666,7 +662,7 @@ influential_HHID <- as.numeric(as.character(influentials$HHID))
 HHID_logit1 <- as.numeric(as.character(HHID_logit1))
 HHID_logit2 <- as.numeric(as.character(HHID_logit2))
 HHID_logit3 <- as.numeric(as.character(HHID_logit3))
-temp100 = c(HHID_logit3,HHID_logit1, HHID_logit2)
+temp100 = c(influential_HHID,HHID_logit1, HHID_logit2)
 HH_dt_2_out <- filter(HH_dt_2_out,!(HH_ID %in% temp100))
 
 HH_dt_2_out$nummots1 = HH_dt_2_out$nummots

@@ -32,13 +32,10 @@ Regression using mnlogit
 HH_dt_2_out$numcars <- as.numeric(as.character(HH_dt_2_out$numcars))
 HH_dt_2_out$numcars <- factor(HH_dt_2_out$numcars)
 
-HH_dt_2_out$sharedrivers <- HH_dt_2_out$numlic / HH_dt_2_out$hhsize
-HH_dt_2_out$shareworkers <- HH_dt_2_out$workers/HH_dt_2_out$hhsize
-HH_dt_2_out$shareold <- HH_dt_2_out$anzahlold/HH_dt_2_out$hhsize
-HH_dt_2_out$share2039_v2 <- HH_dt_2_out$num2039/(HH_dt_2_out$hhsize-HH_dt_2_out$numch18)
-HH_dt_2_out$youngHH <- "0"
-HH_dt_2_out$youngHH[HH_dt_2_out$share2039_v2 > 0.5] <- "1"
-HH_dt_2_out$youngHH <- factor(HH_dt_2_out$youngHH)
+# 18 bis 36
+# 37 + 
+# old hh: mehr als 0.5
+
 
 library(mlogit)
 
@@ -63,7 +60,12 @@ summary(fit1)
 # model formulation after accounting for nonlinearity and multicollinearity
 #now with shareold instead of share4064
 
-fm_new <- formula(numcars ~  1| numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + shareold + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28|1)
+fm_new <- formula(numcars ~  1| numcars ~ numlic + region2 + income_numerical + 
+    I(numlic^2) + quali_nv + I(income_numerical^2) + CSyes + 
+    workers + CSmultiple + log(nummots1) + triplength_avg + housing_type + 
+    quali_opnv + I(triplength_avg^2) + oldHH + parttime + hh_children + 
+    I(workers^2) + numped + tripsavg + metro28 + train28 + garage + 
+    bus28|1)
 fit_new <- mnlogit(fm_new, mnlogit_dt_out, ncores=4, choiceVar = "alt")
 summary(fit_new)
 #fit_new_mlogit<- mlogit(fm_new, mnlogit_dt_out, reflevel = '0')
@@ -1050,14 +1052,13 @@ Forward selection (normal model)
 
 ```{r}
 
-fm_full <- formula(numcars ~  1| numlic+ region2 + income_numerical+ quali_nv)
-fit_full <-  mlogit(fm_full, mnlogit_dt_out, ncores=4, choiceVar = "alt")
 
 fit_multinom_test <- multinom(numcars ~ numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + share4064 + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28 + education + numch18, data = HH_dt_2_out)
 
-fit_multinom_null <- multinom(numcars ~ 1, data = HH_dt_2_out,maxit=200)
+fit_multinom_null <- multinom(numcars ~ 1, data = HH_dt_2_out,maxit=250)
 
-stepAIC(fit_multinom_null, direction="forward", scope = list(upper = ~ numlic + I(numlic^2) + region2 + income_numerical + quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + share4064 + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28 + education + numch18))
+stepAIC(fit_multinom_null, direction="forward", scope = list(upper = ~ numlic + I(numlic^2) + region2 + income_numerical+I(income_numerical^2)+ quali_nv + CSyes + CSmultiple + workers + I(workers^2) + triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + oldHH+ hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28))
+
 
 #statt rotate x axis ding:
 # scale_x_discrete(guide = guide_axis(n.dodge = 2))

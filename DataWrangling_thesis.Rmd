@@ -157,6 +157,10 @@ taet_dt <- HH_dt[, c("HP_TAET_1","HP_TAET_2", "HP_TAET_3", "HP_TAET_4","HP_TAET_
 summary(taet_dt)
 taet_dt <- as.data.table(taet_dt)
 
+temp_workersall <- taet_dt < 6 & taet_dt > 0
+temp_workersall <- as.data.table(temp_workersall)
+temp_workersall <- temp_workersall*1
+
 temp_workers <- taet_dt == 1
 temp_workers <- as.data.table(temp_workers)
 temp_workers <- temp_workers*1
@@ -165,9 +169,11 @@ temp_parttime <- taet_dt < 6 & taet_dt > 1
 temp_parttime <- as.data.table(temp_parttime)
 temp_parttime <- temp_parttime*1
 
+sum_workersall<- apply(temp_workersall,1,sum)
 sum_workers<- apply(temp_workers,1,sum)
 sum_parttime<- apply(temp_parttime,1,sum)
 # add new column 
+HH_dt$workersall <- sum_workersall
 HH_dt$workers <- sum_workers
 HH_dt$parttime <- sum_parttime
 
@@ -219,14 +225,14 @@ age_dt <- HH_dt[, c("HP_ALTER_1", "HP_ALTER_2", "HP_ALTER_3", "HP_ALTER_4", "HP_
 summary(age_dt)
 is.data.table(age_dt)
 
-# 20-39 year olds
+# 18-37 year olds
 temp <- age_dt
 
-result <- temp < 40 & temp > 19
+result <- temp < 37 & temp > 17
 result <- as.data.table(result)
 result <- result*1
 result
-anzahl2039 <- apply(result,1,sum)
+anzahl1836 <- apply(result,1,sum)
 
 # 40-64 year olds
 
@@ -243,16 +249,16 @@ result2 <- as.data.table(result2)
 result2 <- result2*1
 anzahl65 <- apply(result2,1,sum)
 
-result4 <- temp > 39 & temp < 150
+result4 <- temp > 36 & temp < 150
 result4 <- as.data.table(result4)
 result4 <- result4*1
 anzahlold <- apply(result4,1,sum)
 
 # create new columns
-HH_dt$num2039 <- anzahl2039
+HH_dt$num1836 <- anzahl1836
 HH_dt$num4064 <- anzahl4064
 HH_dt$num65 <- anzahl65
-HH_dt$anzahlold <- anzahlold
+HH_dt$numold <- anzahlold
 
 
 #remove old columns
@@ -813,12 +819,24 @@ HH_dt_2$region1 = revalue(HH_dt_2$region1, c("51"="metropole", "52"="regiopole",
 Add share columns
 
 ```{r}
-HH_dt_2$share2039 <- HH_dt_2$num2039/HH_dt_2$hhsize
+HH_dt_2$share1836 <- HH_dt_2$num1836/HH_dt_2$hhsize
 HH_dt_2$share4064 <- HH_dt_2$num4064/HH_dt_2$hhsize
-HH_dt_2$shareold <- HH_dt_2$anzahlold/HH_dt_2_out$hhsize
+
+HH_dt_2$shareold <- HH_dt_2$numold/(HH_dt_2$hhsize-HH_dt_2$numch18)
+HH_dt_2$shareyoung <- HH_dt_2$num1836/(HH_dt_2$hhsize-HH_dt_2$numch18)
+
 HH_dt_2$shareworkers <- HH_dt_2$workers/HH_dt_2$hhsize
 HH_dt_2$shareparttime <- HH_dt_2$parttime/HH_dt_2$hhsize
 HH_dt_2$tripsavg <- HH_dt_2$trips/HH_dt_2$hhsize
+
+HH_dt_2$youngHH <- 0
+HH_dt_2$youngHH[HH_dt_2$shareyoung > 0.5] <- 1
+HH_dt_2$youngHH <- factor(HH_dt_2$youngHH)
+
+HH_dt_2$oldHH <- 0
+HH_dt_2$oldHH[HH_dt_2$shareyoung <= 0.5] <- 1
+HH_dt_2$oldHH <- factor(HH_dt_2$oldHH)
+
 
 ```
 
