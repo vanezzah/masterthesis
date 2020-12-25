@@ -11,6 +11,9 @@ require(ROCR) # for the ROC curve
 require(caret) # for confusionmatrix() 
 require(ROSE) # for downsampling
 require(rpart) # for decision tree 
+library(randomForest)
+library(mlbench)
+library(e1071)
 ```
 
 
@@ -20,7 +23,7 @@ Split into training and test set
 
 ```{r}
 set.seed(6) 
-train_index <- sample.split(Y = HH_dt_2_out$numcars , SplitRatio = 0.7)
+train_index <- sample.split(Y = HH_dt_2_out$numcars , SplitRatio = 0.8)
 
 train_data <- HH_dt_2_out[train_index, ]
 test_data <- HH_dt_2_out[!train_index, ]
@@ -32,6 +35,7 @@ testdata_ml <- mlogit.data(test_data, choice="numcars", shape="wide")
 ```
 
 ```{r}
+
 set.seed(7)
 
 fm_new <- formula(numcars ~  1| numlic + region2 + income_numerical + 
@@ -41,7 +45,7 @@ fm_new <- formula(numcars ~  1| numlic + region2 + income_numerical +
     I(workers^2) + numped + tripsavg + metro28 + train28 + garage + 
     bus28|1)
 
-MNL_model <- mnlogit(fm_new, traindata_ml, ncores=4, choiceVar = "alt")
+#MNL_model <- mnlogit(fm_new, traindata_ml, ncores=4, choiceVar = "alt")
 
 
 ```
@@ -49,6 +53,7 @@ MNL_model <- mnlogit(fm_new, traindata_ml, ncores=4, choiceVar = "alt")
 Prediction with response
 
 ```{r}
+
 MNL_pred <- predict(object = MNL_model,
                       newdata = testdata_ml ,
                       type = "response", probability=F,choiceVar="alt")
@@ -88,23 +93,25 @@ mean(conf$byClass[,"Balanced Accuracy"])
 Downsampling
 
 ```{r}
-summary(train_data$numcars)
+
 set.seed(234)
 dtrain<- downSample(x = train_data,
                      y = train_data$numcars)
 
-summary(dtrain$numcars)
 
 dtraindata_ml <- mlogit.data(dtrain, choice="numcars", shape="wide")
 
 MNL_model_down <- mnlogit(fm_new, dtraindata_ml, ncores=4, choiceVar = "alt")
 
-MNL_pred_down <- predict(object = MNL_model_down,
-                      newdata = testdata_ml,
+MNL_pred_down <- predict(object = MNL_model_down,newdata= testdata_ml,
                       type = "response", probability=F,choiceVar="alt")
+
+
 
 conf2 <- confusionMatrix(reference=test_data$numcars, MNL_pred_down)
 conf2
+
+
 
 mean(conf2$byClass[,"Balanced Accuracy"])
 ```
@@ -136,48 +143,66 @@ mean(conf3$byClass[,"Balanced Accuracy"])
 Up and down sampling including crossvalidation
 
 ```{r}
+set.seed(1234)
+cv_folds <- createFolds(train_data$numcars, k = 5, returnTrain = TRUE)
+
 ctrl <- caret::trainControl(method = "repeatedcv",
                    number = 5,
-                   repeats=5,
+                   repeats=10,
                    verboseIter = FALSE,
                    summaryFunction = multiClassSummary,
-                   sampling = "down")
+                   sampling = "down",
+                   index=cv_folds)
 
-ctrl2 <- trainControl(method = "repeatedcv", number = 5, repeats = 10)
-
-set.seed(42)
-
-
+set.seed(65)
 fit_cv <- caret::train(numcars ~ numlic + region2 + income_numerical + 
     I(numlic^2) + quali_nv + I(income_numerical^2) + CSyes + 
     workers + CSmultiple + log(nummots1) + triplength_avg + housing_type + 
     quali_opnv + I(triplength_avg^2) + oldHH + parttime  + hh_children + 
     I(workers^2) + numped + tripsavg + metro28 + train28 + garage + 
-    bus28, data = HH_dt_2_out, method = "multinom", trControl = ctrl, trace = FALSE)
+    bus28, data = train_data, method = "multinom", trControl = ctrl, trace = FALSE)
 
 fit_cv
 
 confusionMatrix(fit_cv)
 
+predictions0 <- predict(fit_cv, newdata= test_data)
+
+cm0 <- confusionMatrix(test_data$numcars, predictions0)
+cm0
+mean(cm0[["byClass"]][ , "Balanced Accuracy"])
+
+
 ```
 
 
-Random Forest
+Random Forest (Base model)
 ```{r}
+
+
+df_rf <- HH_dt_2_out[,c("numcars","numlic","region2","income_numerical","quali_nv","CSyes","workers","CSmultiple","nummots1","triplength_avg","housing_type","quali_opnv","oldHH","parttime","hh_children","numped","tripsavg","metro28","train28","garage","bus28")]
+
+df_rf <- as.data.frame(df_rf)
+
+train_data2 <- df_rf[train_index, ]
+test_data2 <- df_rf[!train_index, ]
+
+#x <- df_rf[,2:21]
+#y <- df_rf[,1]
 ctrl <- caret::trainControl(method = "repeatedcv",
                    number = 5,
                    repeats=2,
                    verboseIter = FALSE,
                    summaryFunction = multiClassSummary,
-                   sampling = "down")
-ntree = 3
-
-df_rf <- HH_dt_2_out[,c("numcars","numlic","region2","income_numerical","quali_nv","CSyes","workers","CSmultiple","nummots1","triplength_avg","housing_type","quali_opnv","oldHH","parttime","hh_children","numped","tripsavg","metro28","train28","garage","bus28")]
+                   sampling = "down",
+                   index = cv_folds)
 
 set.seed(123)  
-fit_rf <- train(numcars ~ .,  data = df_rf, method = "rf", ntree = 500, trControl = ctrl, trace = FALSE)
+fit_rf <- train(numcars ~ .,  data = train_data, method = "rf", ntree = 500, trControl = ctrl, trace = FALSE)
 
 fit_rf
+
+predictins2 = predict()
 
 confusionMatrix(fit_rf)
 ```
@@ -197,14 +222,9 @@ RF Tuning
 #Maximum tree depth:
 
 ```{r}
-library(randomForest)
-library(mlbench)
-library(caret)
-library(e1071)
 
-df_rf <- as.data.frame(df_rf)
-x <- df_rf[,2:21]
-y <- df_rf[,1]
+
+
 ####
 
 set.seed(1)
@@ -214,14 +234,14 @@ bestMtry <- tuneRF(df_rf[,2:21],df_rf[,1], stepFactor = 1, improve = 1e-5, ntree
 
 ctrl3 <- caret::trainControl(method = "repeatedcv",
                    number = 5,
-                   repeats=2,
+                   repeats = 2, 
                    verboseIter = FALSE,
                    summaryFunction = multiClassSummary,
                    sampling = "down",
                    search='grid')
 
-rfGrid2 <-  expand.grid(.mtry = c(5,8,17,20))
-rfGrid <-  expand.grid(.mtry = (5:20))
+#rfGrid2 <-  expand.grid(.mtry = c(5,8,17,20))
+#rfGrid <-  expand.grid(.mtry = (5:20))
 
 set.seed(123)  
 fit_rf_grid <- train(numcars ~ .,  data = df_rf, method = "rf", ntree = 500, trControl = ctrl3, tuneGrid=rfGrid, trace = FALSE)
@@ -239,57 +259,173 @@ print(fit_rf_grid)
 
 
 ```
+Tune number of trees
 
-Tune number of trees, nodeSize and mtlr simultaneously
+```{r}
+ntrees1 <- c(10,25,50,100, 200, 500, 1000,1200) 
+
+
+set.seed(1234)
+
+ctrl6 <- trainControl(method = "oob",
+                     verboseIter = FALSE,
+                    summaryFunction = multiClassSummary)
+
+params1 <- expand.grid(ntrees = ntrees1)
+
+store_trees <- vector("list", nrow(params1))
+for(i in 1:nrow(params1)){
+  ntree <- params1[i,1]
+  set.seed(65)
+  rf_model <- train(numcars~.,
+                       data = df_rf,
+                       method = "rf",
+                       importance=FALSE,
+                       trControl = ctrl6,
+                       ntree = ntree)
+  store_trees[[i]] <- rf_model
+  print(i)
+}
+
+results_trees <- resamples(store_trees)
+
+summary(results_trees)
+
+store_trees[[1]]$finalModel$err.rate
+
+#nochmal mit weniger trees
+
+ 
+rf_model2 <- train(numcars~.,
+                       data = df_rf,
+                       method = "rf",
+                       importance=TRUE,
+                       trControl = ctrl6,
+                       ntree = 50)
+
+rf_model2$finalModel
+
+rf_model_test <- train(numcars~.,
+                       data = df_rf,
+                       method = "rf",
+                       importance=TRUE,
+                       trControl = ctrl6,
+                       ntree = 50)
+ 
+ rf_model4 <- caret::train(numcars~.,
+                       data = df_rf,
+                       method = "rf",
+                       importance=TRUE,
+                       trControl = ctrl6,
+                       ntree = 25)
+ 
+rf_model4$finalModel
+
+ rf_model5 <- caret::train(numcars~.,
+                       data = df_rf,
+                       method = "rf",
+                       importance=TRUE,
+                       trControl = ctrl6,
+                       ntree = 10)
+
+ rf_model5$finalModel
+ 
+set.seed(65)
+rf_model6 <- caret::train(numcars~.,
+                       data = df_rf,
+                       method = "rf",
+                       importance=TRUE,
+                       trControl = ctrl6,
+                       ntree = 2000)
+
+ rf_model6$finalModel
+ 
+set.seed(65)
+rf_model7 <- caret::train(numcars~.,
+                       data = df_rf,
+                       method = "rf",
+                       importance=TRUE,
+                       trControl = ctrl6,
+                       ntree = 1200)
+
+ rf_model7$finalModel
+ 
+ 
+#https://www.it-swarm-eu.dev/de/r/fehler-vektorspeicher-erschoepft-limit-erreicht-r-3.5.0-macos/806464969/
+ #https://stackoverflow.com/questions/51248293/error-vector-memory-exhausted-limit-reached-r-3-5-0-macos/51956149#51956149
+ 
+
+```
+
+Tune nodeSize and mtlr simultaneously
 ```{r}
 #https://stackoverflow.com/questions/57939453/building-a-randomforest-with-caret
 
-df_rf_test <- df_rf[1:10000,]
-df_rf_train <- df_rf[10001:70390,]
+#df_rf_test <- df_rf[1:10000,]
+#df_rf_train <- df_rf[10001:70390,]
 
-set.seed(1234)
-cv_folds <- createFolds(df_rf_train$numcars, k = 5, returnTrain = TRUE)
+
 
 #create tune control:
 
-tuneGrid <- expand.grid(.mtry = c(5 : 12))
+tuneGrid <- expand.grid(.mtry = c(2:33))
 
 ctrl4 <- trainControl(method = "repeatedcv",
                      number = 5,
-                     repeats =2,
+                     repeats = 10,
                      search = 'grid',
                      verboseIter = FALSE,
-                    summaryFunction = multiClassSummary,
-                      sampling = "down",
-                     classProbs = TRUE,
-                     savePredictions = "final",
+                     summaryFunction = multiClassSummary,
+                     sampling = "down",
                      index = cv_folds)
 
-ntrees <- c(500, 1000, 1500)    
-nodesize <- c(1,3,5,7,9)
+nodesize <- c(1,2,3,4,5,6,7,8,9,10,20,40,80,160,320,640)
+nodesize <- c(1,3,5,7,9,10,20,40,80,160,320,640)
 
-params <- expand.grid(ntrees = ntrees,
-                      nodesize = nodesize)
+params <- expand.grid(nodesize = nodesize)
 
 store_maxnode <- vector("list", nrow(params))
+
 for(i in 1:nrow(params)){
-  nodesize <- params[i,2]
-  ntree <- params[i,1]
+  nodesize <- params[i,1]
   set.seed(65)
   rf_model <- train(numcars~.,
-                       data = df_rf_train,
+                       data = train_data2,
                        method = "rf",
-                       importance=TRUE,
+                       importance=FALSE,
                        tuneGrid = tuneGrid,
                        trControl = ctrl4,
-                       ntree = ntree,
+                       ntree = 500,
                        nodesize = nodesize)
   store_maxnode[[i]] <- rf_model
+  print(i)
+}
+
+#Rest:
+
+nodesize2 <- c(40,80,160,320,640)
+
+params2 <- expand.grid(nodesize = nodesize2)
+store_maxnode2 <- vector("list", nrow(params2))
+
+for(i in 1:nrow(params2)){
+  nodesize2 <- params2[i,1]
+  set.seed(65)
+  rf_model2 <- train(numcars~.,
+                       data = train_data2,
+                       method = "rf",
+                       importance=FALSE,
+                       tuneGrid = tuneGrid,
+                       trControl = ctrl4,
+                       ntree = 1000,
+                       nodesize = nodesize2)
+  store_maxnode2[[i]] <- rf_model2
+  print(i)
 }
 
 #combine results
 
-results_mtry <- resamples(store_maxnode)
+results_mtry <- resamples(store_maxnode[1:11])
 
 summary(results_mtry)
 
@@ -297,6 +433,393 @@ summary(results_mtry)
 
 lapply(store_maxnode, print)
 
+ set.seed(65)
+ rf_model_ns12 <- train(numcars~.,
+                       data = df_rf_train,
+                       method = "rf",
+                       importance=TRUE,
+                       tuneGrid = tuneGrid,
+                       trControl = ctrl4,
+                       ntree = 1000,
+                       nodesize = 12)
+
+print(rf_model_ns12)
+
+ set.seed(65)
+ rf_model_ns20 <- train(numcars~.,
+                       data = df_rf_train,
+                       method = "rf",
+                       importance=TRUE,
+                       tuneGrid = tuneGrid,
+                       trControl = ctrl4,
+                       ntree = 1000,
+                       nodesize = 20)
+
+  set.seed(65)
+ rf_model_ns50 <- train(numcars~.,
+                       data = df_rf_train,
+                       method = "rf",
+                       importance=TRUE,
+                       tuneGrid = tuneGrid,
+                       trControl = ctrl4,
+                       ntree = 1000,
+                       nodesize = 50)
+ print(rf_model_ns50)
+
+```
+
+
+
+Mutliclass ROC
+```{r}
+library(pROC)
+multiclass.roc()
+
+predictions1 = predict(rf_model_ns12, newdata=df_rf_test, type = 'raw')
+cm1 <- confusionMatrix(df_rf_test$numcars, predictions)
+mean(cm1[["byClass"]][ , "Balanced Accuracy"])
+
+predictions2 = predict(rf_model_ns20, newdata=df_rf_test, type = 'raw')
+cm2 <- confusionMatrix(df_rf_test$numcars, predictions2)
+mean(cm2[["byClass"]][ , "Balanced Accuracy"])
+
+predictions3 = predict(rf_model_ns50, newdata=df_rf_test, type = 'raw')
+cm3 <- confusionMatrix(df_rf_test$numcars, predictions3)
+mean(cm3[["byClass"]][ , "Balanced Accuracy"])
+
+predictions <- as.numeric(predictions)
+roc.multi <- multiclass.roc(df_rf_test$numcars, predictions)
+
+rs <- roc.multi[['rocs']]
+plot.roc(rs[[6]])
+sapply(2:length(rs),function(i) lines.roc(rs[[i]],col=i))
+
+```
+```{r}
+predictions = predict(rf_model_ns20, newdata=df_rf_test, type = 'raw')
+confusionMatrix(df_rf_test$numcars, predictions)
+```
+
+
+Plots
+```{r}
+#treesize
+
+#make df of treesizes
+df_treesize = data.frame(matrix(vector(), 0, 2,
+                dimnames=list(c(), c("Number of trees", "OOB-error"))),
+                stringsAsFactors=F)
+
+df_treesize[1,] <- c(10,store_trees[[1]]$finalModel$err.rate[10])
+df_treesize[2,] <- c(25,store_trees[[2]]$finalModel$err.rate[25])
+df_treesize[3,] <- c(50,store_trees[[3]]$finalModel$err.rate[50])
+df_treesize[4,] <- c(100,store_trees[[4]]$finalModel$err.rate[100])
+df_treesize[5,] <- c(200,store_trees[[5]]$finalModel$err.rate[200])
+df_treesize[6,] <- c(500,store_trees[[6]]$finalModel$err.rate[500])
+df_treesize[7,] <- c(1000,store_trees[[7]]$finalModel$err.rate[1000])
+df_treesize[8,] <- c(1200,rf_model7$finalModel$err.rate[1200])
+df_treesize[9,] <- c(1500,store_trees[[5]]$finalModel$err.rate[1500])
+df_treesize[10,] <- c(2000,rf_model6$finalModel$err.rate[2000])
+
+
+tree_plot <-ggplot(data=df_treesize, aes(x=Number.of.trees))+
+      geom_line(aes(y=OOB.error)) + 
+      ylab("Out-of-bag Error")+
+      xlab("Number of trees")+
+      ggtitle("")+
+      #scale_y_continuous(limits=c(0.75,0.77))+
+      scale_x_continuous(limits=c(0,1200),breaks = c(0,250,500,750,1000))+
+      theme_bw()+ 
+        theme(panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank())+
+      scale_fill_grey()
+
+tree_plot
+
+#Different mtrs 
+#different maxnodes
+
+df_mtry = data.frame(matrix(vector(), 0, 3,
+                dimnames=list(c(), c("nodesize", "mtry", "BalAcc"))),
+                stringsAsFactors=F)
+
+balacc1 <- store_maxnode[[1]]$results$Mean_Balanced_Accuracy
+balacc2 <- store_maxnode[[2]]$results$Mean_Balanced_Accuracy
+balacc3 <- store_maxnode[[3]]$results$Mean_Balanced_Accuracy
+balacc4 <- store_maxnode[[4]]$results$Mean_Balanced_Accuracy
+balacc5 <- store_maxnode[[5]]$results$Mean_Balanced_Accuracy
+balacc6 <- store_maxnode[[6]]$results$Mean_Balanced_Accuracy
+balacc7 <- store_maxnode[[7]]$results$Mean_Balanced_Accuracy
+balacc8 <- store_maxnode[[8]]$results$Mean_Balanced_Accuracy
+balacc9 <- store_maxnode[[9]]$results$Mean_Balanced_Accuracy
+balacc10 <- store_maxnode[[10]]$results$Mean_Balanced_Accuracy
+balacc20 <- store_maxnode[[11]]$results$Mean_Balanced_Accuracy
+balacc40 <- store_maxnode2[[1]]$results$Mean_Balanced_Accuracy
+balacc80 <- store_maxnode2[[2]]$results$Mean_Balanced_Accuracy
+balacc160 <- store_maxnode2[[3]]$results$Mean_Balanced_Accuracy
+balacc320 <- store_maxnode2[[4]]$results$Mean_Balanced_Accuracy
+balacc640 <- store_maxnode2[[5]]$results$Mean_Balanced_Accuracy
+
+balacc1 <- store_maxnode[[1]]$results$Mean_F1
+balacc2 <- store_maxnode[[2]]$results$Mean_F1
+balacc3 <- store_maxnode[[3]]$results$Mean_F1
+balacc4 <- store_maxnode[[4]]$results$Mean_F1
+balacc5 <- store_maxnode[[5]]$results$Mean_F1
+balacc6 <- store_maxnode[[6]]$results$Mean_F1
+balacc7 <- store_maxnode[[7]]$results$Mean_F1
+balacc8 <- store_maxnode[[8]]$results$Mean_F1
+balacc9 <- store_maxnode[[9]]$results$Mean_F1
+balacc10 <- store_maxnode[[10]]$results$Mean_F1
+balacc20 <- store_maxnode[[11]]$results$Mean_F1
+balacc40 <- store_maxnode2[[1]]$results$Mean_F1
+balacc80 <- store_maxnode2[[2]]$results$Mean_F1
+balacc160 <- store_maxnode2[[3]]$results$Mean_F1
+balacc320 <- store_maxnode2[[4]]$results$Mean_F1
+balacc640 <- store_maxnode2[[5]]$results$Mean_F1
+
+#balacc12 <- rf_model_ns12$results$Mean_F1
+#balacc20 <- rf_model_ns20$results$Mean_F1
+#balacc50 <- rf_model_ns50$results$Mean_F1
+
+balacc1 <- store_maxnode[[1]]$results$Kappa
+balacc2 <- store_maxnode[[2]]$results$Kappa
+balacc3 <- store_maxnode[[3]]$results$Kappa
+balacc4 <- store_maxnode[[4]]$results$Kappa
+balacc5 <- store_maxnode[[5]]$results$Kappa
+balacc6 <- store_maxnode[[6]]$results$Kappa
+balacc7 <- store_maxnode[[7]]$results$Kappa
+balacc8 <- store_maxnode[[8]]$results$Kappa
+balacc9 <- store_maxnode[[9]]$results$Kappa
+balacc10 <- store_maxnode[[10]]$results$Kappa
+balacc20 <- store_maxnode[[11]]$results$Kappa
+balacc40 <- store_maxnode2[[1]]$results$Kappa
+balacc80 <- store_maxnode2[[2]]$results$Kappa
+balacc160 <- store_maxnode2[[3]]$results$Kappa
+balacc320 <- store_maxnode2[[4]]$results$Kappa
+balacc640 <- store_maxnode2[[5]]$results$Kappa
+
+
+mtry <- c(2:33)
+nodesize1 <- rep(1,32)
+nodesize2 <- rep(2,32)
+nodesize3 <- rep(3,32)
+nodesize4 <- rep(4,32)
+nodesize5 <- rep(5,32)
+nodesize6 <- rep(6,32)
+nodesize7 <- rep(7,32)
+nodesize8 <- rep(8,32)
+nodesize9 <-rep(9,32)
+nodesize10 <- rep(10,32)
+nodesize20 <- rep(20,32)
+nodesize40 <- rep(40,32)
+nodesize80 <- rep(80,32)
+nodesize160 <- rep(160,32)
+nodesize320 <- rep(320,32)
+nodesize640<- rep(640,32)
+
+df_mtry <- data.frame(nodesize=nodesize1, mtry, BalAcc=balacc1)
+#df_mtry <- rbind(df_mtry, data.frame(nodesize =nodesize2, mtry, BalAcc = balacc2),names=FALSE)
+df_mtry <- rbind(df_mtry, data.frame(nodesize =nodesize3, mtry, BalAcc = balacc3),names=FALSE)
+#df_mtry <- rbind(df_mtry, data.frame(nodesize =nodesize4, mtry, BalAcc = balacc4),names=FALSE)
+df_mtry <- rbind(df_mtry, data.frame(nodesize =nodesize5, mtry, BalAcc = balacc5),names=FALSE)
+#df_mtry <- rbind(df_mtry, data.frame(nodesize =nodesize6, mtry, BalAcc = balacc6),names=FALSE)
+df_mtry <- rbind(df_mtry, data.frame(nodesize =nodesize7, mtry, BalAcc = balacc7),names=FALSE)
+#df_mtry <- rbind(df_mtry, data.frame(nodesize =nodesize8, mtry, BalAcc = balacc8),names=FALSE)
+df_mtry <- rbind(df_mtry, data.frame(nodesize =nodesize9, mtry, BalAcc = balacc9),names=FALSE)
+df_mtry <- rbind(df_mtry, data.frame(nodesize =nodesize10, mtry, BalAcc = balacc10),names=FALSE)
+df_mtry <- rbind(df_mtry, data.frame(nodesize =nodesize20, mtry, BalAcc = balacc20),names=FALSE)
+df_mtry <- rbind(df_mtry, data.frame(nodesize =nodesize40, mtry, BalAcc = balacc40),names=FALSE)
+df_mtry <- rbind(df_mtry, data.frame(nodesize =nodesize80, mtry, BalAcc = balacc80),names=FALSE)
+df_mtry <- rbind(df_mtry, data.frame(nodesize =nodesize160, mtry, BalAcc = balacc160),names=FALSE)
+df_mtry <- rbind(df_mtry, data.frame(nodesize =nodesize320, mtry, BalAcc = balacc320),names=FALSE)
+df_mtry <- rbind(df_mtry, data.frame(nodesize =nodesize640, mtry, BalAcc = balacc640),names=FALSE)
+
+df_mtry$nodesize <- factor(df_mtry$nodesize)
+
+RF_plot <-ggplot(data=df_mtry, aes(x=mtry, group=nodesize, colour=nodesize))+
+      geom_line(aes(y=BalAcc)) + 
+      ylab("Mean balanced Accuracy")+
+      xlab("mtry")+
+      ggtitle("")+
+      scale_y_continuous(limits=c(0.3,0.45))+
+      scale_x_continuous(limits=c(2,33), breaks=c(0,5,10,15,20,25,30,35))+
+      theme_bw()+ 
+        theme(panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank())+
+      scale_fill_grey()
+
+RF_plot
+#2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32
+
+  
+#prdicted vs. observed für MNL und RF
+```
+
+Final RF model 
+
+```{r}
+
+predictions_final2 = predict(store_maxnode2[[1]], newdata=test_data2, type = 'raw')
+cm_final2 <- confusionMatrix(test_data2$numcars, predictions_final2)
+cm_final2
+mean(cm_final2[["byClass"]][ , "Balanced Accuracy"])
+
+ctrl_final <- trainControl(verboseIter = FALSE,
+                     summaryFunction = multiClassSummary,
+                     search = 'grid')
+
+tunegrid <- expand.grid(.mtry=c(15))
+set.seed(65)
+rf_model_final3 <- train(numcars~.,
+                       data = train_data2,
+                       method = "rf",
+                       tuneGrid = tuneGrid,
+                       importance=FALSE,
+                       trControl = ctrl_final,
+                       ntree = 1000,
+                       nodesize = 40)
+
+#trainset predictions:
+
+#rf_final_trainref <- rf_model_final$finalModel$y #-> downsampled! deswegen viel bessere werte
+#rf_final_trainpred <- rf_model_final$finalModel$predicted
+#cm_final_train <- confusionMatrix(rf_final_trainref, rf_final_trainpred)
+# same as: rf_model_final$finalModel$confusion
+
+#aus training selbst: -> average aus holdout-Sample ergebnissen 
+cm_final_train <- confusionMatrix(confusionMatrix.train(rf_model_final3)$table)
+
+#trainset prediction 1
+balacc_final_rft <- mean(cm_final_train[["byClass"]][ , "Balanced Accuracy"])
+sensitivity0_rft <- cm_final_train[["byClass"]][ , "Balanced Accuracy"][1]
+sensitivity1_rft <- cm_final_train[["byClass"]][ , "Balanced Accuracy"][2]
+sensitivity2_rft <- cm_final_train[["byClass"]][ , "Balanced Accuracy"][3]
+sensitivity3_rft <- cm_final_train[["byClass"]][ , "Balanced Accuracy"][4]
+kappa_rft <- cm_final_train$overall['Kappa']
+
+#train mit cv
+#rf_final_trainref <- store_maxnode2[[1]]$finalModel$y
+#rf_final_trainpred <- rf_model_final$finalModel$predicted
+
+#train angewendet auf trainset: (gesamtes model wird trainiert, dann auf training data angewendet)
+#https://stats.stackexchange.com/questions/424074/r-caret-classification-why-doesnt-model-accuracy-equal-accuracy-given-by-pred
+predictions_final_trainrf = predict(rf_model_final3, newdata=train_data2, type = 'raw')
+cm_final_train2 <- confusionMatrix(train_data2$numcars, predictions_final_trainrf)
+
+balacc_final_rft2 <- mean(cm_final_train2[["byClass"]][ , "Balanced Accuracy"])
+sensitivity0_rft2 <- cm_final_train2[["byClass"]][ , "Balanced Accuracy"][1]
+sensitivity1_rft2 <- cm_final_train2[["byClass"]][ , "Balanced Accuracy"][2]
+sensitivity2_rft2 <- cm_final_train2[["byClass"]][ , "Balanced Accuracy"][3]
+sensitivity3_rft2 <- cm_final_train2[["byClass"]][ , "Balanced Accuracy"][4]
+kappa_rft2 <- cm_final_train2$overall['Kappa']
+
+#testset
+predictions_final = predict(rf_model_final3, newdata=test_data2, type = 'raw')
+cm_final <- confusionMatrix(test_data2$numcars, predictions_final)
+cm_final
+
+balacc_final_rf <- mean(cm_final[["byClass"]][ , "Balanced Accuracy"])
+sensitivity0_rf <- cm_final[["byClass"]][ , "Balanced Accuracy"][1]
+sensitivity1_rf <- cm_final[["byClass"]][ , "Balanced Accuracy"][2]
+sensitivity2_rf <- cm_final[["byClass"]][ , "Balanced Accuracy"][3]
+sensitivity3_rf <- cm_final[["byClass"]][ , "Balanced Accuracy"][4]
+kappa_rf <- cm_final$overall['Kappa']
+cohen_rf <- cohen.kappa(table(test_data2$numcars, predictions_final))
+weighted_kappa_rf <- cohen_rf$weighted
+
+table_performance <- data.frame(matrix(vector(), 0, 6,
+                dimnames=list(c(), c("Measure","Specification", "train_RF","train_MNL","test_RF", "test_MNL"))),stringsAsFactors=F)
+
+table_performance[1,] <- c("Balanced Accuracy", "Overall", balacc_final_rft2, balacc_final_mnlt2,balacc_final_rf , balacc_final_mnl)
+
+table_performance[2,] <- c("Balanced Accuracy", "Zero cars", sensitivity0_rft2, sensitivity0_mnlt2,sensitivity0_rf , sensitivity0_mnl)
+
+table_performance[3,] <- c("Balanced Accuracy", "One car",sensitivity1_rft2, sensitivity1_mnlt2,sensitivity1_rf ,sensitivity1_mnl)
+
+table_performance[4,] <- c("Balanced Accuracy", "Two cars",sensitivity2_rft2, sensitivity2_mnlt2,sensitivity2_rf , sensitivity2_mnl)
+
+table_performance[5,] <- c("Balanced Accuracy", "Three and more cars", sensitivity3_rft2, sensitivity3_mnlt2,sensitivity3_rf , sensitivity3_mnl)
+
+table_performance[6,] <- c("Kappa", "Kappa", kappa_rft2, kappa_mnlt2,kappa_rf, kappa_mnl)
+
+table_performance$train_RF <- as.numeric(table_performance$train_RF)
+table_performance$train_MNL <- as.numeric(table_performance$train_MNL)
+table_performance$test_RF <- as.numeric(table_performance$test_RF)
+table_performance$test_MNL <- as.numeric(table_performance$test_MNL)
+
+is.num <- sapply(table_performance, is.numeric)
+table_performance[is.num] <- lapply(table_performance[is.num], round, 4)
+
+
+print(xtable(table_performance, type = "latex",digits=c(0,0,0,3,3,3,3)),include.rownames=FALSE, file = "table_predictions2.tex")
+
+
+```
+
+```{r}
+
+ctrl_final_mnl <- trainControl(verboseIter = FALSE,
+                     summaryFunction = multiClassSummary)
+
+set.seed(65)
+fit_cv <- caret::train(numcars ~ numlic + region2 + income_numerical + 
+    I(numlic^2) + quali_nv + I(income_numerical^2) + CSyes + 
+    workers + CSmultiple + log(nummots1) + triplength_avg + housing_type + 
+    quali_opnv + I(triplength_avg^2) + oldHH + parttime  + hh_children + 
+    I(workers^2) + numped + tripsavg + metro28 + train28 + garage + 
+    bus28, data = train_data, method = "multinom", maxit=300,trControl = ctrl_final_mnl, trace = FALSE)
+#same as before?
+
+#aus training selbst:
+#cm_final_trainmnl <- confusionMatrix(confusionMatrix.train(fit_cv)$table)
+
+#auf training data angewendet
+predictions_final_trainmnl2 = predict(fit_cv, newdata=train_data, type = 'raw')
+cm_final_trainmnl2 <- confusionMatrix(train_data$numcars, predictions_final_trainmnl2)
+
+
+#trainset-prediction1
+#balacc_final_mnlt <- mean(cm_final_trainmnl[["byClass"]][ , "Balanced Accuracy"])
+#sensitivity0_mnlt <- cm_final_trainmnl[["byClass"]][ , "Balanced Accuracy"][1]
+#sensitivity1_mnlt <- cm_final_trainmnl[["byClass"]][ , "Balanced Accuracy"][2]
+#sensitivity2_mnlt <- cm_final_trainmnl[["byClass"]][ , "Balanced Accuracy"][3]
+#sensitivity3_mnlt <- cm_final_trainmnl[["byClass"]][ , "Balanced Accuracy"][4]
+#kappa_mnlt <- cm_final_trainmnl$overall['Kappa']
+
+#trainset-prediction2
+balacc_final_mnlt2 <- mean(cm_final_trainmnl2[["byClass"]][ , "Balanced Accuracy"])
+sensitivity0_mnlt2 <- cm_final_trainmnl2[["byClass"]][ , "Balanced Accuracy"][1]
+sensitivity1_mnlt2 <- cm_final_trainmnl2[["byClass"]][ , "Balanced Accuracy"][2]
+sensitivity2_mnlt2 <- cm_final_trainmnl2[["byClass"]][ , "Balanced Accuracy"][3]
+sensitivity3_mnlt2 <- cm_final_trainmnl2[["byClass"]][ , "Balanced Accuracy"][4]
+kappa_mnlt2 <- cm_final_trainmnl2$overall['Kappa']
+
+#testset predictions
+predictions_final_mnl = predict(fit_cv, newdata=test_data, type = 'raw')
+cm_final_mnl <- confusionMatrix(test_data$numcars, predictions_final_mnl)
+cm_final_mnl
+balacc_final_mnl <- mean(cm_final_mnl[["byClass"]][ , "Balanced Accuracy"])
+sensitivity0_mnl <- cm_final_mnl[["byClass"]][ , "Balanced Accuracy"][1]
+sensitivity1_mnl <- cm_final_mnl[["byClass"]][ , "Balanced Accuracy"][2]
+sensitivity2_mnl <- cm_final_mnl[["byClass"]][ , "Balanced Accuracy"][3]
+sensitivity3_mnl <- cm_final_mnl[["byClass"]][ , "Balanced Accuracy"][4]
+kappa_mnl <- cm_final_mnl$overall['Kappa']
+#cohen_mnl <- cohen.kappa(table(test_data$numcars, predictions_final_mnl))
+#weighted_kappa_mnl <- cohen_mnl$weighted
+
+
+```
+
+
+
+
+Weighted Kappa
+```{r}
+
+
+cohen.kappa(table(test_data2$numcars, predictions_final))
+
+cohen.kappa(table(test_data$numcars, predictions_final_mnl))
 
 ```
 
@@ -304,20 +827,162 @@ Compare variable importance
 
 ```{r}
 
+#entweder gesamt oder 
+library(tibble)
+
 #for MNL: standardised coefficients (zegras, vin ha)
+importance_ml <- as.data.frame(coef(fit_new))
+importance_ml <- rownames_to_column(importance_ml)
+importance_ml1 <- importance_ml[1:38,]
+importance_ml2 <- importance_ml[39:76,]
+importance_ml3 <- importance_ml[77:114,]
+importance_ml_final <- data.frame(importance_ml1, importance_ml2, importance_ml3)
+importance_ml_final$rowname.1 <- NULL
+importance_ml_final$rowname.2 <- NULL
+colnames(importance_ml_final)<- c("Variable","One car","Two cars", "Three and more cars")
+importance_ml_final <- importance_ml_final[order(importance_ml_final$Variable),]
+importance_f <- filter(importance_ml_final, Variable!= c("(Intercept):1", "I(numlic^2):1", "I(income_numerical^2):1","I(triplength_avg^2):1","I(workers^2):1"))
+importance_f <- filter(importance_f, Variable!= "I(income_numerical^2):1")
+
+
+#get standard errors
+#sqrt(diag(vcov(fit_new)))
+
+#standard deviation of variables
+relevant_vars <- names(fit_new$model)[2:21]
+SD_df <- HH_dt_2_out[,relevant_vars, with=FALSE] 
+alloc.col(SD_df, 200)
+test_dummies <- fastDummies::dummy_cols(SD_df, remove_first_dummy = TRUE, remove_selected_columns = TRUE)
+test_dummies$nummots1 <- log(test_dummies$nummots1)
+colname(test_dummies$nummots1) <- c("log(nummots1)")
+names(test_dummies)[names(test_dummies) == 'nummots1'] <- 'log(nummots1)'
+variables_SD <- apply(test_dummies,2,sd)
+variables_SD <- as.data.frame(variables_SD)
+variables_SD <- rownames_to_column(variables_SD)
+variables_SD <- variables_SD[order(variables_SD$rowname),]
+
+#Merge both 
+result_importance <- data.frame(importance_f, variables_SD)
+result_importance$standardized_coef_1 <- abs(result_importance$One.car * result_importance$variables_SD)
+result_importance$standardized_coef_2 <- abs(result_importance$Two.cars * result_importance$variables_SD)
+result_importance$standardized_coef_3 <- abs(result_importance$Three.and.more.cars * result_importance$variables_SD)
+result_importance$standardized_coef_total <- result_importance$standardized_coef_1 + result_importance$standardized_coef_2 + result_importance$standardized_coef_3
+
+result_importance <- result_importance[order(result_importance$standardized_coef_total, decreasing=TRUE),]
+
+result_importance2<- data.frame(result_importance$rowname,result_importance$standardized_coef_total)
+colnames(result_importance2)<- c("rowname","Standardizedcoef")
+result_importance2$rank <- c(1:33)
+result_importance2$relimp <- result_importance2$Standardizedcoef/sum(result_importance2$Standardizedcoef)
+result_importance2$rowname<-  sub("_", "", result_importance2$rowname)
+result_importance2$rowname<-  sub("_", "", result_importance2$rowname)
+result_importance2$rowname[10] <- "nummots1"
+
+# Importance random forest Gini: 
+
+importance2 <- varImp(store_maxnode2[[1]], scale=TRUE)$importance
+importance2 <- importance2[order(-importance2$Overall), , drop = FALSE]
+importance2$rank <- c(1:33)
+importance2$RelImp <- importance2$Overall/sum(importance2$Overall)
+
+importance2$MNL_name <- result_importance$rowname
+importance2$MNL <- result_importance$standardized_coef_total
+importance2$relImp_Mnl <- importance2$MNL/sum(importance2$MNL)
+importance2 <- rownames_to_column(importance2)
+
+table_importance <- importance2$rowname
+table_importance <- as.data.frame(table_importance)
+table_importance$table_importance<-  sub("_", "", table_importance$table_importance)
+colnames(table_importance)<- c("rowname")
+table_importance$RFrank <- importance2$rank
+table_importance$RFrelimp <- importance2$RelImp
+
+#merge with mnl results
+
+
+table_importance2 <- merge(table_importance, result_importance2, by="rowname")
+table_importance2 <- table_importance2[order(table_importance2$RFrank, decreasing=FALSE),]
+table_importance2$RFrelimp<- scales::percent(table_importance2$RFrelimp)
+table_importance2$relimp <- scales::percent(table_importance2$relimp)
+table_importance2$Standardizedcoef <- NULL
+colnames(table_importance2)[1] <- "Variable"
+table_importance2 <- rownames_to_column(table_importance2)
+table_importance2$rowname <- NULL
+
+
+
+
+table_importance2$rowname[table_importance2$rowname=="numlic"] <- "Number of Licenses"
+table_importance2$rowname[table_importance2$rowname=="incomenumerical"] <- "Income"
+table_importance2$rowname[table_importance2$rowname=="triplength_avg"] <- "Average triplength"
+table_importance2$rowname[table_importance2$rowname=="workers"] <- "Number of workers"
+table_importance2$rowname[table_importance2$rowname=="metro28rf"] <- "Metro: Distance really far"
+table_importance2$rowname[table_importance2$rowname=="numped"] <- "Number of bikes/pedelecs"
+table_importance2$rowname[table_importance2$rowname=="tripsavg"] <- "Average number of trips"
+table_importance2$rowname[table_importance2$rowname=="CSyes1"] <- "Carsharing available"
+
+#maketable in latex
+library(xtable)
+install.packages("xtable")
+print(xtable(table_importance2, type = "latex"), include.rownames=FALSE, file = "testtable.tex")
+
+
 #VarImp() for random forest
-varImp(fit_rf_grid)
-# as table
+#wie ist es wenn importance false ist?
+importance <- varImp(rf_model_final, scale=TRUE)$importance
+importance
+importance[, "max"] <- apply(importance[, 1:4], 1, max)
+importance[
+  order( importance[,5], decreasing = TRUE ),
+]
+
+
+
+
+# comparison table: 
+
+
+
+
+
 ```
 
+Tables
 
-Plots
 ```{r}
-# ein plot je treesize, x-achse mtlr und farbe nodeSize
+#table0
+#results of training?
 
-#Different mtrs 
-#different number of trees
-#different maxnodes
+#Table1 - prediction results
+df_table1 = data.frame(matrix(vector(), 0, 3,
+                dimnames=list(c(), c("Measure", "RF", "MNL"))),
+                stringsAsFactors=F)
+
+df_table1[1,] <- c("Overall balanced accuracy", balacc_final_rf, balacc_final_mnl)
+
+df_table1[2,] <- c("Sensitivity 0 cars", sensitivity0_rf, sensitivity0_mnl)
+df_table1[3,] <- c("Sensitivity 1 cars", sensitivity1_rf, sensitivity1_mnl)
+df_table1[4,] <- c("Sensitivity 2 cars", sensitivity2_rf, sensitivity2_mnl)
+df_table1[5,] <- c("Sensitivity 3+ cars", sensitivity3_rf, sensitivity3_mnl)
+
+df_table1[6,] <- c("Kappa", kappa_rf, kappa_mnl)
+df_table1[7,] <- c("Weighted Kappa", weighted_kappa_rf, weighted_kappa_mnl)
+
+#table2
+# in  latex tabelle mit mehrere headern : https://tex.stackexchange.com/questions/156384/table-heading-multicolumn-problem
+
+df_table2 = data.frame(matrix(vector(), 0, 5,
+                dimnames=list(c(), c("Variable", "Rank", "Variable Importance", "Rank", "Variable Importance"))),
+                stringsAsFactors=F)
+
+
+
 ```
 
+
+Plot how good categories can be predicted
+
+```{r}
+#https://www.datascienceblog.net/post/machine-learning/performance-measures-multi-class-problems/
+```
 

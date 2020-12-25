@@ -9,10 +9,25 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Calculate model
 ```{r}
-multinom_int <- multinom(numcars ~ region2 + numlic + I(numlic^2) + region2:numlic + region2:I(numlic^2) + income_numerical +I(income_numerical^2)+ region2:income_numerical + region2:I(income_numerical^2) + quali_nv + region2:quali_nv + CSyes + region2:CSyes + workers+ I(workers^2)+region2:workers +region2:I(workers^2)+ triplength_avg+ I(triplength_avg^2)+ region2:triplength_avg+ region2:I(triplength_avg^2) + log(nummots1) + region2:log(nummots1) +housing_type + region2:housing_type+ garage +region2:garage+ quali_opnv + region2:quali_opnv+oldHH + region2:oldHH +CSmultiple+region2:CSmultiple+ hh_children + region2:hh_children + metro28 + parttime + I(parttime^2) + region2:parttime+train28 +numped + I(numped^2) + region2:numped + region2:I(numped^2) + bus28, data = HH_dt_2_out, maxit=700)
 
+multinom_int3<-multinom(formula = numcars ~ region2 + numlic + I(numlic^2) + 
+    region2:numlic + region2:I(numlic^2) + income_numerical + 
+    I(income_numerical^2) + region2:income_numerical + region2:I(income_numerical^2) + 
+    quali_nv + region2:quali_nv + CSyes + region2:CSyes + workers + 
+    I(workers^2) + region2:workers + region2:I(workers^2) + triplength_avg + 
+    I(triplength_avg^2) + region2:triplength_avg + region2:I(triplength_avg^2) + 
+    log(nummots1) + region2:log(nummots1) + housing_type + region2:housing_type + 
+    garage + region2:garage + quali_opnv + region2:quali_opnv + 
+    oldHH + region2:oldHH + CSmultiple + region2:CSmultiple + 
+    hh_children + region2:hh_children + metro28 + region2:metro28 + 
+    tripsavg + I(tripsavg^2) + region2:tripsavg + parttime + 
+    I(parttime^2) + region2:parttime + train28 + region2:train28 + 
+    numped + I(numped^2) + region2:numped + region2:I(numped^2) + 
+    bus28 + region2:bus28, data = HH_dt_2_out, maxit = 700)
 
-multinom_int <- multinom(numcars ~ region2 + numlic + I(numlic^2) + region2:numlic + region2:I(numlic^2) + income_numerical +I(income_numerical^2)+ region2:income_numerical + region2:I(income_numerical^2) + quali_nv + region2:quali_nv+CSyes + region2:CSyes + workers+ I(workers^2)+ region2:workers + triplength_avg+ I(triplength_avg^2)+ region2:triplength_avg+ region2:I(triplength_avg^2) + log(nummots1) + housing_type + garage + quali_opnv + oldHH + region2:oldHH+ CSmultiple+ hh_children + region2:hh_children + metro28 +tripsavg + parttime + train28 +numped + I(numped^2) + region2:numped + region2:I(numped^2) +bus28, data = HH_dt_2_out, maxit=700)
+multinom_int <- multinom(numcars ~ region2 + numlic + I(numlic^2) + region2:numlic + region2:I(numlic^2) + income_numerical +I(income_numerical^2)+ region2:income_numerical + region2:I(income_numerical^2) + quali_nv + region2:quali_nv + CSyes + region2:CSyes + workers+ I(workers^2)+region2:workers +region2:I(workers^2)+ triplength_avg+ I(triplength_avg^2)+ region2:triplength_avg+ region2:I(triplength_avg^2) + log(nummots1) + region2:log(nummots1) +housing_type + region2:housing_type+ garage +region2:garage+ quali_opnv + region2:quali_opnv+oldHH + region2:oldHH +CSmultiple+region2:CSmultiple+ hh_children + region2:hh_children + metro28 + parttime + I(parttime^2) + region2:parttime+train28 + numped + I(numped^2) + region2:numped + region2:I(numped^2) + bus28, data = HH_dt_2_out, maxit=700)
+
+multinom_int <- multinom(numcars ~ region2 + numlic + I(numlic^2) + region2:numlic + region2:I(numlic^2) + income_numerical +I(income_numerical^2)+ region2:income_numerical + region2:I(income_numerical^2) + quali_nv + region2:quali_nv+CSyes + region2:CSyes + workers+ I(workers^2)+ region2:workers + triplength_avg+ I(triplength_avg^2)+ region2:triplength_avg+ region2:I(triplength_avg^2) + log(nummots1) + housing_type + garage + quali_opnv + oldHH + region2:oldHH+ CSmultiple+ hh_children + region2:hh_children + metro28 + tripsavg + parttime + train28 +numped + I(numped^2) + region2:numped + region2:I(numped^2) +bus28, data = HH_dt_2_out, maxit=700)
 
 fm_int <- formula(numcars ~  1|region2 + numlic + I(numlic^2) + region2:numlic + region2:I(numlic^2) + income_numerical +I(income_numerical^2)+ region2:income_numerical + region2:I(income_numerical^2) + quali_nv + region2:quali_nv+CSyes + region2:CSyes + workers+ I(workers^2)+ region2:workers + triplength_avg+ I(triplength_avg^2)+ region2:triplength_avg+ region2:I(triplength_avg^2) + log(nummots1) + housing_type + garage + quali_opnv + share2039 + I(share2039^2)  +  region2:share2039 + region2:I(share2039^2) + share4064 + CSmultiple+ hh_children + region2:hh_children + metro28 +tripsavg + parttime + train28 +numped + I(numped^2) + region2:numped + region2:I(numped^2) +bus28|1)
 #qualinv2 + qualinv3 + qualinv4+ region2:qualinv2 + region2:qualinv3  + region2:qualinv4
@@ -45,6 +60,9 @@ ef <- as.data.frame(ef)
 #numlic
 ef2 <- effect("region2:numlic", multinom_int)
 ef2 <- as.data.frame(ef2)
+
+eftest2 <- effect("region2:numlic", multinom_int)
+eftest2 <- as.data.frame(eftest2)
 
 
 #income_numerical
@@ -93,6 +111,9 @@ ef14 <- as.data.frame(ef14)
 
 ef15 <- effect("region2:train28", multinom_int2) #bei rural level1 nicht (2 plots)
 ef15 <- as.data.frame(ef15)
+
+eftest <- effect("region2:train28", multinom_int3) #bei rural level1 nicht (2 plots)
+eftest <- as.data.frame(eftest)
 
 ef16 <- effect("region2:bus28", multinom_int2) #bei rural level1 nicht (2 plots)
 ef16 <- as.data.frame(ef16)
@@ -1707,3 +1728,102 @@ annotate_figure(figure,
 
 
 ```
+
+```{r}
+#numlic 
+Plot.numlic0<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
+#For ylim, specify the range of your DV (in our case, 0-4)
+      #facet_wrap(~region2)+
+      geom_line(aes(y=prob.X0)) + 
+      #geom_line(aes(y=prob.X1, color="prob.X1")) + 
+      #geom_line(aes(y=prob.X2, color ="prob.X2"))+
+      #geom_line(aes(y=prob.X3, color ="prob.X3"))+
+      #scale_color_manual(labels = c("urban","suburban", "rural"),values= c("blue", "red", "orange"))+
+      geom_ribbon(aes(ymin=L.prob.X0, ymax=U.prob.X0),linetype=0,alpha=.2)+
+      #geom_ribbon(aes(ymin=prob.X1-se.prob.X1, ymax=prob.X1+se.prob.X1),alpha=.2)+
+      #geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2)+
+      #geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2)+
+       ylab("")+
+      xlab("")+
+      ggtitle("")+
+      labs(color = "region") +
+      #coord_fixed(ratio=10)+
+  scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      theme_bw()+ 
+        theme(panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank())+
+      scale_fill_grey()
+#Plot.numlic0
+
+Plot.numlic1<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
+#For ylim, specify the range of your DV (in our case, 0-4)
+      #facet_wrap(~region2)+
+      geom_line(aes(y=prob.X1)) + 
+      #geom_line(aes(y=prob.X1, color="prob.X1")) + 
+      #geom_line(aes(y=prob.X2, color ="prob.X2"))+
+      #geom_line(aes(y=prob.X3, color ="prob.X3"))+
+      #scale_color_manual(labels = c("urban","suburban", "rural"),values= c("blue", "red", "orange"))+
+      geom_ribbon(aes(ymin=L.prob.X1, ymax=U.prob.X1),linetype=0,alpha=.2)+
+      #geom_ribbon(aes(ymin=prob.X1-se.prob.X1, ymax=prob.X1+se.prob.X1),alpha=.2)+
+      #geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2)+
+      #geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2)+
+       ylab("")+
+      xlab("")+
+      ggtitle("")+
+      labs(color = "region") +
+      #coord_fixed(ratio=10)+
+  scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      theme_bw()+ 
+        theme(panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank())+
+      scale_fill_grey()
+Plot.numlic1
+
+Plot.numlic2<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
+#For ylim, specify the range of your DV (in our case, 0-4)
+      #facet_wrap(~region2)+
+      geom_line(aes(y=prob.X2)) + 
+      #geom_line(aes(y=prob.X1, color="prob.X1")) + 
+      #geom_line(aes(y=prob.X2, color ="prob.X2"))+
+      #geom_line(aes(y=prob.X3, color ="prob.X3"))+
+      #scale_color_manual(labels = c("urban","suburban", "rural"),values= c("blue", "red", "orange"))+
+      geom_ribbon(aes(ymin=L.prob.X2, ymax=U.prob.X2),linetype=0,alpha=.2)+
+      #geom_ribbon(aes(ymin=prob.X1-se.prob.X1, ymax=prob.X1+se.prob.X1),alpha=.2)+
+      #geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2)+
+      #geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2)+
+       ylab("")+
+      xlab("")+
+      ggtitle("")+
+      labs(color = "region") +
+     # coord_fixed(ratio=10)+
+  scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      theme_bw()+ 
+        theme(panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank())+
+      scale_fill_grey()
+#Plot.numlic2
+
+Plot.numlic3<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
+#For ylim, specify the range of your DV (in our case, 0-4)
+      #facet_wrap(~region2)+
+      geom_line(aes(y=prob.X3)) + 
+      #geom_line(aes(y=prob.X1, color="prob.X1")) + 
+      #geom_line(aes(y=prob.X2, color ="prob.X2"))+
+      #geom_line(aes(y=prob.X3, color ="prob.X3"))+
+      #scale_color_manual(labels = c("urban","suburban", "rural"),values= c("blue", "red", "orange"))+
+      geom_ribbon(aes(ymin=L.prob.X3, ymax=U.prob.X3),linetype=0,alpha=.2)+
+      #geom_ribbon(aes(ymin=prob.X1-se.prob.X1, ymax=prob.X1+se.prob.X1),alpha=.2)+
+      #geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2)+
+      #geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2)+
+       ylab("")+
+      xlab("")+
+      ggtitle("")+
+      labs(color = "region") +
+      #coord_fixed(ratio=10)+
+    scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      theme_bw()+ 
+        theme(panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank())+
+      scale_fill_grey()
+```
+

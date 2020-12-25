@@ -70,7 +70,28 @@ fit_new <- mnlogit(fm_new, mnlogit_dt_out, ncores=4, choiceVar = "alt")
 summary(fit_new)
 #fit_new_mlogit<- mlogit(fm_new, mnlogit_dt_out, reflevel = '0')
 
+#final 24.12.2020
+mnlogit_dt_out <- mlogit.data(HH_dt_2_out, choice = "numcars", shape = "wide") 
 
+#NULL MODEL (only intercept)
+fm_null <- formula(numcars ~ 1 | 1 | 1)
+fit_null <- mnlogit(fm_null, mnlogit_dt_out, ncores=4, choiceVar = "alt")
+
+# model formulation normal
+fm1 <- formula(numcars ~ 1 | numlic + region2 + income_numerical + 
+    quali_nv + CSyes + workers + CSmultiple + nummots + housing_type + 
+    triplength_avg + quali_opnv + oldHH + parttime + tripsavg + 
+    hh_children + numped + metro28 + train28 + garage + bus28 | 1)
+fit1 <- mnlogit(fm1, mnlogit_dt_out, ncores=4, choiceVar = "alt")
+
+
+#with nonlinear terms
+fm_new <- formula(numcars ~  1| numlic + region2 + income_numerical + I(numlic^2) + 
+    quali_nv + I(income_numerical^2) + CSyes + workers + CSmultiple + 
+    log(nummots1) + triplength_avg + housing_type + quali_opnv + 
+    I(triplength_avg^2) + oldHH + parttime + hh_children + numped + 
+    tripsavg + metro28 + train28 + garage + bus28 + I(parttime^2)|1)
+fit_new <- mnlogit(fm_new, mnlogit_dt_out, ncores=4, choiceVar = "alt")
 
 # compare normal and nonlinearity model -> non linearity performs better
 LL0 <- logLik(fit1)
@@ -250,6 +271,7 @@ data.frame(t(results_oddsratios))
 Average marginal effects
 
 ```{r}
+
 #https://data.princeton.edu/wws509/r/mlogit
 
 # average marginal effects
@@ -1045,7 +1067,26 @@ margins(data=HH_dt_2_out, fit_multinom2, variables = "region2",category="3")
 
 ```
 
+Standardized residuals of model
+```{r}
 
+unstandardizedResiduals <- resid(fit_new)
+ #get standardized values
+standardizedResiduals <- (unstandardizedResiduals - mean(unstandardizedResiduals)) / sd(unstandardizedResiduals)
+
+# no standardized residuals above 3 or below -3
+SR_df <- as.data.frame(standardizedResiduals)
+summary_SR <- summary(SR_df)
+
+#Table for Appendix:
+summary_SR <- as.data.frame(summary_SR)
+summary_SR <- separate(data = summary_SR, col = "Freq", into = c("Var", "Standardized Residuals"), sep = ":")
+summary_SR$Var1 <- NULL
+summary_SR$Var2 <- NULL
+
+print(xtable(summary_SR, type = "latex",digits=c(0,0,3)),include.rownames=FALSE, file = "standardresid.tex")
+
+```
 
 
 Forward selection (normal model)
@@ -1053,9 +1094,13 @@ Forward selection (normal model)
 ```{r}
 
 
-fit_multinom_test <- multinom(numcars ~ numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + share4064 + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28 + education + numch18, data = HH_dt_2_out)
+#fit_multinom_test <- multinom(numcars ~ numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + share4064 + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28 + education + numch18, data = HH_dt_2_out)
 
-fit_multinom_null <- multinom(numcars ~ 1, data = HH_dt_2_out,maxit=250)
+fit_multinom_null <- multinom(numcars ~ 1, data = HH_dt_2_out,maxit=300)
+
+result_stepAIC1 <- stepAIC(fit_multinom_null, direction="forward", scope = list(upper = ~ numlic + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers  + triplength_avg+ nummots+ housing_type + quali_opnv + oldHH + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28))
+
+result_stepAIC1
 
 stepAIC(fit_multinom_null, direction="forward", scope = list(upper = ~ numlic + I(numlic^2) + region2 + income_numerical+I(income_numerical^2)+ quali_nv + CSyes + CSmultiple + workers + I(workers^2) + triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + oldHH+ hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28))
 
@@ -1105,6 +1150,7 @@ AIC(fit_interaction) - AIC(fit_adapated)
 quali_nv separate levels
 
 ```{r}
+
 HH_dt_2_out$qualinv1 <- 0
 HH_dt_2_out$qualinv1[HH_dt_2_out$quali_nv == "1"] <- HH_dt_2_out$qualinv1[HH_dt_2_out$quali_nv == "1"] + 1
 
@@ -1229,7 +1275,7 @@ for(i in names_cat){
 
 ```
 
-alt
+alt ( alles hiernach)
 
 ```{r}
 #just AME
@@ -1283,8 +1329,6 @@ temp2 <- dydx(data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], multinom_in
 
 temp3 <- dydx(data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], multinom_int2, "numlic", category = "0", type="response")
 ```
-
-Share 20-to 39 year olds
 
 ```{r}
 margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "share2039", category="0")

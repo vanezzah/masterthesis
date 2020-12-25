@@ -20,6 +20,7 @@ Effect plots model 1
 Making mnlogit output the same as multinom (example)
 
 ```{r}
+
 #Source: https://stackoverflow.com/questions/43623076/multinomial-logit-in-r-mlogit-versus-nnet/43697814
 
 mlogitSample_test <- mlogit.data(HH_dt_model2, choice = "anzauto", shape = "wide") 
@@ -361,8 +362,8 @@ share2_plot <-ggplot(data=e13, aes(x=oldHH, group=1))+
       geom_line(aes(y=prob.X1, color="One car")) + 
       geom_line(aes(y=prob.X2, color ="Two cars"))+
       geom_line(aes(y=prob.X3, color ="Three cars"))+
-      ylab("")+
-      xlab("Share of 40- to 64 year-olds")+
+      ylab("Predicted Probability")+
+      xlab("Type of household")+
       ggtitle("")+
       labs(color = "Number of cars owned") +
       coord_fixed(ratio=1)+
@@ -1822,18 +1823,4 @@ addmargins(cTab)
 
 
 
-```{r}
-
-unstandardizedResiduals <- resid(fit_new)
- #get standardized values
-standardizedResiduals <- (unstandardizedResiduals - mean(unstandardizedResiduals)) / sd(unstandardizedResiduals)
-
-
-
-SR_df <- as.data.frame(standardizedResiduals)
-summary(SR_df)
-
-#keine standardized residuals > 3 or < -3
-
-```
 

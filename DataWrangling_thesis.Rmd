@@ -11,11 +11,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Nützliche Befehle
 ```{r}
-#save.image(file='yoursession.RData')
+save.image(file='yoursession.RData')
 
 #To load this data later you can use:
 
-#load('yoursession.RData')
+load('yoursession.RData')
 ```
 
 Packages and libraries
@@ -38,8 +38,12 @@ Packages and libraries
 #install.packages("reshape2")
 #install.packages("mnlogit")
 #install.packages("Formula")
+#install.packages("xtable")
+#install.packages("psych")
 
 library(margins)
+library(psych)
+library(xtable)
 library(ggpubr)
 library(reshape2)
 library(interplot)
@@ -59,6 +63,7 @@ library(tidyr)
 library(dplyr)
 library(mnlogit)
 library(Formula)
+library(tibble)
 library(mosaic)
 library(Hmisc)
 library(corrplot)
@@ -268,7 +273,6 @@ HH_dt <- HH_dt[, -c("HP_ALTER_1", "HP_ALTER_2", "HP_ALTER_3", "HP_ALTER_4", "HP_
 ```
 
 5.
-
 Household lifecycle stage 
 -> single, couple, couple with children, singleparent and other (extended family, unattached individuals)
 
