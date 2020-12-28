@@ -497,8 +497,6 @@ mylogit <- glm(numcars  ~ numlic + region2 + income_numerical +
 coeflog1 <- coef(mylogit)
 coeflog1 <- as.data.frame(coeflog1)
 
-texreg::extract(mylogit)
-texreg::texreg()
 
 mylogit2 <- glm(numcars  ~ numlic + region2 + income_numerical + 
     quali_nv + CSyes + workers + CSmultiple + nummots + housing_type + 
@@ -508,19 +506,16 @@ mylogit2 <- glm(numcars  ~ numlic + region2 + income_numerical +
 coeflog2 <- coef(mylogit2)
 coeflog2 <- as.data.frame(coeflog2)
 
-texreg::extract(mylogit2)
-texreg::texreg(mylogit2)
 
 mylogit3 <- glm(numcars  ~ numlic + region2 + income_numerical + 
     quali_nv + CSyes + workers + CSmultiple + nummots + housing_type + 
     triplength_avg + quali_opnv + oldHH + parttime + tripsavg + 
     hh_children + numped + metro28 + train28 + garage + bus28, data = HH_dt_bin3, family = "binomial")
 
+
 coeflog3 <- coef(mylogit3)
 coeflog3 <- as.data.frame(coeflog3)
 
-texreg::extract(mylogit3)
-texreg::texreg(mylogit3)
 
 ```
 
@@ -697,24 +692,25 @@ HH_dt_bin1$nummots1[HH_dt_bin1$nummots == 0] <- HH_dt_bin1$nummots1[HH_dt_bin1$n
 mylogit <- glm(numcars  ~ numlic + I(numlic^2) + region2 + income_numerical + 
      I(income_numerical^2)+quali_nv + CSyes + workers + CSmultiple + log(nummots1) + housing_type + 
     triplength_avg + I(triplength_avg^2) + quali_opnv + oldHH + parttime + I(parttime^2) + tripsavg +  
-    hh_children + numped + metro28 + train28 + garage + bus28 , data = HH_dt_bin1, family = "binomial")
+    hh_children + numped + metro28 + train28 + garage + bus28, data = HH_dt_bin1, family = "binomial")
 
-
+library(broom)
+library(dplyr)
 datalogit1 <- augment(mylogit) %>% 
-  mutate(index = 1:n()) 
+  dplyr::mutate(index = 1:n()) 
 datalogit1$HHID <- HH_dt_bin1$HH_ID
 influentials1 <- datalogit1 %>% 
   filter(abs(.std.resid) > 3)
 
 
 datalogit2 <- augment(mylogit2) %>% 
-  mutate(index = 1:n()) 
+  dplyr::mutate(index = 1:n()) 
 datalogit2$HHID <- HH_dt_bin2$HH_ID
 influentials2 <- datalogit2 %>% 
   filter(abs(.std.resid) > 3)
 
 datalogit3 <- augment(mylogit3) %>% 
-  mutate(index = 1:n()) 
+  dplyr::mutate(index = 1:n()) 
 datalogit3$HHID <- HH_dt_bin3$HH_ID
 influentials3 <- datalogit3 %>% 
   filter(abs(.std.resid) > 3)
@@ -726,6 +722,11 @@ HHID_logit3 <- as.numeric(as.character(influentials3$HHID))
 
 temp_influentials <- c(HHID_logit1,HHID_logit2,HHID_logit3)
 HH_dt_2_out <- filter(HH_dt_2_out,!(HH_ID %in% temp_influentials))
+
+duplicates(temp_influentials)
+
+HH_dt_2_out$nummots1 = HH_dt_2_out$nummots
+HH_dt_2_out$nummots1[HH_dt_2_out$nummots == 0] <- HH_dt_2_out$nummots1[HH_dt_2_out$nummots == 0] + 0.0001
 
 ```
 
@@ -744,6 +745,9 @@ binnedplot(HH_dt_bin2$parttime,y2, main="Binned plot: Parttime",ylab="Logit2: Av
 binnedplot(HH_dt_bin2$nummots,y2, main="Binned plot: Motorbikes",ylab="Logit2: Average residual") #ok
 binnedplot(HH_dt_bin2$numped,y2, main="Binned plot: Bikes",ylab="Logit2: Average residual") # ok
 binnedplot(x2,y2, main="Binned plot: Overall",ylab="Logit2: Average residual")
+
+HH_dt_bin2$nummots1 = HH_dt_bin2$nummots
+HH_dt_bin2$nummots1[HH_dt_bin2$nummots == 0] <- HH_dt_bin2$nummots1[HH_dt_bin2$nummots == 0] + 0.0001
 
 mylogit2 <- glm(numcars  ~ numlic + I(numlic^2) + region2 + income_numerical + 
      I(income_numerical^2)+quali_nv + CSyes + workers + CSmultiple + log(nummots1) + housing_type + 
@@ -767,6 +771,10 @@ binnedplot(HH_dt_bin3$parttime,y3, main="Binned plot: Parttime",ylab="Logit3: Av
 binnedplot(HH_dt_bin3$nummots,y3, main="Binned plot: Motorbikes",ylab="Logit3: Average residual") #ok
 binnedplot(HH_dt_bin3$numped,y3, main="Binned plot: Bikes",ylab="Logit3: Average residual") # ok
 binnedplot(x3,y3, main="Binned plot: Overall",ylab="Logit3: Average residual")
+
+HH_dt_bin3$nummots1 = HH_dt_bin3$nummots
+HH_dt_bin3$nummots1[HH_dt_bin3$nummots == 0] <- HH_dt_bin3$nummots1[HH_dt_bin3$nummots == 0] + 0.0001
+
 
 mylogit3 <- glm(numcars  ~ numlic + I(numlic^2) + region2 + income_numerical + 
      I(income_numerical^2)+quali_nv + CSyes + workers + CSmultiple + log(nummots1) + housing_type + 

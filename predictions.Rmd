@@ -828,7 +828,7 @@ Compare variable importance
 ```{r}
 
 #entweder gesamt oder 
-library(tibble)
+
 
 #for MNL: standardised coefficients (zegras, vin ha)
 importance_ml <- as.data.frame(coef(fit_new))

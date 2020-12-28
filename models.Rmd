@@ -100,14 +100,9 @@ N <- nrow(HH_dt_2_out)
 
 lrtest(fit_new, fit1)
 
-#mc fadden pseudo r2 
-as.vector(1 - ((LL1) / (LL0)))
+AIC(fit_new)
+AIC(fit1)
 
-# cox and snell r2 
-as.vector(1 - exp((2/N) * (LL0 - LL1)))
-
-# nagelkerke r2
-as.vector((1 - exp((2/N) * (LL0 - LL1))) / (1 - exp((2/N)*LL0)))
 
 
 # compare with null model 
@@ -117,15 +112,13 @@ N <- nrow(HH_dt_2_out)
 
 #http://dwoll.de/rexrepos/posts/regressionMultinom.html#mcfadden-cox-snell-and-nagelkerke-pseudo-r2
 #mc fadden pseudo r2 
-as.vector(1 - ((LL1) / (LL0)))
+mcfadden <- as.vector(1 - ((LL1) / (LL0)))
 
 # cox and snell r2 
-as.vector(1 - exp((2/N) * (LL0 - LL1)))
+cox <- as.vector(1 - exp((2/N) * (LL0 - LL1)))
 
 # nagelkerke r2
-as.vector((1 - exp((2/N) * (LL0 - LL1))) / (1 - exp((2/N)*LL0)))
-
-
+nagelkerke <- as.vector((1 - exp((2/N) * (LL0 - LL1))) / (1 - exp((2/N)*LL0)))
 
 ```
 
@@ -144,15 +137,19 @@ waldtest(fit_new, fit_null)
 
 
 # Score test (using mlogit)
-model1 <- mlogit(numcars ~  1| income_numerical +triplength_avg+ I(triplength_avg^2) + tripsavg +log(nummots1) + numped  + numch18 + numlic+ I(numlic^2) + workers + log(parttime1) + share2039 + share4064 + education + CS + region2 + bus28 + train28 + metro28 + housing_type + garage + quali_opnv + quali_nv + hh_children, data = mnlogit_dt_out)
-model2 <- mlogit(numcars ~ 1 | numlic | 1, data = mnlogit_dt_out)
+model1 <- mlogit(numcars ~  1| numlic + region2 + income_numerical + I(numlic^2) + 
+    quali_nv + I(income_numerical^2) + CSyes + workers + CSmultiple + 
+    log(nummots1) + triplength_avg + housing_type + quali_opnv + 
+    I(triplength_avg^2) + oldHH + parttime + hh_children + numped + 
+    tripsavg + metro28 + train28 + garage + bus28 + I(parttime^2), data = mnlogit_dt_out)
+model2 <- mlogit(numcars ~ 1, data = mnlogit_dt_out)
 
 
 mlogit::scoretest(model2, model1)
 
 # Likelihood ratio test
 
-lrtest(fit_new, fit_null)
+lrtest(fit_null, fit_new)
 
 
 # AIC:
@@ -161,6 +158,8 @@ AIC(fit_null)
 
 
 #format(fitted(fit_new, outcome=FALSE), scientific = FALSE)
+
+
 
 
 ```
@@ -187,7 +186,7 @@ logitgof(HH_dt_bin3$numcars, fitted(mylogit3, outcome=FALSE), g=20, ord=FALSE)
 
 Hosmer-Lemeshow standardization for large samples
 ```{r}
-#n = 70661
+#n = 70294
 #event number = 4
 #target sample size= 500
 #k=1000
@@ -198,24 +197,27 @@ Hosmer-Lemeshow standardization for large samples
 # save HL statistic
 # find distribution of HL statistic
 
-dplyr::count(HH_dt_2_out,numcars)
-#0:7513 -> 10.6% ->53
-#1:35921 -> 50.9 -> 254
-#2:21804 -> 30.8 ->154
-#3:5423 -> 7.7 -> 39
+#dplyr::count(HH_dt_2_out,numcars)
+#0	7436 -> 10.6%	-> 53		
+#1	35909	-> 51% -> 255		
+#2	21764	-> 31%	-> 155	
+#3	5185 -> 7.4% -> 37
 
 HL_dist <- as.matrix(data.frame(t(c("1"))))
 colnames(HL_dist) <- c("Stat")
 
-for (i in 1:10){
+for (i in 1:100){
  a<- sample(subset(HH_dt_2_out, numcars == "0"), 53)
- b<- sample(subset(HH_dt_2_out, numcars == "1"), 254)
- c <- sample(subset(HH_dt_2_out, numcars == "2"), 154)
- d<- sample(subset(HH_dt_2_out, numcars == "3"), 39)
+ b<- sample(subset(HH_dt_2_out, numcars == "1"), 255)
+ c <- sample(subset(HH_dt_2_out, numcars == "2"), 155)
+ d<- sample(subset(HH_dt_2_out, numcars == "3"), 37)
  df_test <- rbind(a,b,c,d)
  
- 
- fit_HLsim <- multinom(numcars ~numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + youngHH + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28, data = df_test)
+fit_HLsim <- multinom(numcars ~ numlic + region2 + income_numerical + I(numlic^2) + 
+    quali_nv + I(income_numerical^2) + CSyes + workers + CSmultiple + 
+    log(nummots1) + triplength_avg + housing_type + quali_opnv + 
+    I(triplength_avg^2) + oldHH + parttime + hh_children + numped + 
+    tripsavg + metro28 + train28 + garage + bus28 + I(parttime^2), data = df_test)
  
 HLtest <- logitgof(df_test$numcars, fitted(fit_HLsim))
 HLstat <- HLtest$statistic
@@ -228,7 +230,7 @@ HL_dist <- as.data.frame(HL_dist)
 HL_dist$Stat <- as.numeric(as.character(HL_dist$Stat))
 hist(HL_dist$Stat)
 
-#Xiquadrat verteilung für Xi8(10-2) für 95% quantil: 15.51 / 2.73
+#Xiquadrat verteilung für Xi(10-2) für 95% quantil: 15.51 / 2.73
 
 prob = 1 - ecdf(HL_dist$Stat)(2.73)
 prob
@@ -238,6 +240,126 @@ runif(1)
 
 
 Results - Model 1
+
+Coefficient table
+```{r}
+options(scipen = 999)
+summary <- summary(fit_new)
+coeffs <- summary$CoefTable
+coeffs <- as.data.frame(coeffs)
+coeffs <- rownames_to_column(coeffs)
+coeffs$`t-value` <- NULL
+
+coeffs1 <- coeffs[seq(1, 114, by=3),]
+coeffs2 <- coeffs[seq(2, 114, by=3),]
+coeffs3 <- coeffs[seq(3, 114, by=3),]
+
+coeffs_total <- data.frame(coeffs1, coeffs2, coeffs3)
+coeffs_total$rowname.1 <- NULL
+coeffs_total$rowname.2 <- NULL
+
+coeffs_total$rowname<-  sub(":1", "", coeffs_total$rowname)
+coeffs_total$rowname[coeffs_total$rowname=="I(numlic^2)"] <- "licenses squared"
+coeffs_total$rowname[coeffs_total$rowname=="I(parttime^2)"] <- "parttime squared"
+coeffs_total$rowname[coeffs_total$rowname=="I(income_numerical^2)"] <- "income squared"
+coeffs_total$rowname[coeffs_total$rowname=="I(triplength_avg^2)"] <- "av.triplength squared"
+coeffs_total$rowname[coeffs_total$rowname=="log(nummots1)"] <- "motorbikes (log)"
+
+coeffs_total$rowname[coeffs_total$rowname=="numlic"] <- "licenses"
+coeffs_total$rowname[coeffs_total$rowname=="income_numerical"] <- "income"
+coeffs_total$rowname[coeffs_total$rowname=="triplength_avg"] <- "av.triplength"
+coeffs_total$rowname[coeffs_total$rowname=="workers"] <- "fulltime"
+coeffs_total$rowname[coeffs_total$rowname=="numped"] <- "bikes"
+coeffs_total$rowname[coeffs_total$rowname=="tripsavg"] <- "av.trips"
+coeffs_total$rowname[coeffs_total$rowname=="CSyes1"] <- "carsharing"
+coeffs_total$rowname[coeffs_total$rowname=="CSmultiple1"] <- "m.carsharing"
+coeffs_total$rowname[coeffs_total$rowname=="nummots"] <- "motorbikes"
+coeffs_total$rowname[coeffs_total$rowname=="parttime"] <- "parttime"
+coeffs_total$rowname[coeffs_total$rowname=="region2suburban"] <- "suburban"
+coeffs_total$rowname[coeffs_total$rowname=="region2rural"] <- "rural"
+coeffs_total$rowname[coeffs_total$rowname=="oldHH1"] <- "old"
+coeffs_total$rowname[coeffs_total$rowname=="hh_children1"] <- "children"
+coeffs_total$rowname[coeffs_total$rowname=="housing_typemultifamily_h"] <- "multifamily"
+coeffs_total$rowname[coeffs_total$rowname=="housing_typeapartmentbuilding"] <- "apartmentbuilding"
+coeffs_total$rowname[coeffs_total$rowname=="housing_typeother"] <- "other"
+coeffs_total$rowname[coeffs_total$rowname=="garage1"] <- "garage"
+
+coeffs_total$rowname[coeffs_total$rowname=="quali_nv2"] <- "ps.2"
+coeffs_total$rowname[coeffs_total$rowname=="quali_nv3"] <- "ps.3"
+coeffs_total$rowname[coeffs_total$rowname=="quali_nv4"] <- "ps.4"
+
+
+coeffs_total$rowname[coeffs_total$rowname=="quali_opnv2"] <- "pt.2"
+coeffs_total$rowname[coeffs_total$rowname=="quali_opnv3"] <- "pt.3"
+coeffs_total$rowname[coeffs_total$rowname=="quali_opnv4"] <- "pt.4"
+
+
+coeffs_total$rowname[coeffs_total$rowname=="bus28_middle"] <- "bus.2"
+coeffs_total$rowname[coeffs_total$rowname=="bus28_far"] <- "bus.3"
+coeffs_total$rowname[coeffs_total$rowname=="bus28_rfar"] <- "bus.4"
+
+
+coeffs_total$rowname[coeffs_total$rowname=="train28_middle"] <- "train.2"
+coeffs_total$rowname[coeffs_total$rowname=="train28_far"] <- "train.3"
+coeffs_total$rowname[coeffs_total$rowname=="train28_rfar"] <- "train.4"
+
+coeffs_total$rowname[coeffs_total$rowname=="metro28_middle"] <- "metro.2"
+coeffs_total$rowname[coeffs_total$rowname=="metro28_far"] <- "metro.3"
+coeffs_total$rowname[coeffs_total$rowname=="metro28_rfar"] <- "metro.4"
+
+colnames(coeffs_total)<- c("Variable","Parameter","Std. Error", "Sig1.", "Parameter","Std. Error", "Sig2.", "Parameter","Std. Error", "Sig3.")
+
+for(i in 1:38) {
+  if (coeffs_total$Sig1.[i] < 0.01) {
+    coeffs_total$Sig1.[i] <- "***"
+  }
+  else if (coeffs_total$Sig1.[i] < 0.05) {
+    coeffs_total$Sig1.[i] <- "**"
+  }
+  else if (coeffs_total$Sig1.[i] < 0.1) {
+    coeffs_total$Sig1.[i] <- "*"
+  }
+  
+  else{
+    coeffs_total$Sig1.[i] <- ""
+  }
+}
+
+for(i in 1:38) {
+  if (coeffs_total$Sig2.[i] < 0.01) {
+    coeffs_total$Sig2.[i] <- "***"
+  }
+  else if (coeffs_total$Sig2.[i] < 0.05) {
+    coeffs_total$Sig2.[i] <- "**"
+  }
+   else if (coeffs_total$Sig2.[i] < 0.1) {
+    coeffs_total$Sig2.[i] <- "*"
+   }
+  else{
+    coeffs_total$Sig2.[i] <- ""
+  }
+}
+
+
+for(i in 1:38) {
+  if (coeffs_total$Sig3.[i] < 0.01) {
+    coeffs_total$Sig3.[i] <- "***"
+  }
+  else if (coeffs_total$Sig3.[i] < 0.05) {
+    coeffs_total$Sig3.[i] <- "**"
+  }
+   else if (coeffs_total$Sig3.[i] < 0.1) {
+    coeffs_total$Sig3.[i] <- "*"
+   }
+  else{
+    coeffs_total$Sig3.[i] <- ""
+  }
+ }
+
+
+print(xtable(coeffs_total, type = "latex",digits=c(0,0,3,3,0,3,3,0,3,3,0)),include.rownames=FALSE, file = "coeffs_model.tex")
+```
+
 
 Log-odds -> remove education as it is not significant
 ```{r}
@@ -384,16 +506,16 @@ r<- apply(me, 2, mean)
 r <- c("numpeds", r)
 AVE_df <- insertRow(AVE_df,1,r)
 
-b <- c(0,B[c("numch18:1", "numch18:2", "numch18:3")])
-pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
-me <- matrix(0, nrow(probs), ncol(probs))
-for(j in 1:4) {
-  me[,j] <- probs[,j] * (b[j] - pb)
-}
-print("numch18")
-r<- apply(me, 2, mean)
-r <- c("numch18", r)
-AVE_df <- insertRow(AVE_df,1,r)
+#b <- c(0,B[c("numch18:1", "numch18:2", "numch18:3")])
+#pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+#me <- matrix(0, nrow(probs), ncol(probs))
+#for(j in 1:4) {
+#  me[,j] <- probs[,j] * (b[j] - pb)
+#}
+#print("numch18")
+#r<- apply(me, 2, mean)
+#r <- c("numch18", r)
+#AVE_df <- insertRow(AVE_df,1,r)
 
 b <- c(0,B[c("workers:1", "workers:2", "workers:3")])
 pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
@@ -417,27 +539,27 @@ r<- apply(me, 2, mean)
 r <- c("parttime", r)
 AVE_df <- insertRow(AVE_df,1,r)
 
-b <- c(0,B[c("share2039:1", "share2039:2", "share2039:3")])
-pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
-me <- matrix(0, nrow(probs), ncol(probs))
-for(j in 1:4) {
-  me[,j] <- probs[,j] * (b[j] - pb)
-}
-print("share2039")
-r<- apply(me, 2, mean)
-r <- c("share2039", r)
-AVE_df <- insertRow(AVE_df,1,r)
+#b <- c(0,B[c("share2039:1", "share2039:2", "share2039:3")])
+#pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+#me <- matrix(0, nrow(probs), ncol(probs))
+#for(j in 1:4) {
+#  me[,j] <- probs[,j] * (b[j] - pb)
+#}
+#print("share2039")
+#r<- apply(me, 2, mean)
+#r <- c("share2039", r)
+#AVE_df <- insertRow(AVE_df,1,r)
 
-b <- c(0,B[c("share4064:1", "share4064:2", "share4064:3")])
-pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
-me <- matrix(0, nrow(probs), ncol(probs))
-for(j in 1:4) {
-  me[,j] <- probs[,j] * (b[j] - pb)
-}
-print("share4064")
-r<- apply(me, 2, mean)
-r <- c("share4064", r)
-AVE_df <- insertRow(AVE_df,1,r)
+#b <- c(0,B[c("share4064:1", "share4064:2", "share4064:3")])
+#pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
+#me <- matrix(0, nrow(probs), ncol(probs))
+#for(j in 1:4) {
+ # me[,j] <- probs[,j] * (b[j] - pb)
+#}
+#print("share4064")
+#r<- apply(me, 2, mean)
+#r <- c("share4064", r)
+#AVE_df <- insertRow(AVE_df,1,r)
 
 b <- c(0,B[c("hh_children1:1", "hh_children1:2", "hh_children1:3")])
 pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
@@ -842,23 +964,23 @@ Average marginal effects mit margins
 AME_df <- as.matrix(data.frame(t(c("name", "zero_cars","1_car","2_cars","3_cars"))))
 colnames(AME_df) <- c("name", "zero_cars","one_car","two_cars","three_cars")
 
-a.names <- names(fit_new$model)[- c(1, 23:25)]
+a.names <- names(fit_new$model)[- c(1, 22:25)]
 
-names_num <- a.names[c(1,3,5:8,12:15,18:20)]
-names_cat <- a.names[c(4,10:11,16:17,21)]
+names_num <- a.names[-c(2,4,8,10:11,17:18,20)]
+names_cat <- a.names[c(4,10:11,17:18,20)]
 #region alleine
 
 
 
   for(i in names_num){
   
-  a <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = i,category="0")
+  a <- marginal_effects(data=HH_dt_2_out, fit_multinom_v3, variables = i,category="0")
   a_mean <- mean(a[,1])
-  b <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = i,category="1")
+  b <- marginal_effects(data=HH_dt_2_out, fit_multinom_v3, variables = i,category="1")
   b_mean <- mean(b[,1])
-  c <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = i,category="2")
+  c <- marginal_effects(data=HH_dt_2_out, fit_multinom_v3, variables = i,category="2")
   c_mean <- mean(c[,1])
-  d <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables =i,category="3")
+  d <- marginal_effects(data=HH_dt_2_out, fit_multinom_v3, variables =i,category="3")
   d_mean <- mean(d[,1])
   v <- c(i,a_mean,b_mean,c_mean,d_mean)
   AME_df <- insertRow(AME_df,1,v)
@@ -866,19 +988,19 @@ names_cat <- a.names[c(4,10:11,16:17,21)]
 
   for(i in names_cat){
   
-  a <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = i,category="0")
+  a <- marginal_effects(data=HH_dt_2_out, fit_multinom_v3, variables = i,category="0")
   a_mean <- mean(a[,1])
   a_mean2 <- mean(a[,2])
   a_mean3 <- mean(a[,3])
-  b <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = i,category="1")
+  b <- marginal_effects(data=HH_dt_2_out, fit_multinom_v3, variables = i,category="1")
   b_mean <- mean(b[,1])
   b_mean2 <- mean(b[,2])
   b_mean3 <- mean(b[,3])
-  c <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = i,category="2")
+  c <- marginal_effects(data=HH_dt_2_out, fit_multinom_v3, variables = i,category="2")
   c_mean <- mean(c[,1])
   c_mean2 <- mean(c[,2])
   c_mean3 <- mean(c[,3])
-  d <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables =i,category="3")
+  d <- marginal_effects(data=HH_dt_2_out, fit_multinom_v3, variables =i,category="3")
   d_mean <- mean(d[,1])
   d_mean2 <- mean(d[,2])
   d_mean3 <- mean(d[,3])
@@ -894,16 +1016,16 @@ names_cat <- a.names[c(4,10:11,16:17,21)]
 
 # region
 
- a <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = "region2",category="0")
+ a <- marginal_effects(data=HH_dt_2_out, fit_multinom_v3, variables = "region2",category="0")
   a_mean <- mean(a[,1])
   a_mean2 <- mean(a[,2])
-  b <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = "region2",category="1")
+  b <- marginal_effects(data=HH_dt_2_out, fit_multinom_v3, variables = "region2",category="1")
   b_mean <- mean(b[,1])
   b_mean2 <- mean(b[,2])
-  c <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = "region2",category="2")
+  c <- marginal_effects(data=HH_dt_2_out, fit_multinom_v3, variables = "region2",category="2")
   c_mean <- mean(c[,1])
   c_mean2 <- mean(c[,2])
-  d <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = "region2",category="3")
+  d <- marginal_effects(data=HH_dt_2_out, fit_multinom_v3, variables = "region2",category="3")
   d_mean <- mean(d[,1])
   d_mean2 <- mean(d[,2])
 
@@ -919,6 +1041,7 @@ names_cat <- a.names[c(4,10:11,16:17,21)]
   #https://stats.stackexchange.com/questions/8318/interpretation-of-log-transformed-predictors-in-logistic-regression
 #https://stats.stackexchange.com/questions/215599/log-transformation-logistic-regression
 
+B <- coef(fit_new)
 b <- c(0,B[c("log(nummots1):1", "log(nummots1):2", "log(nummots1):3")])
 pb <- probs[,2] * b[2]  + probs[,3] * b[3] + probs[,4] * b[4]
 me <- matrix(0, nrow(probs), ncol(probs))
@@ -929,7 +1052,7 @@ r<- apply(me, 2, mean)
 v <- c("log(nummots1)", r)
 AME_df <- insertRow(AME_df,1,v)
 
-AME_df <- AME_df[-c(36),]
+AME_df <- AME_df[-c(34),]
 
 AME_df <- as.data.frame(AME_df)
 AME_df$zero_cars <- as.numeric(as.character((AME_df$zero_cars)))
@@ -943,12 +1066,60 @@ AME_df$two_cars <- round(AME_df$two_cars,3)
 
 AME_df$three_cars <- as.numeric(as.character((AME_df$three_cars)))
 AME_df$three_cars <- round(AME_df$three_cars,3)
+
+#make table
+AME_df$name <- as.character(AME_df$name)
+AME_df$name[AME_df$name=="numlic"] <- "licenses"
+AME_df$name[AME_df$name=="income_numerical"] <- "income"
+AME_df$name[AME_df$name=="triplength_avg"] <- "av.triplength"
+AME_df$name[AME_df$name=="workers"] <- "fulltime"
+AME_df$name[AME_df$name=="numped"] <- "bikes"
+AME_df$name[AME_df$name=="tripsavg"] <- "av.trips"
+AME_df$name[AME_df$name=="CSyes"] <- "carsharing"
+AME_df$name[AME_df$name=="CSmultiple"] <- "m.carsharing"
+AME_df$name[AME_df$name=="log(nummots1)"] <- "motorbikes"
+AME_df$name[AME_df$name=="parttime"] <- "parttime"
+AME_df$name[AME_df$name=="region2suburban"] <- "suburban"
+AME_df$name[AME_df$name=="region2rural"] <- "rural"
+AME_df$name[AME_df$name=="oldHH"] <- "old"
+AME_df$name[AME_df$name=="hh_children"] <- "children"
+AME_df$name[AME_df$name=="housing_type2"] <- "multifamily"
+AME_df$name[AME_df$name=="housing_type3"] <- "apartmentbuilding"
+AME_df$name[AME_df$name=="housing_type4"] <- "other"
+AME_df$name[AME_df$name=="garage"] <- "garage"
+
+AME_df$name[AME_df$name=="quali_nv2"] <- "ps.2"
+AME_df$name[AME_df$name=="quali_nv3"] <- "ps.3"
+AME_df$name[AME_df$name=="quali_nv4"] <- "ps.4"
+
+
+AME_df$name[AME_df$name=="quali_opnv2"] <- "pt.2"
+AME_df$name[AME_df$name=="quali_opnv3"] <- "pt.3"
+AME_df$name[AME_df$name=="quali_opnv4"] <- "pt.4"
+
+
+AME_df$name[AME_df$name=="bus282"] <- "bus.2"
+AME_df$name[AME_df$name=="bus283"] <- "bus.3"
+AME_df$name[AME_df$name=="bus284"] <- "bus.4"
+
+
+AME_df$name[AME_df$name=="train282"] <- "train.2"
+AME_df$name[AME_df$name=="train283"] <- "train.3"
+AME_df$name[AME_df$name=="train284"] <- "train.4"
+
+AME_df$name[AME_df$name=="metro282"] <- "metro.2"
+AME_df$name[AME_df$name=="metro283"] <- "metro.3"
+AME_df$name[AME_df$name=="metro284"] <- "metro.4"
+
+print(xtable(AME_df, type = "latex",digits=c(0,0,3,3,3,3)),include.rownames=FALSE, file = "AME.tex")
+
 ```
 
 
 alt AMEs
 
 ```{r}
+
 a <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = "CSmultiple",category="0")
 a_mean <- mean(a$dydx_CSmultiple1)
 b <- margins(data=HH_dt_2_out, fit_multinom2, variables = "CSmultiple",category="1")
