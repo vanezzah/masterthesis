@@ -12,25 +12,35 @@ Calculate model
 
 multinom_int3<-multinom(formula = numcars ~ region2 + numlic + I(numlic^2) + 
     region2:numlic + region2:I(numlic^2) + income_numerical + 
-    I(income_numerical^2) + region2:income_numerical + region2:I(income_numerical^2) + 
-    quali_nv + region2:quali_nv + CSyes + region2:CSyes + workers + 
+    I(income_numerical^2) + region2:income_numerical + region2:I(income_numerical^2) +     quali_nv + region2:quali_nv + CSyes + region2:CSyes + workers + 
     I(workers^2) + region2:workers + region2:I(workers^2) + triplength_avg + 
     I(triplength_avg^2) + region2:triplength_avg + region2:I(triplength_avg^2) + 
     log(nummots1) + region2:log(nummots1) + housing_type + region2:housing_type + 
-    garage + region2:garage + quali_opnv + region2:quali_opnv + 
-    oldHH + region2:oldHH + CSmultiple + region2:CSmultiple + 
-    hh_children + region2:hh_children + metro28 + region2:metro28 + 
+    garage + region2:garage + quali_opnv + 
+    oldHH + region2:oldHH + CSmultiple + 
+    hh_children + region2:hh_children + metro28 + 
     tripsavg + I(tripsavg^2) + region2:tripsavg + parttime + 
     I(parttime^2) + region2:parttime + train28 + region2:train28 + 
     numped + I(numped^2) + region2:numped + region2:I(numped^2) + 
-    bus28 + region2:bus28, data = HH_dt_2_out, maxit = 700)
+    bus28, data = HH_dt_2_out, maxit = 700)
 
 multinom_int <- multinom(numcars ~ region2 + numlic + I(numlic^2) + region2:numlic + region2:I(numlic^2) + income_numerical +I(income_numerical^2)+ region2:income_numerical + region2:I(income_numerical^2) + quali_nv + region2:quali_nv + CSyes + region2:CSyes + workers+ I(workers^2)+region2:workers +region2:I(workers^2)+ triplength_avg+ I(triplength_avg^2)+ region2:triplength_avg+ region2:I(triplength_avg^2) + log(nummots1) + region2:log(nummots1) +housing_type + region2:housing_type+ garage +region2:garage+ quali_opnv + region2:quali_opnv+oldHH + region2:oldHH +CSmultiple+region2:CSmultiple+ hh_children + region2:hh_children + metro28 + parttime + I(parttime^2) + region2:parttime+train28 + numped + I(numped^2) + region2:numped + region2:I(numped^2) + bus28, data = HH_dt_2_out, maxit=700)
 
 multinom_int <- multinom(numcars ~ region2 + numlic + I(numlic^2) + region2:numlic + region2:I(numlic^2) + income_numerical +I(income_numerical^2)+ region2:income_numerical + region2:I(income_numerical^2) + quali_nv + region2:quali_nv+CSyes + region2:CSyes + workers+ I(workers^2)+ region2:workers + triplength_avg+ I(triplength_avg^2)+ region2:triplength_avg+ region2:I(triplength_avg^2) + log(nummots1) + housing_type + garage + quali_opnv + oldHH + region2:oldHH+ CSmultiple+ hh_children + region2:hh_children + metro28 + tripsavg + parttime + train28 +numped + I(numped^2) + region2:numped + region2:I(numped^2) +bus28, data = HH_dt_2_out, maxit=700)
 
-fm_int <- formula(numcars ~  1|region2 + numlic + I(numlic^2) + region2:numlic + region2:I(numlic^2) + income_numerical +I(income_numerical^2)+ region2:income_numerical + region2:I(income_numerical^2) + quali_nv + region2:quali_nv+CSyes + region2:CSyes + workers+ I(workers^2)+ region2:workers + triplength_avg+ I(triplength_avg^2)+ region2:triplength_avg+ region2:I(triplength_avg^2) + log(nummots1) + housing_type + garage + quali_opnv + share2039 + I(share2039^2)  +  region2:share2039 + region2:I(share2039^2) + share4064 + CSmultiple+ hh_children + region2:hh_children + metro28 +tripsavg + parttime + train28 +numped + I(numped^2) + region2:numped + region2:I(numped^2) +bus28|1)
-#qualinv2 + qualinv3 + qualinv4+ region2:qualinv2 + region2:qualinv3  + region2:qualinv4
+fm_int <- formula(numcars ~  1|region2 + numlic + I(numlic^2) + 
+    region2:numlic + region2:I(numlic^2) + income_numerical + 
+    I(income_numerical^2) + region2:income_numerical + region2:I(income_numerical^2) +     quali_nv + region2:quali_nv + CSyes + region2:CSyes + workers + 
+    I(workers^2) + region2:workers + region2:I(workers^2) + triplength_avg + 
+    I(triplength_avg^2) + region2:triplength_avg + region2:I(triplength_avg^2) + 
+    log(nummots1) + region2:log(nummots1) + housing_type + region2:housing_type + 
+    garage + region2:garage + quali_opnv + 
+    oldHH + region2:oldHH + CSmultiple + 
+    hh_children + region2:hh_children + metro28 + 
+    tripsavg + I(tripsavg^2) + region2:tripsavg + parttime + 
+    I(parttime^2) + region2:parttime + train28 + region2:train28 + 
+    numped + I(numped^2) + region2:numped + region2:I(numped^2) + 
+    bus28|1)
 
 fit_int <- mnlogit(fm_int, mnlogit_dt_out, ncores=4, choiceVar = "alt")
 
@@ -140,13 +150,65 @@ ef18 <- as.data.frame(ef18)
 #https://stackoverflow.com/questions/20530232/change-factor-labels-on-effects-plot-in-r
 ```
 
+Interaction effects new
+
+```{r}
+
+#numlic
+ef22 <- effect("region2:numlic", multinom_int3)
+ef22 <- as.data.frame(ef22)
+
+#income_numerical
+ef33 <- effect("region2:income_numerical", multinom_int3)#bei rural nicht 1
+ef33 <- as.data.frame(ef33)
+
+#Csyes
+ef44 <- effect("region2:CSyes", multinom_int3) #nursuburban, alle
+ef44 <- as.data.frame(ef44)
+
+
+#qualinv
+ef111 <- effect("region2:quali_nv", multinom_int3) #nur rural and urban und nur 1 und 2
+ef111 <- as.data.frame(ef111)
+ef55 <- effect("region2:workers", multinom_int3) # alles 
+ef55 <- as.data.frame(ef55)
+ef122 <- effect("region2:parttime", multinom_int3) # alles 
+ef122 <- as.data.frame(ef122)
+
+ef66 <- effect("region2:triplength_avg", multinom_int3) #nur suburban significant, alle levels
+ef66 <- as.data.frame(ef66)
+ef77 <- effect("region2:oldHH", multinom_int3) #nur rural, alle levels
+ef77 <- as.data.frame(ef77)
+ef88 <- effect("region2:hh_children", multinom_int3) #nur carownership 2 bei suburban, 2 und 3 bei rural
+ef88 <- as.data.frame(ef88)
+
+
+ef99 <- effect("region2:numped", multinom_int3) #bei rural level1 nicht (2 plots)
+ef99 <- as.data.frame(ef99)
+ef133 <- effect("region2:housing_type", multinom_int3) #bei rural level1 nicht (2 plots)
+ef133 <- as.data.frame(ef133)
+ef199 <- effect("region2:garage", multinom_int3) #bei rural level1 nicht (2 plots)
+ef199 <- as.data.frame(ef199)
+
+ef155 <- effect("region2:train28", multinom_int3) #bei rural level1 nicht (2 plots)
+ef155 <- as.data.frame(ef155)
+
+ef177 <- effect("region2:tripsavg", multinom_int3) #bei rural level1 nicht (2 plots)
+ef177 <- as.data.frame(ef177)
+
+ef188 <- effect("region2:log(nummots1)", multinom_int3) #bei rural level1 nicht (2 plots)
+ef188 <- as.data.frame(ef188)
+```
+
+
+
 Plots with ggplot - interaction terms
 numlic
 ```{r}
 #library(ggplot2)
 
 #numlic 
-Plot.numlic0<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
+Plot.numlic0<-ggplot(data=ef22, aes(x=numlic, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X0)) + 
@@ -160,9 +222,9 @@ Plot.numlic0<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
       #geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2)+
        ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Zero cars")+
       labs(color = "region") +
-      #coord_fixed(ratio=10)+
+      coord_fixed(ratio=4)+
   scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
@@ -170,7 +232,7 @@ Plot.numlic0<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
       scale_fill_grey()
 #Plot.numlic0
 
-Plot.numlic1<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
+Plot.numlic1<-ggplot(data=ef22, aes(x=numlic, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X1)) + 
@@ -184,17 +246,17 @@ Plot.numlic1<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
       #geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2)+
        ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("One car")+
       labs(color = "region") +
-      #coord_fixed(ratio=10)+
+      coord_fixed(ratio=4)+
   scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-Plot.numlic1
+#Plot.numlic1
 
-Plot.numlic2<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
+Plot.numlic2<-ggplot(data=ef22, aes(x=numlic, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X2)) + 
@@ -208,9 +270,9 @@ Plot.numlic2<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
       #geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2)+
        ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Two cars")+
       labs(color = "region") +
-     # coord_fixed(ratio=10)+
+     coord_fixed(ratio=4)+
   scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
@@ -218,7 +280,7 @@ Plot.numlic2<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
       scale_fill_grey()
 #Plot.numlic2
 
-Plot.numlic3<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
+Plot.numlic3<-ggplot(data=ef22, aes(x=numlic, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X3)) + 
@@ -232,9 +294,9 @@ Plot.numlic3<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
       #geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2)+
        ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Three cars")+
       labs(color = "region") +
-      #coord_fixed(ratio=10)+
+      coord_fixed(ratio=4)+
     scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
@@ -245,16 +307,16 @@ Plot.numlic3<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
 ```
 
 ```{r}
-figure_numlic <- ggarrange(Plot.numlic0, Plot.numlic1, Plot.numlic2,Plot.numlic3,common.legend = TRUE, legend = "right", 
-          labels = c("Zero cars", "One car", "Two cars","Three cars"),
-          ncol = 2, nrow = 2)
+figure_numlic <- ggarrange(Plot.numlic1, Plot.numlic2,Plot.numlic3,common.legend = TRUE, legend = "right",
+          ncol = 3, nrow = 1)
 
-
+figure_numlic <- ggarrange(Plot.numlic0, Plot.numlic1, Plot.numlic2,Plot.numlic3,common.legend = TRUE, legend = "none",
+          ncol = 4, nrow = 1)%>% gridExtra::grid.arrange(get_legend(Plot.qualiopnv4), heights = unit(c(60, 5), "mm"))
 
 annotate_figure(figure_numlic,
-                top = text_grob("Number of license holders and region as predictors of car ownership", color = "black", size =                   14,),
+                #top = text_grob("Number of license holders and region as predictors of car ownership", color = "black", size =                   14,),
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Number of license holders"),
+                bottom = text_grob("Number of license holders", vjust = -9),
 )
 
 ```
@@ -263,7 +325,7 @@ Income numerical
 
 ```{r}
 #income (3 separate plot)
-Plot.income0 <-ggplot(data=ef3, aes(x=income_numerical, group=region2, color=region2))+
+Plot.income0 <-ggplot(data=ef33, aes(x=income_numerical, group=region2, color=region2))+
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X0)) + 
       #geom_line(aes(y=prob.X1, color="prob.X1")) + 
@@ -272,7 +334,7 @@ Plot.income0 <-ggplot(data=ef3, aes(x=income_numerical, group=region2, color=reg
       geom_ribbon(aes(ymin=prob.X0-se.prob.X0, ymax=prob.X0+se.prob.X0),alpha=.2, linetype=0)+
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Zero cars")+
       labs(color = "region") +
       coord_fixed(ratio=10)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
@@ -282,7 +344,7 @@ Plot.income0 <-ggplot(data=ef3, aes(x=income_numerical, group=region2, color=reg
       scale_fill_grey()
 Plot.income0
 
-Plot.income1 <-ggplot(data=ef3, aes(x=income_numerical, group=region2, color=region2))+
+Plot.income1 <-ggplot(data=ef33, aes(x=income_numerical, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X1)) + 
@@ -292,16 +354,16 @@ Plot.income1 <-ggplot(data=ef3, aes(x=income_numerical, group=region2, color=reg
       geom_ribbon(aes(ymin=prob.X1-se.prob.X1, ymax=prob.X1+se.prob.X1),alpha=.2, linetype=0)+
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("One car")+
       coord_fixed(ratio=10)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-#Plot.income1
+Plot.income1
 
-Plot.income2 <-ggplot(data=ef3, aes(x=income_numerical, group=region2, color=region2))+
+Plot.income2 <-ggplot(data=ef33, aes(x=income_numerical, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X2)) + 
@@ -311,17 +373,17 @@ Plot.income2 <-ggplot(data=ef3, aes(x=income_numerical, group=region2, color=reg
       geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2, linetype=0)+
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Two cars")+
       coord_fixed(ratio=10)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-#Plot.income2
+Plot.income2
 
 
-Plot.income3 <-ggplot(data=ef3, aes(x=income_numerical, group=region2, color=region2))+
+Plot.income3 <-ggplot(data=ef33, aes(x=income_numerical, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X3)) + 
@@ -331,28 +393,28 @@ Plot.income3 <-ggplot(data=ef3, aes(x=income_numerical, group=region2, color=reg
       geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2, linetype=0)+
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Three cars")+
       coord_fixed(ratio=8)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-#Plot.income3
+Plot.income3
 
 ```
 
 ```{r}
-figure_income <- ggarrange(Plot.income0, Plot.income1, Plot.income2,common.legend = TRUE, legend = "right", 
-          labels = c("Zero cars", "One car", "Two cars"), vjust=7,
-          ncol = 4, nrow = 1)
+figure_income <- ggarrange(Plot.income0, Plot.income1, Plot.income2, common.legend = TRUE, legend = "right", vjust=7,
+          ncol = 3, nrow = 1)
 
-
+figure_income <- ggarrange(Plot.income0, Plot.income1, Plot.income2,Plot.income3,common.legend = TRUE, legend = "none",
+          ncol = 4, nrow = 1)%>% gridExtra::grid.arrange(get_legend(Plot.qualiopnv4), heights = unit(c(60, 5), "mm"))
 
 annotate_figure(figure_income,
-                top = text_grob("Monthly income and region as predictors of car ownership", color = "black", size =                   14, vjust=5),
+                #top = text_grob("Monthly income and region as predictors of car ownership", color = "black", size =                   14, vjust=5),
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Monthly Income", vjust=-8),
+                bottom = text_grob("Monthly Income in Thousands", vjust=-9),
 )
 
 
@@ -362,7 +424,7 @@ annotate_figure(figure_income,
 qualinv
 ```{r}
 #qualinv4
-Plot.qualinv1 <-ggplot(data=ef, aes(x=quali_nv, group=region2, color=region2))+
+Plot.qualinv1 <-ggplot(data=ef111, aes(x=quali_nv, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X0)) + 
@@ -373,7 +435,7 @@ Plot.qualinv1 <-ggplot(data=ef, aes(x=quali_nv, group=region2, color=region2))+
       labs(color = "region") +
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Zero cars")+
       coord_fixed(ratio=12)+
       scale_y_continuous(limits=c(0,0.3),breaks = c(0.1,0.2,0.3))+
       theme_bw()+ 
@@ -382,7 +444,7 @@ Plot.qualinv1 <-ggplot(data=ef, aes(x=quali_nv, group=region2, color=region2))+
       scale_fill_grey()
 Plot.qualinv1
 
-Plot.qualinv2 <-ggplot(data=ef, aes(x=quali_nv, group=region2, color=region2))+
+Plot.qualinv2 <-ggplot(data=ef111, aes(x=quali_nv, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X1)) + 
@@ -393,7 +455,7 @@ Plot.qualinv2 <-ggplot(data=ef, aes(x=quali_nv, group=region2, color=region2))+
       labs(color = "region") +
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("One car")+
       coord_fixed(ratio=4)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
@@ -402,7 +464,7 @@ Plot.qualinv2 <-ggplot(data=ef, aes(x=quali_nv, group=region2, color=region2))+
       scale_fill_grey()
 Plot.qualinv2
 
-Plot.qualinv3 <-ggplot(data=ef, aes(x=quali_nv, group=region2, color=region2))+
+Plot.qualinv3 <-ggplot(data=ef111, aes(x=quali_nv, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X2)) + 
@@ -413,7 +475,7 @@ Plot.qualinv3 <-ggplot(data=ef, aes(x=quali_nv, group=region2, color=region2))+
      labs(color = "region") +
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Two cars")+
       coord_fixed(ratio=4)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
@@ -422,7 +484,7 @@ Plot.qualinv3 <-ggplot(data=ef, aes(x=quali_nv, group=region2, color=region2))+
       scale_fill_grey()
 Plot.qualinv3
 
-Plot.qualinv4 <-ggplot(data=ef, aes(x=quali_nv, group=region2, color=region2))+
+Plot.qualinv4 <-ggplot(data=ef111, aes(x=quali_nv, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X3)) + 
@@ -433,11 +495,12 @@ Plot.qualinv4 <-ggplot(data=ef, aes(x=quali_nv, group=region2, color=region2))+
       labs(color = "region") +
       ylab("")+
       xlab("")+
-      ggtitle("")+
-      coord_fixed(ratio=4)+
-      scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      ggtitle("Three cars")+
+      coord_fixed(ratio=12)+
+      scale_y_continuous(limits=c(0,0.3),breaks = c(0.1,0.2,0.3))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
+              legend.direction = "horizontal",
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 Plot.qualinv4
@@ -445,14 +508,16 @@ Plot.qualinv4
 
 ```{r}
 #library(ggpubr)
-figure <- ggarrange(Plot.qualinv1, Plot.qualinv2, Plot.qualinv3,common.legend = TRUE, legend = "right", 
-          labels = c("Zero cars", "One car", "Two cars"), vjust=8,
-          ncol = 3, nrow = 1)
+figure <- ggarrange(Plot.qualinv1, Plot.qualinv2, Plot.qualinv3,common.legend = TRUE, legend = "none", vjust=8,
+          ncol = 3, nrow = 1) %>% gridExtra::grid.arrange(get_legend(Plot.qualinv4), heights = unit(c(60, 5), "mm"))
+
+figure <- ggarrange(Plot.qualinv1, Plot.qualinv2, Plot.qualinv3,Plot.qualinv4, common.legend = TRUE, legend = "none", vjust=8,
+          ncol = 4, nrow = 1) %>% gridExtra::grid.arrange(get_legend(Plot.qualinv4), heights = unit(c(60, 5), "mm"))
 
 annotate_figure(figure,
-                top = text_grob("Quality of public services and region as predictors of car ownership", color = "black", size = 14, vjust=6),
+                #top = text_grob("Quality of public services and region as predictors of car ownership", color = "black", size = 14, vjust=6),
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Quality of public services", vjust=-8),
+                bottom = text_grob("Quality of public services", vjust=-9),
 )
 
 
@@ -574,7 +639,7 @@ annotate_figure(figure2,
 Csyes
 ```{r}
 #CSyes
-Plot.cs0 <-ggplot(data=ef4, aes(x=CSyes, group=region2, color=region2))+
+Plot.cs0 <-ggplot(data=ef44, aes(x=CSyes, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X0)) + 
@@ -585,16 +650,17 @@ Plot.cs0 <-ggplot(data=ef4, aes(x=CSyes, group=region2, color=region2))+
       labs(color = "region") +
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Zero cars")+
       coord_fixed(ratio=2)+
       scale_y_continuous(limits=c(0,0.5),breaks = c(0.1,0.2,0.3,0.4,0.5))+
+  scale_x_discrete(labels = c("0" = "No", "1" = "Yes"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank(),aspect.ratio=1)+
       scale_fill_grey()
-#Plot.cs0
+Plot.cs0
 
-Plot.cs1 <-ggplot(data=ef4, aes(x=CSyes, group=region2, color=region2))+
+Plot.cs1 <-ggplot(data=ef44, aes(x=CSyes, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X1)) + 
@@ -604,7 +670,7 @@ Plot.cs1 <-ggplot(data=ef4, aes(x=CSyes, group=region2, color=region2))+
       geom_ribbon(aes(ymin=prob.X1-se.prob.X1, ymax=prob.X1+se.prob.X1),alpha=.2, linetype =0)+
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("One car")+
       coord_fixed(ratio=2)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       scale_x_discrete(labels = c("0" = "No", "1" = "Yes"))+
@@ -615,7 +681,7 @@ Plot.cs1 <-ggplot(data=ef4, aes(x=CSyes, group=region2, color=region2))+
 Plot.cs1
 
 
-Plot.cs2 <-ggplot(data=ef4, aes(x=CSyes, group=region2, color=region2))+
+Plot.cs2 <-ggplot(data=ef44, aes(x=CSyes, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X2)) + 
@@ -625,16 +691,17 @@ Plot.cs2 <-ggplot(data=ef4, aes(x=CSyes, group=region2, color=region2))+
       geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2, linetype =0)+
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Two cars")+
       coord_fixed(ratio=2)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+  scale_x_discrete(labels = c("0" = "No", "1" = "Yes"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-#Plot.cs2
+Plot.cs2
 
-Plot.cs3<-ggplot(data=ef4, aes(x=CSyes, group=region2, color=region2))+
+Plot.cs3<-ggplot(data=ef44, aes(x=CSyes, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X3)) + 
@@ -642,26 +709,31 @@ Plot.cs3<-ggplot(data=ef4, aes(x=CSyes, group=region2, color=region2))+
       #geom_line(aes(y=prob.X2, color ="prob.X2"))+
       #scale_color_manual(labels = c("0 car","1 car", "2 cars"),values= c("blue", "red", "orange"))+
       geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2, linetype =0)+
+  labs(color = "region")+
       ylab("")+
       xlab("")+
-      ggtitle("")+
-      scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      ggtitle("Three cars")+
+      scale_y_continuous(limits=c(0,0.5),breaks = c(0.1,0.2,0.3,0.4,0.5))+
+  scale_x_discrete(labels = c("0" = "No", "1" = "Yes"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
+              legend.direction = "horizontal",
         panel.grid.minor=element_blank(), aspect.ratio=1)+
       scale_fill_grey()
-#Plot.cs3
+Plot.cs3
 ```
 
 ```{r}
-figure <- ggarrange(Plot.cs0, Plot.cs1, Plot.cs2,common.legend = TRUE, legend = "right", 
-          labels = c("Zero cars", "One car", "Two cars"), vjust=8,
+figure_car <- ggarrange(Plot.cs0, Plot.cs1, Plot.cs2,common.legend = TRUE, legend = "right", vjust=8,
           ncol = 3, nrow = 1)
 
-annotate_figure(figure,
-                top = text_grob("Carsharing and region as predictors of car ownership", color = "black", size = 14, vjust=6),
+figure_car <- ggarrange(Plot.cs0, Plot.cs1, Plot.cs2,Plot.cs3,common.legend = TRUE, legend = "none", vjust=8,
+          ncol = 4, nrow = 1)%>%gridExtra::grid.arrange(get_legend(Plot.cs3), heights = unit(c(60, 5), "mm"))
+
+annotate_figure(figure_car,
+                #top = text_grob("Carsharing and region as predictors of car ownership", color = "black", size = 14, vjust=6),
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Carsharing Subscription", vjust=-8),
+                bottom = text_grob("Carsharing Subscription", vjust=-9),
 )
 
 
@@ -671,7 +743,7 @@ annotate_figure(figure,
 workers
 ```{r}
 #CSyes
-Plot.work0 <-ggplot(data=ef5, aes(x=workers, group=region2, color=region2))+
+Plot.work0 <-ggplot(data=ef55, aes(x=workers, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X0)) + 
@@ -682,16 +754,16 @@ Plot.work0 <-ggplot(data=ef5, aes(x=workers, group=region2, color=region2))+
       geom_ribbon(aes(ymin=prob.X0-se.prob.X0, ymax=prob.X0+se.prob.X0),alpha=.2, linetype =0)+
       ylab("")+
       xlab("")+
-      ggtitle("")+
-      scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
-  coord_fixed(ratio=3)+
+      ggtitle("Zero cars")+
+      scale_y_continuous(limits=c(0,0.5),breaks = c(0.1,0.2,0.3,0.4))+
+  coord_fixed(ratio=6)+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 Plot.work0
 
-Plot.work1 <-ggplot(data=ef5, aes(x=workers, group=region2, color=region2))+
+Plot.work1 <-ggplot(data=ef55, aes(x=workers, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X1)) + 
@@ -701,16 +773,16 @@ Plot.work1 <-ggplot(data=ef5, aes(x=workers, group=region2, color=region2))+
       geom_ribbon(aes(ymin=prob.X1-se.prob.X1, ymax=prob.X1+se.prob.X1),alpha=.2, linetype =0)+
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("One car")+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
   coord_fixed(ratio=3)+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-#Plot.work1
+Plot.work1
 
-Plot.work2 <-ggplot(data=ef5, aes(x=workers, group=region2, color=region2))+
+Plot.work2 <-ggplot(data=ef55, aes(x=workers, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X2)) + 
@@ -720,16 +792,16 @@ Plot.work2 <-ggplot(data=ef5, aes(x=workers, group=region2, color=region2))+
       geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2, linetype =0)+
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Two cars")+
   coord_fixed(ratio=3)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-#Plot.work2
+Plot.work2
 
-Plot.work3<-ggplot(data=ef5, aes(x=workers, group=region2, color=region2))+
+Plot.work3<-ggplot(data=ef55, aes(x=workers, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X3)) + 
@@ -737,34 +809,38 @@ Plot.work3<-ggplot(data=ef5, aes(x=workers, group=region2, color=region2))+
       #geom_line(aes(y=prob.X2, color ="prob.X2"))+
       #scale_color_manual(labels = c("0 car","1 car", "2 cars"),values= c("blue", "red", "orange"))+
       geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2, linetype =0)+
+  labs(color = "region")+
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Three cars")+
       coord_fixed(ratio=3)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
+              legend.direction = "horizontal",
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-#Plot.work3
+Plot.work3
 ```
 
 ```{r}
-figure_work <- ggarrange( Plot.work0,Plot.work1, Plot.work2, Plot.work3,common.legend = TRUE, legend = "none", 
-          labels = c( "Zero cars","One car", "Two cars", "Three cars"),vjust=3,
-          ncol = 4, nrow = 1)%>% gridExtra::grid.arrange(get_legend(Plot.qualiopnv3), heights = unit(c(60, 5), "mm"))
+figure_work <- ggarrange(Plot.work1, Plot.work2, Plot.work3,common.legend = TRUE, legend = "none",vjust=3,
+          ncol = 3, nrow = 1)%>% gridExtra::grid.arrange(get_legend(Plot.work3), heights = unit(c(60, 5), "mm"))
+
+figure_work <- ggarrange(Plot.work0, Plot.work1, Plot.work2, Plot.work3,common.legend = TRUE, legend = "none",vjust=3,
+          ncol = 4, nrow = 1)%>% gridExtra::grid.arrange(get_legend(Plot.work3), heights = unit(c(60, 5), "mm"))
 
 
 annotate_figure(figure_work,
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Number of workers", vjust=-11),
+                bottom = text_grob("Number of workers", vjust=-9),
 )
 ```
 
 parttime
 
 ```{r}
-Plot.parttime1 <-ggplot(data=ef12, aes(x=parttime, group=region2, color=region2))+
+Plot.parttime1 <-ggplot(data=ef122, aes(x=parttime, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X0)) + 
@@ -775,7 +851,7 @@ Plot.parttime1 <-ggplot(data=ef12, aes(x=parttime, group=region2, color=region2)
       labs(color = "region") +
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Zero cars")+
       coord_fixed(ratio=3)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
@@ -783,7 +859,7 @@ Plot.parttime1 <-ggplot(data=ef12, aes(x=parttime, group=region2, color=region2)
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 
-Plot.parttime2 <-ggplot(data=ef12, aes(x=parttime, group=region2, color=region2))+
+Plot.parttime2 <-ggplot(data=ef122, aes(x=parttime, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X1)) + 
@@ -794,7 +870,7 @@ Plot.parttime2 <-ggplot(data=ef12, aes(x=parttime, group=region2, color=region2)
       labs(color = "region") +
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("One car")+
       coord_fixed(ratio=3)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
@@ -803,7 +879,7 @@ Plot.parttime2 <-ggplot(data=ef12, aes(x=parttime, group=region2, color=region2)
       scale_fill_grey()
 
 
-Plot.parttime3 <-ggplot(data=ef12, aes(x=parttime, group=region2, color=region2))+
+Plot.parttime3 <-ggplot(data=ef122, aes(x=parttime, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X2)) + 
@@ -814,7 +890,7 @@ Plot.parttime3 <-ggplot(data=ef12, aes(x=parttime, group=region2, color=region2)
      labs(color = "region") +
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Two cars")+
       coord_fixed(ratio=3)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
@@ -822,7 +898,7 @@ Plot.parttime3 <-ggplot(data=ef12, aes(x=parttime, group=region2, color=region2)
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 
-Plot.parttime4 <-ggplot(data=ef12, aes(x=parttime, group=region2, color=region2))+
+Plot.parttime4 <-ggplot(data=ef122, aes(x=parttime, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X3)) + 
@@ -833,7 +909,7 @@ Plot.parttime4 <-ggplot(data=ef12, aes(x=parttime, group=region2, color=region2)
       labs(color = "region") +
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Three cars")+
       coord_fixed(ratio=3)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
@@ -843,20 +919,19 @@ Plot.parttime4 <-ggplot(data=ef12, aes(x=parttime, group=region2, color=region2)
 ```
 
 ```{r}
-figure_parttime <- ggarrange( Plot.parttime1,Plot.parttime2, Plot.parttime3, Plot.parttime4,common.legend = TRUE, legend = "none", 
-          labels = c( "Zero cars","One car", "Two cars", "Three cars"),vjust=3,
-          ncol = 4, nrow = 1)%>% gridExtra::grid.arrange(get_legend(Plot.qualiopnv3), heights = unit(c(60, 5), "mm"))
+figure_parttime <- ggarrange(Plot.parttime1,Plot.parttime2, Plot.parttime3,common.legend = TRUE, legend = "none",vjust=3,
+          ncol = 3, nrow = 1)%>% gridExtra::grid.arrange(get_legend(Plot.qualiopnv3), heights = unit(c(60, 5), "mm"))
 
 
 annotate_figure(figure_parttime,
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Number of parttime workers", vjust=-11),
+                bottom = text_grob("Number of parttime workers", vjust=-9),
 )
 
 ```
 triplength_avg
 ```{r}
-Plot.trip0 <-ggplot(data=ef6, aes(x=triplength_avg, group=region2, color=region2))+
+Plot.trip0 <-ggplot(data=ef66, aes(x=triplength_avg, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X0)) + 
@@ -866,16 +941,16 @@ Plot.trip0 <-ggplot(data=ef6, aes(x=triplength_avg, group=region2, color=region2
       geom_ribbon(aes(ymin=prob.X0-se.prob.X0, ymax=prob.X0+se.prob.X0),alpha=.2, linetype =0)+
        ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Zero cars")+
       coord_fixed(ratio=30)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-#Plot.trip0
+Plot.trip0
 
-Plot.trip1 <-ggplot(data=ef6, aes(x=triplength_avg, group=region2, color=region2))+
+Plot.trip1 <-ggplot(data=ef66, aes(x=triplength_avg, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X1)) + 
@@ -885,7 +960,7 @@ Plot.trip1 <-ggplot(data=ef6, aes(x=triplength_avg, group=region2, color=region2
       geom_ribbon(aes(ymin=prob.X1-se.prob.X1, ymax=prob.X1+se.prob.X1),alpha=.2, linetype =0)+
        ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("One car")+
       coord_fixed(ratio=30)+
       labs(color = "region") +
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
@@ -895,7 +970,7 @@ Plot.trip1 <-ggplot(data=ef6, aes(x=triplength_avg, group=region2, color=region2
       scale_fill_grey()
 #Plot.trip1
 
-Plot.trip2 <-ggplot(data=ef6, aes(x=triplength_avg, group=region2, color=region2))+
+Plot.trip2 <-ggplot(data=ef66, aes(x=triplength_avg, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X2)) + 
@@ -905,7 +980,7 @@ Plot.trip2 <-ggplot(data=ef6, aes(x=triplength_avg, group=region2, color=region2
       geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2, linetype =0)+
        ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Two cars")+
       coord_fixed(ratio=30)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
@@ -914,7 +989,7 @@ Plot.trip2 <-ggplot(data=ef6, aes(x=triplength_avg, group=region2, color=region2
       scale_fill_grey()
 #Plot.trip2
 
-Plot.trip3<-ggplot(data=ef6, aes(x=triplength_avg, group=region2, color=region2))+
+Plot.trip3<-ggplot(data=ef66, aes(x=triplength_avg, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X3)) + 
@@ -924,7 +999,7 @@ Plot.trip3<-ggplot(data=ef6, aes(x=triplength_avg, group=region2, color=region2)
       geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2, linetype =0)+
        ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Three cars")+
       coord_fixed(ratio=30)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
@@ -936,22 +1011,24 @@ Plot.trip3
 ```
 
 ```{r}
-figure_trip <- ggarrange( Plot.trip1, Plot.trip2, common.legend = TRUE, legend = "right", 
-          labels = c( "One car", "Two cars"), vjust=5,
+figure_trip <- ggarrange(Plot.trip1, Plot.trip2, common.legend = TRUE, legend = "right", vjust=5,
           ncol = 2, nrow = 1)
+
+figure_trip <- ggarrange(Plot.trip0,Plot.trip1, Plot.trip2, Plot.trip3,common.legend = TRUE, legend = "none",vjust=3,
+          ncol = 4, nrow = 1) %>% gridExtra::grid.arrange(get_legend(Plot.work3), heights = unit(c(60, 5), "mm"))
 
 
 annotate_figure(figure_trip,
-                top = text_grob("Average triplength and region as predictors of car ownership", color = "black", size = 14, vjust=4),
+                #top = text_grob("Average triplength and region as predictors of car ownership", color = "black", size = 14, vjust=4),
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Average triplength", vjust=-4),
+                bottom = text_grob("Average triplength in kilometers", vjust=-4),
 )
 ```
 
 Share old
 
 ```{r}
-Plot.share0 <-ggplot(data=ef7, aes(x=oldHH, group=region2, color=region2))+
+Plot.share0 <-ggplot(data=ef77, aes(x=oldHH, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X0)) + 
@@ -962,9 +1039,10 @@ Plot.share0 <-ggplot(data=ef7, aes(x=oldHH, group=region2, color=region2))+
       labs(color = "region")+
        ylab("")+
       xlab("")+
-      ggtitle("")+
-      coord_fixed(ratio=2)+
+      ggtitle("Zero cars")+
+      coord_fixed(ratio=4)+
       scale_y_continuous(limits=c(0,0.5),breaks = c(0.1,0.2,0.3,0.4))+
+   scale_x_discrete(labels = c("0" = "<= 36", "1" = "> 36"))+
       #scale_x_continuous(limits=c(0,1),breaks = c(0.5))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
@@ -972,7 +1050,7 @@ Plot.share0 <-ggplot(data=ef7, aes(x=oldHH, group=region2, color=region2))+
       scale_fill_grey()
 #Plot.share0
 
-Plot.share1 <-ggplot(data=ef7, aes(x=oldHH, group=region2, color=region2))+
+Plot.share1 <-ggplot(data=ef77, aes(x=oldHH, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X1)) + 
@@ -983,17 +1061,17 @@ Plot.share1 <-ggplot(data=ef7, aes(x=oldHH, group=region2, color=region2))+
       geom_ribbon(aes(ymin=prob.X1-se.prob.X1, ymax=prob.X1+se.prob.X1),alpha=.2, linetype =0)+
        ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("One car")+
       coord_fixed(ratio=2)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
-      #scale_x_continuous(limits=c(0,1),breaks = c(0.5))+
+scale_x_discrete(labels = c("0" = "<= 36", "1" = "> 36"))+      #scale_x_continuous(limits=c(0,1),breaks = c(0.5))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 #Plot.share1
 
-Plot.share2 <-ggplot(data=ef7, aes(x=oldHH, group=region2, color=region2))+
+Plot.share2 <-ggplot(data=ef77, aes(x=oldHH, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X2)) +
@@ -1004,9 +1082,9 @@ Plot.share2 <-ggplot(data=ef7, aes(x=oldHH, group=region2, color=region2))+
       geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2, linetype =0)+
        ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Two cars")+
       coord_fixed(ratio=2)+
-      scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+scale_x_discrete(labels = c("0" = "<= 36", "1" = "> 36"))+      scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       #scale_x_continuous(limits=c(0,1),breaks = c(0.5))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
@@ -1014,7 +1092,7 @@ Plot.share2 <-ggplot(data=ef7, aes(x=oldHH, group=region2, color=region2))+
       scale_fill_grey()
 
 
-Plot.share3<-ggplot(data=ef7, aes(x=oldHH, group=region2, color=region2))+
+Plot.share3<-ggplot(data=ef77, aes(x=oldHH, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X3)) + 
@@ -1024,35 +1102,38 @@ Plot.share3<-ggplot(data=ef7, aes(x=oldHH, group=region2, color=region2))+
       #scale_color_manual(labels = c("0 car","1 car", "2 cars"),values= c("blue", "red", "orange"))+
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Three cars")+
       coord_fixed(ratio=4)+
       geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2, linetype =0)+
       labs(color = "region")+
-      scale_y_continuous(limits=c(0,0.5),breaks = c(0.1,0.2,0.3,0.4))+
+scale_x_discrete(labels = c("0" = "<= 36", "1" = "> 36"))+      scale_y_continuous(limits=c(0,0.5),breaks = c(0.1,0.2,0.3,0.4))+
       #scale_x_continuous(limits=c(0,1),breaks = c(0.5))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-#Plot.share3
+Plot.share3
 ```
 
 ```{r}
-figure_share <- ggarrange(Plot.share1, Plot.share2, common.legend = TRUE, legend = "right", 
-          labels = c("One car", "Two cars", "Three cars"), vjust=5,
-          ncol = 2, nrow = 1)
+
+figure_share <- ggarrange(Plot.share0,Plot.share1, Plot.share2, Plot.share3,common.legend = TRUE, legend = "none",vjust=3,
+          ncol = 4, nrow = 1) %>% gridExtra::grid.arrange(get_legend(Plot.work3), heights = unit(c(60, 5), "mm"))
+
+figure_share <- ggarrange(Plot.share0, Plot.share1, Plot.share2, common.legend = TRUE, legend = "none", vjust=5,
+          ncol = 3, nrow = 1)%>% gridExtra::grid.arrange(get_legend(Plot.work3), heights = unit(c(60, 5), "mm"))
 
 
 annotate_figure(figure_share,
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Type of Household", vjust=-6),
+                bottom = text_grob("Prevailing household age", vjust=-9),
 )
 ```
 
 
 hh_children
 ```{r}
-Plot.children0 <-ggplot(data=ef8, aes(x=hh_children, group=region2, color=region2))+
+Plot.children0 <-ggplot(data=ef88, aes(x=hh_children, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X0)) + 
@@ -1063,16 +1144,18 @@ Plot.children0 <-ggplot(data=ef8, aes(x=hh_children, group=region2, color=region
       geom_ribbon(aes(ymin=prob.X0-se.prob.X0, ymax=prob.X0+se.prob.X0),alpha=.2, linetype =0)+
        ylab("")+
       xlab("")+
-      ggtitle("")+
-      coord_fixed(ratio=1)+
-      scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      ggtitle("Zero cars")+
+      coord_fixed(ratio=8)+
+  scale_x_discrete(labels = c("0" = "No", "1" = "Yes"))+
+      scale_y_continuous(limits=c(0,0.25),breaks = c(0.1,0.2))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
+              axis.text.x = element_text(angle=45, hjust=1),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 Plot.children0
 
-Plot.children1 <-ggplot(data=ef8, aes(x=hh_children, group=region2, color=region2))+
+Plot.children1 <-ggplot(data=ef88, aes(x=hh_children, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X1)) + 
@@ -1083,16 +1166,18 @@ Plot.children1 <-ggplot(data=ef8, aes(x=hh_children, group=region2, color=region
        ylab("")+
       xlab("")+
   labs(color = "region")+
-      ggtitle("")+
-      coord_fixed(ratio=1)+
+      ggtitle("One car")+
+      coord_fixed(ratio=2)+
+  scale_x_discrete(labels = c("0" = "No", "1" = "Yes"))+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
+              axis.text.x = element_text(angle=45, hjust=1),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 Plot.children1
 
-Plot.children2 <-ggplot(data=ef8, aes(x=hh_children, group=region2, color=region2))+
+Plot.children2 <-ggplot(data=ef88, aes(x=hh_children, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X2)) + 
@@ -1102,17 +1187,19 @@ Plot.children2 <-ggplot(data=ef8, aes(x=hh_children, group=region2, color=region
       geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2, linetype =0)+
        ylab("")+
       xlab("")+
-      ggtitle("")+
-      coord_fixed(ratio=1)+
+      ggtitle("Two cars")+
+      coord_fixed(ratio=2)+
   labs(color = "region")+
+  scale_x_discrete(labels = c("0" = "No", "1" = "Yes"))+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
+              axis.text.x = element_text(angle=45, hjust=1),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 Plot.children2
 
-Plot.children3<-ggplot(data=ef8, aes(x=hh_children, group=region2, color=region2))+
+Plot.children3<-ggplot(data=ef88, aes(x=hh_children, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X3)) + 
@@ -1122,34 +1209,38 @@ Plot.children3<-ggplot(data=ef8, aes(x=hh_children, group=region2, color=region2
       geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2, linetype =0)+
        ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Three cars")+
   labs(color = "region")+
-      coord_fixed(ratio=1)+
-      scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      coord_fixed(ratio=8)+
+  scale_x_discrete(labels = c("0" = "No", "1" = "Yes"))+ 
+      scale_y_continuous(limits=c(0,0.25),breaks = c(0.1,0.2))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
+              axis.text.x = element_text(angle=45, hjust=1),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 Plot.children3
 ```
 
 ```{r}
-figure_children <- ggarrange( Plot.children1, Plot.children2, common.legend = TRUE, legend = "right", 
-          labels = c( "One car", "Two cars"), vjust=8,
+figure_children <- ggarrange(Plot.children1, Plot.children2, common.legend = TRUE, legend = "right", vjust=8,
           ncol = 2, nrow = 1)
 
 
+figure_children <- ggarrange(Plot.children0, Plot.children1, Plot.children2, Plot.children3,common.legend = TRUE, legend = "none",vjust=3,
+          ncol = 4, nrow = 1) %>% gridExtra::grid.arrange(get_legend(Plot.work3), heights = unit(c(60, 5), "mm"))
+
 annotate_figure(figure_children,
-                top = text_grob("Children and region as predictors of car ownership", color = "black", size = 14, vjust=6),
+                #top = text_grob("Children and region as predictors of car ownership", color = "black", size = 14, vjust=6),
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Households with children", vjust=-10),
+                bottom = text_grob("Household with children", vjust=-6),
 )
 ```
 
 
 numped
 ```{r}
-Plot.ped0 <-ggplot(data=ef9, aes(x=numped, group=region2, color=region2))+
+Plot.ped0 <-ggplot(data=ef99, aes(x=numped, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X0)) + 
@@ -1159,17 +1250,18 @@ Plot.ped0 <-ggplot(data=ef9, aes(x=numped, group=region2, color=region2))+
       geom_ribbon(aes(ymin=prob.X0-se.prob.X0, ymax=prob.X0+se.prob.X0),alpha=.2, linetype =0)+
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Zero cars")+
   labs(color = "region")+
-      coord_fixed(ratio=10)+
-      scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      coord_fixed(ratio=20)+
+      scale_y_continuous(limits=c(0,0.25),breaks = c(0.1,0.2))+
+   scale_x_continuous(limits=c(0,5),breaks = c(1,2,3,4,5))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 Plot.ped0
 
-Plot.ped1 <-ggplot(data=ef9, aes(x=numped, group=region2, color=region2))+
+Plot.ped1 <-ggplot(data=ef99, aes(x=numped, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X1)) + 
@@ -1179,17 +1271,18 @@ Plot.ped1 <-ggplot(data=ef9, aes(x=numped, group=region2, color=region2))+
       geom_ribbon(aes(ymin=prob.X1-se.prob.X1, ymax=prob.X1+se.prob.X1),alpha=.2, linetype =0)+
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("One car")+
   labs(color = "region")+
-      coord_fixed(ratio=10)+
+      coord_fixed(ratio=5)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+  scale_x_continuous(limits=c(0,5),breaks = c(1,2,3,4,5))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 Plot.ped1
 
-Plot.ped2 <-ggplot(data=ef9, aes(x=numped, group=region2, color=region2))+
+Plot.ped2 <-ggplot(data=ef99, aes(x=numped, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X2)) + 
@@ -1199,17 +1292,18 @@ Plot.ped2 <-ggplot(data=ef9, aes(x=numped, group=region2, color=region2))+
       geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2, linetype =0)+
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Two cars")+
   labs(color = "region")+
-      coord_fixed(ratio=10)+
+      coord_fixed(ratio=5)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+  scale_x_continuous(limits=c(0,5),breaks = c(1,2,3,4,5))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 Plot.ped2
 
-Plot.ped3<-ggplot(data=ef9, aes(x=numped, group=region2, color=region2))+
+Plot.ped3<-ggplot(data=ef99, aes(x=numped, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X3)) + 
@@ -1219,10 +1313,11 @@ Plot.ped3<-ggplot(data=ef9, aes(x=numped, group=region2, color=region2))+
       geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2, linetype =0)+
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Three cars")+
   labs(color = "region")+
-      coord_fixed(ratio=10)+
-      scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      coord_fixed(ratio=20)+
+      scale_y_continuous(limits=c(0,0.25),breaks = c(0.1,0.2))+
+  scale_x_continuous(limits=c(0,5),breaks = c(1,2,3,4,5))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
@@ -1231,22 +1326,24 @@ Plot.ped3
 ```
 
 ```{r}
-figure_ped <- ggarrange(Plot.ped0,Plot.ped1, Plot.ped2, common.legend = TRUE, legend = "right", 
-          labels = c( "Zero cars","One car", "Two cars"), vjust=8,
-          ncol = 3, nrow = 1)
+figure_ped <- ggarrange(Plot.ped1, Plot.ped2, common.legend = TRUE, legend = "right", vjust=8,
+          ncol = 2, nrow = 1)
+
+figure_ped <- ggarrange(Plot.ped0, Plot.ped1, Plot.ped2,Plot.ped3,common.legend = TRUE, legend = "none",vjust=3,
+          ncol = 4, nrow = 1) %>% gridExtra::grid.arrange(get_legend(Plot.work3), heights = unit(c(60, 5), "mm"))
 
 
 annotate_figure(figure_ped,
-                top = text_grob("Number of bicycles and region as predictors of car ownership", color = "black", size = 14, vjust=6),
+                #top = text_grob("Number of bicycles and region as predictors of car ownership", color = "black", size = 14, vjust=6),
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Number of bicycles/pedelecs", vjust=-8),
+                bottom = text_grob("Number of bicycles/pedelecs", vjust=-9),
 )
 ```
 
 housingtype
 
 ```{r}
-Plot.housingtyp1 <-ggplot(data=ef13, aes(x=housing_type, group=region2, color=region2))+
+Plot.housingtyp1 <-ggplot(data=ef133, aes(x=housing_type, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X0)) + 
@@ -1257,7 +1354,7 @@ Plot.housingtyp1 <-ggplot(data=ef13, aes(x=housing_type, group=region2, color=re
       labs(color = "region") +
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Zero cars")+
       coord_fixed(ratio=6)+
       scale_y_continuous(limits=c(0,0.5),breaks = c(0.1,0.2,0.3,0.4))+
   scale_x_discrete(limits=c("singlefamily_h","multifamily_h", "apartmentbuilding"),labels = c("singlefamily_h" = "Singlefamily-Home", "multifamily_h" = "Multifamily-Home","apartmentbuilding" = "Apartmentbuilding"))+
@@ -1267,7 +1364,7 @@ Plot.housingtyp1 <-ggplot(data=ef13, aes(x=housing_type, group=region2, color=re
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 
-Plot.housingtyp2 <-ggplot(data=ef13, aes(x=housing_type, group=region2, color=region2))+
+Plot.housingtyp2 <-ggplot(data=ef133, aes(x=housing_type, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X1)) + 
@@ -1278,7 +1375,7 @@ Plot.housingtyp2 <-ggplot(data=ef13, aes(x=housing_type, group=region2, color=re
       labs(color = "region") +
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("One car")+
       coord_fixed(ratio=3)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
   scale_x_discrete(limits=c("singlefamily_h","multifamily_h", "apartmentbuilding"),labels = c("singlefamily_h" = "Singlefamily-Home", "multifamily_h" = "Multifamily-Home","apartmentbuilding" = "Apartmentbuilding"))+
@@ -1289,7 +1386,7 @@ Plot.housingtyp2 <-ggplot(data=ef13, aes(x=housing_type, group=region2, color=re
       scale_fill_grey()
 
 
-Plot.housingtyp3 <-ggplot(data=ef13, aes(x=housing_type, group=region2, color=region2))+
+Plot.housingtyp3 <-ggplot(data=ef133, aes(x=housing_type, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X2)) + 
@@ -1300,7 +1397,7 @@ Plot.housingtyp3 <-ggplot(data=ef13, aes(x=housing_type, group=region2, color=re
      labs(color = "region") +
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Two cars")+
       coord_fixed(ratio=3)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
   scale_x_discrete(limits=c("singlefamily_h","multifamily_h", "apartmentbuilding"),labels = c("singlefamily_h" = "Singlefamily-Home", "multifamily_h" = "Multifamily-Home","apartmentbuilding" = "Apartmentbuilding"))+
@@ -1310,20 +1407,20 @@ Plot.housingtyp3 <-ggplot(data=ef13, aes(x=housing_type, group=region2, color=re
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 
-Plot.housingtyp4 <-ggplot(data=ef13, aes(x=housing_type, group=region2, color=region2))+
+Plot.housingtyp4 <-ggplot(data=ef133, aes(x=housing_type, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X3)) + 
       #geom_line(aes(y=prob.X1, color="prob.X1")) + 
       #geom_line(aes(y=prob.X2, color ="prob.X2"))+
       #scale_color_manual(labels = c("0 car","1 car", "2 cars"),values= c("blue", "red", "orange"))+
-      geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2, linetype =0)+
+      geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2, linetype =0)+
      labs(color = "region") +
       ylab("")+
       xlab("")+
-      ggtitle("")+
-      coord_fixed(ratio=3)+
-      scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      ggtitle("Three cars")+
+      coord_fixed(ratio=6)+
+      scale_y_continuous(limits=c(0,0.5),breaks = c(0.1,0.2,0.3,0.4))+
   scale_x_discrete(limits=c("singlefamily_h","multifamily_h", "apartmentbuilding"),labels = c("singlefamily_h" = "Singlefamily-Home", "multifamily_h" = "Multifamily-Home","apartmentbuilding" = "Apartmentbuilding"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
@@ -1333,20 +1430,22 @@ Plot.housingtyp4 <-ggplot(data=ef13, aes(x=housing_type, group=region2, color=re
 ```
 
 ```{r}
-figure_housing <- ggarrange(Plot.housingtyp1, Plot.housingtyp2, Plot.housingtyp3,common.legend = TRUE, legend = "right", 
-          labels = c("Zero cars", "One car", "Two cars"), vjust=6,
-          ncol = 3, nrow = 1)
+figure_housing <- ggarrange(Plot.housingtyp1, Plot.housingtyp2, Plot.housingtyp3,common.legend = TRUE, legend = "none", vjust=6,
+          ncol = 3, nrow = 1, align = "h")
+
+figure_housing <- ggarrange(Plot.housingtyp1, Plot.housingtyp2, Plot.housingtyp3,Plot.housingtyp4,common.legend = TRUE, legend = "none",vjust=3,
+          ncol = 4, nrow = 1) %>% gridExtra::grid.arrange(get_legend(Plot.work3), heights = unit(c(60, 5), "mm"))
 
 annotate_figure(figure_housing,
-                left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Type of housing", color = "black",vjust=-5)
+                left = text_grob("Predicted Probability", color = "black", rot = 90, hjust = 0.2),
+                bottom = text_grob("Type of housing", color = "black",vjust=-4)
 )
 
 ```
 
 garage
 ```{r}
-Plot.garage1 <-ggplot(data=ef19, aes(x=garage, group=region2, color=region2))+
+Plot.garage1 <-ggplot(data=ef199, aes(x=garage, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X0)) + 
@@ -1357,15 +1456,16 @@ Plot.garage1 <-ggplot(data=ef19, aes(x=garage, group=region2, color=region2))+
       labs(color = "region") +
       ylab("")+
       xlab("")+
-      ggtitle("")+
-      coord_fixed(ratio=4)+
-      scale_y_continuous(limits=c(0,0.5),breaks = c(0.1,0.2,0.3,0.4))+
+      ggtitle("Zero cars")+
+      coord_fixed(ratio=8)+
+      scale_y_continuous(limits=c(0,0.25),breaks = c(0.1,0.2))+
+  scale_x_discrete(labels = c("0" = "No", "1" = "Yes"))+ 
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 
-Plot.garage2 <-ggplot(data=ef19, aes(x=garage, group=region2, color=region2))+
+Plot.garage2 <-ggplot(data=ef199, aes(x=garage, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X1)) + 
@@ -1376,16 +1476,17 @@ Plot.garage2 <-ggplot(data=ef19, aes(x=garage, group=region2, color=region2))+
       labs(color = "region") +
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("One car")+
       coord_fixed(ratio=2)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+  scale_x_discrete(labels = c("0" = "No", "1" = "Yes"))+ 
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 
 
-Plot.garage3 <-ggplot(data=ef19, aes(x=garage, group=region2, color=region2))+
+Plot.garage3 <-ggplot(data=ef199, aes(x=garage, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X2)) + 
@@ -1396,9 +1497,10 @@ Plot.garage3 <-ggplot(data=ef19, aes(x=garage, group=region2, color=region2))+
      labs(color = "region") +
       ylab("")+
       xlab("")+
-      ggtitle("")+
+      ggtitle("Two cars")+
       coord_fixed(ratio=2)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+  scale_x_discrete(labels = c("0" = "No", "1" = "Yes"))+ 
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
@@ -1406,7 +1508,7 @@ Plot.garage3 <-ggplot(data=ef19, aes(x=garage, group=region2, color=region2))+
 
 
 
-Plot.garage4 <-ggplot(data=ef19, aes(x=garage, group=region2, color=region2))+
+Plot.garage4 <-ggplot(data=ef199, aes(x=garage, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X3)) + 
@@ -1417,9 +1519,10 @@ Plot.garage4 <-ggplot(data=ef19, aes(x=garage, group=region2, color=region2))+
       labs(color = "region") +
       ylab("")+
       xlab("")+
-      ggtitle("")+
-      coord_fixed(ratio=2)+
-      scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      ggtitle("Three cars")+
+      coord_fixed(ratio=8)+
+      scale_y_continuous(limits=c(0,0.25),breaks = c(0.1,0.2))+
+  scale_x_discrete(labels = c("0" = "No", "1" = "Yes"))+ 
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
@@ -1427,22 +1530,20 @@ Plot.garage4 <-ggplot(data=ef19, aes(x=garage, group=region2, color=region2))+
 ```
 
 ```{r}
-figure_garage <- ggarrange( Plot.garage2, Plot.garage3,common.legend = TRUE, legend = "none", 
-          labels = c("One car", "Two cars"), vjust=8,
-          ncol = , nrow = 1)
+figure_garage <- ggarrange(Plot.garage2, Plot.garage3,common.legend = TRUE, legend = "right", vjust=8,
+          ncol = 2 , nrow = 1)
 
 annotate_figure(figure_garage,
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Availability of a garage", vjust=-10, just=c(1.5,0)),
+                bottom = text_grob("Availability of a garage", vjust=-6),
 )
 
-figure_housing <- ggarrange(Plot.garage1, Plot.garage2, Plot.garage3,common.legend = TRUE, legend = "right", 
-          labels = c("Zero cars", "One car", "Two cars"), vjust=9,
-          ncol = 3, nrow = 1)
+figure_garage <- ggarrange(Plot.garage1, Plot.garage2, Plot.garage3,Plot.garage4, common.legend = TRUE, legend = "none", vjust=9,
+          ncol = 4, nrow = 1) %>% gridExtra::grid.arrange(get_legend(Plot.work3), heights = unit(c(60, 5), "mm"))
 
-annotate_figure(figure_housing,
+annotate_figure(figure_garage,
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Availabilty of a garage", color = "black",vjust=-9)
+                bottom = text_grob("Availabilty of a garage", color = "black",vjust=-6)
 )
 
 ```
@@ -1550,7 +1651,7 @@ annotate_figure(figure,
 
 trips
 ```{r}
-Plot.tripsa0 <-ggplot(data=ef17, aes(x=tripsavg, group=region2, color=region2))+
+Plot.tripsa0 <-ggplot(data=ef177, aes(x=tripsavg, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X0)) + 
@@ -1568,9 +1669,9 @@ Plot.tripsa0 <-ggplot(data=ef17, aes(x=tripsavg, group=region2, color=region2))+
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank(),aspect.ratio=1)+
       scale_fill_grey()
-#Plot.csm0
+Plot.tripsa0
 
-Plot.tripsa1 <-ggplot(data=ef17, aes(x=tripsavg, group=region2, color=region2))+
+Plot.tripsa1 <-ggplot(data=ef177, aes(x=tripsavg, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X1)) + 
@@ -1588,10 +1689,10 @@ Plot.tripsa1 <-ggplot(data=ef17, aes(x=tripsavg, group=region2, color=region2))+
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-#Plot.csm1
+Plot.tripsa1
 
 
-Plot.tripsa2 <-ggplot(data=ef17, aes(x=tripsavg, group=region2, color=region2))+
+Plot.tripsa2 <-ggplot(data=ef177, aes(x=tripsavg, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X2)) + 
@@ -1608,9 +1709,9 @@ Plot.tripsa2 <-ggplot(data=ef17, aes(x=tripsavg, group=region2, color=region2))+
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-#Plot.csm2
+Plot.tripsa2
 
-Plot.tripsa3<-ggplot(data=ef17, aes(x=tripsavg, group=region2, color=region2))+
+Plot.tripsa3<-ggplot(data=ef177, aes(x=tripsavg, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X3)) + 
@@ -1626,7 +1727,7 @@ Plot.tripsa3<-ggplot(data=ef17, aes(x=tripsavg, group=region2, color=region2))+
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank(), aspect.ratio=1)+
       scale_fill_grey()
-#Plot.cs3
+Plot.tripsa3
 
 ```
 
@@ -1634,7 +1735,7 @@ Plot.tripsa3<-ggplot(data=ef17, aes(x=tripsavg, group=region2, color=region2))+
 log(nummots)
 
 ```{r}
-Plot.mot0 <-ggplot(data=ef18, aes(x=nummots1, group=region2, color=region2))+
+Plot.mot0 <-ggplot(data=ef188, aes(x=nummots1, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X0)) + 
@@ -1654,7 +1755,7 @@ Plot.mot0 <-ggplot(data=ef18, aes(x=nummots1, group=region2, color=region2))+
       scale_fill_grey()
 #Plot.mot0
 
-Plot.mot1 <-ggplot(data=ef18, aes(x=nummots1, group=region2, color=region2))+
+Plot.mot1 <-ggplot(data=ef188, aes(x=nummots1, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X1)) + 
@@ -1675,7 +1776,7 @@ Plot.mot1 <-ggplot(data=ef18, aes(x=nummots1, group=region2, color=region2))+
 #Plot.csm1
 
 
-Plot.mot2 <-ggplot(data=ef18, aes(x=nummots1, group=region2, color=region2))+
+Plot.mot2 <-ggplot(data=ef188, aes(x=nummots1, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X2)) + 
@@ -1694,7 +1795,7 @@ Plot.mot2 <-ggplot(data=ef18, aes(x=nummots1, group=region2, color=region2))+
       scale_fill_grey()
 #Plot.csm2
 
-Plot.mot3<-ggplot(data=ef18, aes(x=nummots1, group=region2, color=region2))+
+Plot.mot3<-ggplot(data=ef188, aes(x=nummots1, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X3)) + 
@@ -1710,7 +1811,10 @@ Plot.mot3<-ggplot(data=ef18, aes(x=nummots1, group=region2, color=region2))+
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank(), aspect.ratio=1)+
       scale_fill_grey()
-#Plot.cs3
+Plot.mot0
+Plot.mot1
+Plot.mot2
+Plot.mot3
 
 ```
 
@@ -1730,100 +1834,85 @@ annotate_figure(figure,
 ```
 
 ```{r}
-#numlic 
-Plot.numlic0<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
+Plot.train0 <-ggplot(data=ef155, aes(x=train28, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X0)) + 
       #geom_line(aes(y=prob.X1, color="prob.X1")) + 
       #geom_line(aes(y=prob.X2, color ="prob.X2"))+
-      #geom_line(aes(y=prob.X3, color ="prob.X3"))+
-      #scale_color_manual(labels = c("urban","suburban", "rural"),values= c("blue", "red", "orange"))+
-      geom_ribbon(aes(ymin=L.prob.X0, ymax=U.prob.X0),linetype=0,alpha=.2)+
-      #geom_ribbon(aes(ymin=prob.X1-se.prob.X1, ymax=prob.X1+se.prob.X1),alpha=.2)+
-      #geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2)+
-      #geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2)+
-       ylab("")+
+      #scale_color_manual(labels = c("0 car","1 car", "2 cars"),values= c("blue", "red", "orange"))+
+      geom_ribbon(aes(ymin=prob.X0-se.prob.X0, ymax=prob.X0+se.prob.X0),alpha=.2, linetype =0)+
+      labs(color = "region") +
+      ylab("")+
       xlab("")+
       ggtitle("")+
-      labs(color = "region") +
-      #coord_fixed(ratio=10)+
-  scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      coord_fixed(ratio=2)+
+      scale_y_continuous(limits=c(0,0.5),breaks = c(0.1,0.2,0.3,0.4,0.5))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank())+
+        panel.grid.minor=element_blank(),aspect.ratio=1)+
       scale_fill_grey()
-#Plot.numlic0
+#Plot.mot0
 
-Plot.numlic1<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
+Plot.train1 <-ggplot(data=ef155, aes(x=train28, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X1)) + 
       #geom_line(aes(y=prob.X1, color="prob.X1")) + 
       #geom_line(aes(y=prob.X2, color ="prob.X2"))+
-      #geom_line(aes(y=prob.X3, color ="prob.X3"))+
-      #scale_color_manual(labels = c("urban","suburban", "rural"),values= c("blue", "red", "orange"))+
-      geom_ribbon(aes(ymin=L.prob.X1, ymax=U.prob.X1),linetype=0,alpha=.2)+
-      #geom_ribbon(aes(ymin=prob.X1-se.prob.X1, ymax=prob.X1+se.prob.X1),alpha=.2)+
-      #geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2)+
-      #geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2)+
-       ylab("")+
+      #scale_color_manual(labels = c("0 car","1 car", "2 cars"),values= c("blue", "red", "orange"))+
+      geom_ribbon(aes(ymin=prob.X1-se.prob.X1, ymax=prob.X1+se.prob.X1),alpha=.2, linetype =0)+
+      ylab("")+
       xlab("")+
       ggtitle("")+
-      labs(color = "region") +
-      #coord_fixed(ratio=10)+
-  scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      coord_fixed(ratio=2)+
+      scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      scale_x_discrete(labels = c("0" = "No", "1" = "Yes"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-Plot.numlic1
+#Plot.csm1
 
-Plot.numlic2<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
+
+Plot.train2 <-ggplot(data=ef155, aes(x=train28, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X2)) + 
       #geom_line(aes(y=prob.X1, color="prob.X1")) + 
       #geom_line(aes(y=prob.X2, color ="prob.X2"))+
-      #geom_line(aes(y=prob.X3, color ="prob.X3"))+
-      #scale_color_manual(labels = c("urban","suburban", "rural"),values= c("blue", "red", "orange"))+
-      geom_ribbon(aes(ymin=L.prob.X2, ymax=U.prob.X2),linetype=0,alpha=.2)+
-      #geom_ribbon(aes(ymin=prob.X1-se.prob.X1, ymax=prob.X1+se.prob.X1),alpha=.2)+
-      #geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2)+
-      #geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2)+
-       ylab("")+
+      #scale_color_manual(labels = c("0 car","1 car", "2 cars"),values= c("blue", "red", "orange"))+
+      geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2, linetype =0)+
+      ylab("")+
       xlab("")+
       ggtitle("")+
-      labs(color = "region") +
-     # coord_fixed(ratio=10)+
-  scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      coord_fixed(ratio=2)+
+      scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-#Plot.numlic2
+#Plot.csm2
 
-Plot.numlic3<-ggplot(data=ef2, aes(x=numlic, group=region2, color=region2))+
+Plot.train3<-ggplot(data=ef155, aes(x=train28, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
       #facet_wrap(~region2)+
       geom_line(aes(y=prob.X3)) + 
       #geom_line(aes(y=prob.X1, color="prob.X1")) + 
       #geom_line(aes(y=prob.X2, color ="prob.X2"))+
-      #geom_line(aes(y=prob.X3, color ="prob.X3"))+
-      #scale_color_manual(labels = c("urban","suburban", "rural"),values= c("blue", "red", "orange"))+
-      geom_ribbon(aes(ymin=L.prob.X3, ymax=U.prob.X3),linetype=0,alpha=.2)+
-      #geom_ribbon(aes(ymin=prob.X1-se.prob.X1, ymax=prob.X1+se.prob.X1),alpha=.2)+
-      #geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2)+
-      #geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2)+
-       ylab("")+
+      #scale_color_manual(labels = c("0 car","1 car", "2 cars"),values= c("blue", "red", "orange"))+
+      geom_ribbon(aes(ymin=prob.X3-se.prob.X3, ymax=prob.X3+se.prob.X3),alpha=.2, linetype =0)+
+      ylab("")+
       xlab("")+
       ggtitle("")+
-      labs(color = "region") +
-      #coord_fixed(ratio=10)+
-    scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank())+
+        panel.grid.minor=element_blank(), aspect.ratio=1)+
       scale_fill_grey()
+Plot.train0
+Plot.train1
+Plot.train2
+Plot.train3
 ```
 

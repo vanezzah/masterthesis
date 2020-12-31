@@ -970,13 +970,11 @@ names_num <- a.names[-c(2,4,8,10:11,17:18,20)]
 names_cat <- a.names[c(4,10:11,17:18,20)]
 #region alleine
 
-
-
   for(i in names_num){
   
   a <- marginal_effects(data=HH_dt_2_out, fit_multinom_v3, variables = i,category="0")
   a_mean <- mean(a[,1])
-  b <- marginal_effects(data=HH_dt_2_out, fit_multinom_v3, variables = i,category="1")
+  b <- marginal_effects(data=HH_dt_2_out, multinom_int3, variables = i,category="1")
   b_mean <- mean(b[,1])
   c <- marginal_effects(data=HH_dt_2_out, fit_multinom_v3, variables = i,category="2")
   c_mean <- mean(c[,1])
@@ -1343,18 +1341,49 @@ HH_dt_2_out$qualinv4 <- factor(HH_dt_2_out$qualinv4)
 #Average marginal effects for interaction effects (Beispiel numlic)
 #https://stackoverflow.com/questions/45421196/replicating-the-stata-marginlist-argument-using-r-margins-package
 
+# for 0 cars
 ```{r}
 
+#AME_temp <- AME_int
 AME_int <- as.matrix(data.frame(t(c("name", "urban","suburban","rural","pvalue1", "pvalue2", "pvalue3"))))
 colnames(AME_int) <- c("name", "urban","suburban","rural","pvalue1", "pvalue2", "pvalue3")
 
+test_margins0 <- margins(multinom_int3, variables=c("numlic","income_numerical","CSyes", "workers", "parttime", "hh_children", "oldHH", "garage", "numped", "triplength_avg","quali_nv", "housing_type", "train28"), data = data.frame(HH_dt_2_out), at = list("region2"=c("urban", "suburban", "rural")), category = "0")
 
-  for(i in names_num){
-  tempurb <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], multinom_int2,variables= i,category = "0")  
+
+test_margins0_df <- as.data.frame(summary(test_margins0))
+test_margins0_df[,3:7] <- NULL
+test_margins0_df <- reshape(test_margins0_df, idvar = "factor", timevar = "region2", direction = "wide")
+
+test_margins1_df <- as.data.frame(summary(test_margins1))
+test_margins1_df[,4:8] <- NULL
+test_margins1_df <- reshape(test_margins1_df, idvar = "factor", timevar = "region2", direction = "wide")
+
+test_margins2_df <- as.data.frame(summary(test_margins2))
+test_margins2_df[,4:8] <- NULL
+test_margins2_df <- reshape(test_margins2_df, idvar = "factor", timevar = "region2", direction = "wide")
+
+test_margins3_df <- as.data.frame(summary(test_margins3))
+test_margins3_df[,4:8] <- NULL
+test_margins3_df <- reshape(test_margins3_df, idvar = "factor", timevar = "region2", direction = "wide")
+
+
+test_margins1 <- margins(multinom_int3, variables=c("numlic","income_numerical","CSyes", "workers", "parttime", "hh_children", "oldHH", "garage", "numped", "triplength_avg", "quali_nv", "housing_type", "train28"), data = data.frame(HH_dt_2_out), at = list("region2"=c("urban", "suburban", "rural")), category = "1")
+
+test_margins2 <- margins(multinom_int3, variables=c("numlic","income_numerical","CSyes", "workers", "parttime", "hh_children", "oldHH", "garage", "numped", "triplength_avg", "quali_nv", "housing_type", "train28"), data = data.frame(HH_dt_2_out), at = list("region2"=c("urban", "suburban", "rural")), category = "2")
+
+test_margins3 <- margins(multinom_int3, variables=c("numlic","income_numerical","CSyes", "workers", "parttime", "hh_children", "oldHH", "garage", "numped", "triplength_avg", "quali_nv", "housing_type", "train28"), data = data.frame(HH_dt_2_out), at = list("region2"=c("urban", "suburban", "rural")), category = "3")
+
+margins_total <- cbind(test_margins0_df, test_margins1_df, test_margins2_df, test_margins3_df)
+margins_total[,c(5,9,13)] <- NULL
+
+names_numint <- names_num[c(1,2,3,4,6,7,8,9,10,12)]
+  for(i in names_numint){
+  tempurb <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], multinom_int3,variables= i,category = "0")  
   mean_urb <- mean(tempurb[,1])
-  tempsub <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], multinom_int2,variables= i,category = "0")  
+  tempsub <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], multinom_int3,variables= i,category = "0")  
   mean_sub <- mean(tempsub[,1])
-  temprur <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], multinom_int2,variables= i,category = "0")  
+  temprur <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], multinom_int3,variables= i,category = "0")  
   mean_rur <- mean(temprur[,1])
   
   testa <- wilcox.test(tempurb[,1],tempsub[,1], paired = FALSE)
@@ -1377,7 +1406,49 @@ colnames(AME_int) <- c("name", "urban","suburban","rural","pvalue1", "pvalue2", 
   AME_int <- insertRow(AME_int,1,w)
   }
 
-for(i in names_cat){
+print(xtable(margins_total, type = "latex", digits=c(0,0,3,3,3,3,3,3,3,3,3,3,3,3)), include.rownames=FALSE, file = "margins_int.tex")
+
+
+tempurb <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], multinom_int3,variables= i,category = "1") 
+
+AME_int1 <- as.matrix(data.frame(t(c("name", "urban","suburban","rural","pvalue1", "pvalue2", "pvalue3"))))
+colnames(AME_int1) <- c("name", "urban","suburban","rural","pvalue1", "pvalue2", "pvalue3")
+for(i in names_numint){
+  tempurb <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], multinom_int3,variables= i,category = "1")  
+  mean_urb <- mean(tempurb[,1])
+  tempsub <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], multinom_int3,variables= i,category = "1")  
+  mean_sub <- mean(tempsub[,1])
+  temprur <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], multinom_int3,variables= i,category = "1")  
+  mean_rur <- mean(temprur[,1])
+  
+  testa <- wilcox.test(tempurb[,1],tempsub[,1], paired = FALSE)
+  testb <- wilcox.test(tempurb[,1],temprur[,1], paired = FALSE)
+  testc <- wilcox.test(tempsub[,1],temprur[,1], paired = FALSE)
+  
+  
+  
+  res1 = round(mean_urb - mean_sub,3)
+  if(testa$p.value < 0.01) 
+  {res1 = paste0(round(mean_urb - mean_sub,3),"*")}
+  
+  res2 = round(mean_urb - mean_rur,3)
+  if(testb$p.value < 0.01) 
+  {res2 = paste0(round(mean_urb - mean_rur,3),"*")}
+  
+  res3 = round(mean_sub - mean_rur,3)
+  if(testc$p.value < 0.01) 
+  {res3 = paste0(round(mean_sub - mean_rur,3),"*")}
+  
+  w <- c(i,round(mean_urb,3),round(mean_sub,3),round(mean_rur,3), res1, res2, res3)
+  AME_int1 <- insertRow(AME_int1,1,w)
+}
+
+AME_inttotal <- data.frame(AME_int, AME_int1)
+
+
+
+names_catint <- names_cat[c(1,2,5)]
+for(i in names_catint){
   tempurb <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], multinom_int2,variables= i,category = "0")  
   mean_urb <- mean(tempurb[,1])
   mean_urb2<- mean(tempurb[,2])
