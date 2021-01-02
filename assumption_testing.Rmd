@@ -101,7 +101,8 @@ HH_dt_2_out <- filter(HH_dt_2_out,triplength_avg < upper_bound)
 dplyr::count(HH_dt_2, nummots, by=numcars) 
 HH_dt_2_out <- filter(HH_dt_2_out,nummots < 5)
 
-dplyr::count(HH_dt_2, numlic, by=numcars) #ok
+dplyr::count(HH_dt_2_out, numcars , by=region2) #ok
+dplyr::count(HH_dt_2_out, region2) #ok
 HH_dt_2_out <- filter(HH_dt_2_out,numlic < 5)
 
 #dplyr::count(HH_dt_2_out, numped, by = numcars) # ok
@@ -157,6 +158,7 @@ Testing correlation
 1. Numerical/Ordinal by Numerical/ordinal correlation incl. plot
 
 ```{r}
+
 # Source: http://www.sthda.com/english/wiki/correlation-matrix-a-quick-start-guide-to-analyze-format-and-visualize-a-correlation-matrix-using-r-software
 
 

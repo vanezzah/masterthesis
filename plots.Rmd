@@ -56,13 +56,6 @@ plot(effect("hheink_imp", fit_multinom), multiline=TRUE, rug=FALSE)
 Making mnlogit output the same as multinom (normal)
 ```{r}
 
-fit_multinom <- multinom(numcars ~ numlic + region2 + income_numerical + 
-    I(numlic^2) + quali_nv + I(income_numerical^2) + CSyes + 
-    workers + CSmultiple + log(nummots1) + triplength_avg + housing_type + 
-    quali_opnv + I(triplength_avg^2) + oldHH + parttime  + hh_children + 
-    I(workers^2) + numped + tripsavg + metro28 + train28 + garage + 
-    bus28, data = HH_dt_2_out,maxit=250)
-
 
 
 fit_multinom <- multinom(numcars ~numlic + region2 + income_numerical + I(numlic^2) + 
@@ -72,13 +65,12 @@ fit_multinom <- multinom(numcars ~numlic + region2 + income_numerical + I(numlic
     tripsavg + metro28 + train28 + garage + bus28 + I(parttime^2), data = HH_dt_2_out,maxit=250)
 
 
-fm_new <- formula(numcars ~  1| numlic + region2 + income_numerical + 
-    I(numlic^2) + quali_nv + I(income_numerical^2) + CSyes + 
-    workers + CSmultiple + log(nummots1) + triplength_avg + housing_type + 
-    quali_opnv + I(triplength_avg^2) + oldHH + parttime + hh_children + 
-    I(workers^2) + numped + tripsavg + metro28 + train28 + garage + 
-    bus28|1)
-fit_new <- mnlogit(fm_new, mnlogit_dt_out, ncores=4, choiceVar = "alt")
+fm_new <- formula(numcars ~  1| numlic + region2 + income_numerical + I(numlic^2) + 
+    quali_nv + I(income_numerical^2) + CSyes + workers + CSmultiple + 
+    log(nummots1) + triplength_avg + housing_type + quali_opnv + 
+    I(triplength_avg^2) + oldHH + parttime + hh_children + numped + 
+    tripsavg + metro28 + train28 + garage + bus28 + I(parttime^2)|1)
+fit_new <- mlogit(fm_new, mnlogit_dt_out, ncores=4, choiceVar = "alt")
 
 
 #substitution of coefficients
@@ -157,8 +149,8 @@ e33 <- as.data.frame(e33)
 
 e111 = effect("triplength_avg", fit_multinom_v3)
 e111 = as.data.frame(e111)
-e222 = effect("income_numerical", fit_multinom_v3, xlevels = 20)
-e222 = as.data.frame(e222)
+e2222 = effect("income_numerical", fit_multinom_v3, xlevels = 20)
+e2222 = as.data.frame(e2222)
 e44 = effect("tripsavg", fit_multinom_v3)
 e44 <- as.data.frame(e44)
 
@@ -221,8 +213,9 @@ numlic_plot <-ggplot(data=e33, aes(x=numlic))+
       geom_line(aes(y=prob.X3, color ="Three or more cars"))+
       ylab("")+
       xlab("Number of licensed drivers")+
-      ggtitle("")+
+      ggtitle("Licenses")+
       labs(color = "Number of cars owned") +
+      scale_color_discrete(breaks = c("Zero cars", "One car","Two cars", "Three or more cars"))+
       coord_fixed(ratio=4)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
@@ -237,17 +230,18 @@ income numerical
 
 ```{r}
 
-income_plot <-ggplot(data=e222, aes(x=income_numerical))+
+income_plot <-ggplot(data=e2222, aes(x=income_numerical))+
       geom_line(aes(y=prob.X0, color="Zero cars")) + 
       geom_line(aes(y=prob.X1, color="One car")) + 
       geom_line(aes(y=prob.X2, color ="Two cars"))+
       geom_line(aes(y=prob.X3, color ="Three or more cars"))+
       ylab("")+
       xlab("Monthly Income in Thousands")+
-      ggtitle("")+
+      ggtitle("Income")+
       labs(color = "Number of cars owned") +
       coord_fixed(ratio=9)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      scale_color_discrete(breaks = c("Zero cars", "One car","Two cars", "Three or more cars"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         legend.position = "bottom",
@@ -256,9 +250,7 @@ income_plot <-ggplot(data=e222, aes(x=income_numerical))+
 #income_plot
 
 
-figure_incnum <- ggarrange(numlic_plot, income_plot,common.legend = TRUE, legend = "right", 
-          labels = c("Licenses", "Income"), vjust=6,hjust=-0.6,
-          ncol = 2, nrow = 1, align="h")
+figure_incnum <- ggarrange(numlic_plot, income_plot,common.legend = TRUE, legend = "right", vjust=6,hjust=-0.6, ncol = 2, nrow = 1, align="h")
 
 #%>% gridExtra::grid.arrange(get_legend(income_plot), heights = unit(c(60, 5), "mm"))
 
@@ -276,13 +268,14 @@ CS1_plot <-ggplot(data=e144, aes(x=CSyes, group=1))+
       geom_line(aes(y=prob.X0, color="Zero cars")) + 
       geom_line(aes(y=prob.X1, color="One car")) + 
       geom_line(aes(y=prob.X2, color ="Two cars"))+
-      geom_line(aes(y=prob.X3, color ="Three cars"))+
+      geom_line(aes(y=prob.X3, color ="Three or more cars"))+
       ylab("")+
       xlab("Carsharing available")+
       ggtitle("Carsharing available")+
       labs(color = "Number of cars owned") +
       coord_fixed(ratio=2)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      scale_color_discrete(breaks = c("Zero cars", "One car","Two cars", "Three or more cars"))+
       scale_x_discrete(labels = c("0" = "No", "1" = "Yes"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
@@ -310,7 +303,7 @@ CS2_plot <-ggplot(data=e155, aes(x=CSmultiple, group=1))+
 
 
 
-figure_CS <- ggarrange(CS1_plot, CS2_plot,common.legend = TRUE, legend = "right",
+figure_CS <- ggarrange(CS1_plot,common.legend = TRUE, legend = "right",
           ncol = 2, nrow = 1)
 #%>% gridExtra::grid.arrange(get_legend(CS2_plot), heights = unit(c(60, 5), "mm"))
 
@@ -331,18 +324,18 @@ trips_plot <-ggplot(data=e44, aes(x=tripsavg))+
       geom_line(aes(y=prob.X0, color="Zero cars")) + 
       geom_line(aes(y=prob.X1, color="One car")) + 
       geom_line(aes(y=prob.X2, color ="Two cars"))+
-      geom_line(aes(y=prob.X3, color ="Three cars"))+
+      geom_line(aes(y=prob.X3, color ="Three or more cars"))+
       ylab("")+
       xlab("Average number of trips")+
-      ggtitle("")+
+      ggtitle("Av. trips")+
       labs(color = "Number of cars owned") +
       coord_fixed(ratio=8)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      scale_color_discrete(breaks = c("Zero cars", "One car","Two cars", "Three or more cars"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
-#income_plot
 
 triplength_plot <-ggplot(data=e111, aes(x=triplength_avg))+
       geom_line(aes(y=prob.X0, color="Zero cars")) + 
@@ -351,10 +344,11 @@ triplength_plot <-ggplot(data=e111, aes(x=triplength_avg))+
       geom_line(aes(y=prob.X3, color ="Three cars"))+
       ylab("")+
       xlab("Average triplength")+
-      ggtitle("")+
+      ggtitle("Av. triplength")+
       labs(color = "Number of cars owned") +
       coord_fixed(ratio=34)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      scale_color_discrete(breaks = c("Zero cars", "One car","Two cars", "Three or more cars"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         legend.position = "bottom",
@@ -363,8 +357,7 @@ triplength_plot <-ggplot(data=e111, aes(x=triplength_avg))+
 
 
 
-figure_trips <- ggarrange(triplength_plot, trips_plot,common.legend = TRUE, legend = "right", 
-          labels = c("Av. triplength", "Av. trips"), vjust=6,
+figure_trips <- ggarrange(triplength_plot,common.legend = TRUE, legend = "right", vjust=6,
           ncol = 2, nrow = 1)
 
 #%>% gridExtra::grid.arrange(get_legend(triplength_plot), heights = unit(c(60, 5), "mm"))
@@ -390,6 +383,7 @@ workers_plot <-ggplot(data=e100, aes(x=workers))+
       labs(color = "Number of cars owned") +
       coord_fixed(ratio=3)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      scale_color_discrete(breaks = c("Zero cars", "One car","Two cars", "Three or more cars"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         legend.position = "bottom",
@@ -408,6 +402,7 @@ parttime_plot <-ggplot(data=e1111, aes(x=parttime))+
       labs(color = "Number of cars owned") +
       coord_fixed(ratio=3)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      scale_color_discrete(breaks = c("Zero cars", "One car","Two cars", "Three or more cars"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         legend.position = "bottom",
@@ -441,6 +436,7 @@ children_plot <-ggplot(data=e244, aes(x=hh_children, group = 1))+
       labs(color = "Number of cars owned") +
       coord_fixed(ratio=2)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      scale_color_discrete(breaks = c("Zero cars", "One car","Two cars", "Three or more cars"))+
       scale_x_discrete(labels = c("0" = "No", "1" = "Yes"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
@@ -460,6 +456,7 @@ old_plot <-ggplot(data=e133, aes(x=oldHH, group=1))+
       labs(color = "Number of cars owned") +
       coord_fixed(ratio=2)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      scale_color_discrete(breaks = c("Zero cars", "One car","Two cars", "Three or more cars"))+
       scale_x_discrete(limits=c("0","1"),labels = c("0" = "<= 36", "1" = "> 36"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
@@ -492,11 +489,12 @@ numped_plot <-ggplot(data=e66, aes(x=numped))+
       geom_line(aes(y=prob.X3, color ="Three or more cars"))+
       ylab("")+
       xlab("Number of bikes / ped.")+
-      ggtitle("")+
+      ggtitle("Bikes")+
       labs(color = "Number of cars owned") +
       coord_fixed(ratio=10)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       scale_x_continuous(limits=c(0,10), breaks = c(0,2,4,6,8,10))+
+      scale_color_discrete(breaks = c("Zero cars", "One car","Two cars", "Three or more cars"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
@@ -509,11 +507,11 @@ nummots_plot <-ggplot(data=e55, aes(x=nummots1))+
       geom_line(aes(y=prob.X3, color ="Three or more cars"))+
       ylab("")+
       xlab("Number of motorbikes")+
-      ggtitle("")+
+      ggtitle("Motorbikes")+
       labs(color = "Number of cars owned") +
       coord_fixed(ratio=4)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
-      #scale_x_discrete(labels = c("0" = "urban", "1" = "suburban","2"= "rural"))+
+      scale_color_discrete(breaks = c("Zero cars", "One car","Two cars", "Three or more cars"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
@@ -522,8 +520,7 @@ nummots_plot <-ggplot(data=e55, aes(x=nummots1))+
 
 
 
-figure_pedmots<- ggarrange(numped_plot, nummots_plot,common.legend = TRUE, legend = "right", 
-          labels = c("Bikes / Ped.", "Motorbikes"), vjust=6,
+figure_pedmots<- ggarrange(numped_plot, nummots_plot,common.legend = TRUE, legend = "right", vjust=6,
           ncol = 2, nrow = 1)
 
 
@@ -603,7 +600,7 @@ figure_bus<- ggarrange(bus_plot, metro_plot,train_plot,common.legend = TRUE, leg
 
 annotate_figure(figure_bus,
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom=text_grob("Distance to next station", color="black",vjust=-9)
+                bottom=text_grob("Distance to next station", color="black",vjust=-10)
 )
 ```
 
@@ -698,6 +695,7 @@ qualinv_plot <-ggplot(data=e233, aes(x=quali_nv, group=1))+
       labs(color = "Number of cars owned") +
       coord_fixed(ratio=4)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      scale_color_discrete(breaks = c("Zero cars", "One car","Two cars", "Three or more cars"))+
       #scale_x_discrete(labels = c("0" = "No", "1" = "Yes"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
@@ -715,6 +713,7 @@ qualiopnv_plot <-ggplot(data=e222, aes(x=quali_opnv, group=1))+
       labs(color = "Number of cars owned") +
       coord_fixed(ratio=4)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
+      scale_color_discrete(breaks = c("Zero cars", "One car","Two cars", "Three or more cars"))+
       #scale_x_discrete(labels = c("0" = "urban", "1" = "suburban","2"= "rural"))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),

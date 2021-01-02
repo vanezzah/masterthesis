@@ -10,6 +10,12 @@ knitr::opts_chunk$set(echo = TRUE)
 Calculate model
 ```{r}
 
+table_numcarsregion <- as.data.frame(dplyr::count(HH_dt_2_out, numcars , by=region2)) #ok
+table_numcarsregion <- reshape(table_numcarsregion, idvar = "numcars", timevar = "by", direction = "wide")
+table_numcarsregion$n.urban <- table_numcarsregion$n.urban/26320
+table_numcarsregion$n.suburban <- table_numcarsregion$n.suburban/30899
+table_numcarsregion$n.rural <- table_numcarsregion$n.rural/13101
+
 multinom_int3<-multinom(formula = numcars ~ region2 + numlic + I(numlic^2) + 
     region2:numlic + region2:I(numlic^2) + income_numerical + 
     I(income_numerical^2) + region2:income_numerical + region2:I(income_numerical^2) +     quali_nv + region2:quali_nv + CSyes + region2:CSyes + workers + 
@@ -42,7 +48,7 @@ fm_int <- formula(numcars ~  1|region2 + numlic + I(numlic^2) +
     numped + I(numped^2) + region2:numped + region2:I(numped^2) + 
     bus28|1)
 
-fit_int <- mnlogit(fm_int, mnlogit_dt_out, ncores=4, choiceVar = "alt")
+fit_int <- mlogit(fm_int, mnlogit_dt_out, ncores=4, choiceVar = "alt")
 
 
 #substitution of coefficients
@@ -300,6 +306,7 @@ Plot.numlic3<-ggplot(data=ef22, aes(x=numlic, group=region2, color=region2))+
     scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
+              legend.direction = "horizontal", 
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 #Plot.numlic3
@@ -307,16 +314,16 @@ Plot.numlic3<-ggplot(data=ef22, aes(x=numlic, group=region2, color=region2))+
 ```
 
 ```{r}
-figure_numlic <- ggarrange(Plot.numlic1, Plot.numlic2,Plot.numlic3,common.legend = TRUE, legend = "right",
-          ncol = 3, nrow = 1)
+figure_numlic <- ggarrange(Plot.numlic1, Plot.numlic2,Plot.numlic3,common.legend = TRUE, legend = "none",
+          ncol = 3, nrow = 1)%>%gridExtra::grid.arrange(get_legend(Plot.numlic3), heights = unit(c(60, 5), "mm"))
 
 figure_numlic <- ggarrange(Plot.numlic0, Plot.numlic1, Plot.numlic2,Plot.numlic3,common.legend = TRUE, legend = "none",
-          ncol = 4, nrow = 1)%>% gridExtra::grid.arrange(get_legend(Plot.qualiopnv4), heights = unit(c(60, 5), "mm"))
+          ncol = 4, nrow = 1)%>% gridExtra::grid.arrange(get_legend(Plot.numlic3), heights = unit(c(50, 5), "mm"))
 
 annotate_figure(figure_numlic,
                 #top = text_grob("Number of license holders and region as predictors of car ownership", color = "black", size =                   14,),
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Number of license holders", vjust = -9),
+                bottom = text_grob("Number of license holders", vjust = -11),
 )
 
 ```
@@ -373,6 +380,7 @@ Plot.income2 <-ggplot(data=ef33, aes(x=income_numerical, group=region2, color=re
       geom_ribbon(aes(ymin=prob.X2-se.prob.X2, ymax=prob.X2+se.prob.X2),alpha=.2, linetype=0)+
       ylab("")+
       xlab("")+
+  labs(color = "region") +
       ggtitle("Two cars")+
       coord_fixed(ratio=10)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
@@ -394,10 +402,12 @@ Plot.income3 <-ggplot(data=ef33, aes(x=income_numerical, group=region2, color=re
       ylab("")+
       xlab("")+
       ggtitle("Three cars")+
-      coord_fixed(ratio=8)+
+  labs(color = "region") +
+      coord_fixed(ratio=10)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
+            legend.direction = "horizontal",  
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 Plot.income3
@@ -405,11 +415,11 @@ Plot.income3
 ```
 
 ```{r}
-figure_income <- ggarrange(Plot.income0, Plot.income1, Plot.income2, common.legend = TRUE, legend = "right", vjust=7,
-          ncol = 3, nrow = 1)
+figure_income <- ggarrange(Plot.income0, Plot.income1, Plot.income2, common.legend = TRUE, legend = "none", vjust=7,
+          ncol = 3, nrow = 1)%>% gridExtra::grid.arrange(get_legend(Plot.income3), heights = unit(c(60, 5), "mm"))
 
 figure_income <- ggarrange(Plot.income0, Plot.income1, Plot.income2,Plot.income3,common.legend = TRUE, legend = "none",
-          ncol = 4, nrow = 1)%>% gridExtra::grid.arrange(get_legend(Plot.qualiopnv4), heights = unit(c(60, 5), "mm"))
+          ncol = 4, nrow = 1)%>% gridExtra::grid.arrange(get_legend(Plot.income3), heights = unit(c(50, 5), "mm"))
 
 annotate_figure(figure_income,
                 #top = text_grob("Monthly income and region as predictors of car ownership", color = "black", size =                   14, vjust=5),
@@ -423,6 +433,8 @@ annotate_figure(figure_income,
 
 qualinv
 ```{r}
+
+library(ggplot2)
 #qualinv4
 Plot.qualinv1 <-ggplot(data=ef111, aes(x=quali_nv, group=region2, color=region2))+
 #For ylim, specify the range of your DV (in our case, 0-4)
@@ -436,7 +448,7 @@ Plot.qualinv1 <-ggplot(data=ef111, aes(x=quali_nv, group=region2, color=region2)
       ylab("")+
       xlab("")+
       ggtitle("Zero cars")+
-      coord_fixed(ratio=12)+
+      coord_fixed(ratio=13.33)+
       scale_y_continuous(limits=c(0,0.3),breaks = c(0.1,0.2,0.3))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
@@ -496,7 +508,7 @@ Plot.qualinv4 <-ggplot(data=ef111, aes(x=quali_nv, group=region2, color=region2)
       ylab("")+
       xlab("")+
       ggtitle("Three cars")+
-      coord_fixed(ratio=12)+
+      coord_fixed(ratio=13.33)+
       scale_y_continuous(limits=c(0,0.3),breaks = c(0.1,0.2,0.3))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
@@ -511,13 +523,15 @@ Plot.qualinv4
 figure <- ggarrange(Plot.qualinv1, Plot.qualinv2, Plot.qualinv3,common.legend = TRUE, legend = "none", vjust=8,
           ncol = 3, nrow = 1) %>% gridExtra::grid.arrange(get_legend(Plot.qualinv4), heights = unit(c(60, 5), "mm"))
 
+library(dplyr)
+library(gpubr)
 figure <- ggarrange(Plot.qualinv1, Plot.qualinv2, Plot.qualinv3,Plot.qualinv4, common.legend = TRUE, legend = "none", vjust=8,
-          ncol = 4, nrow = 1) %>% gridExtra::grid.arrange(get_legend(Plot.qualinv4), heights = unit(c(60, 5), "mm"))
+          ncol = 4, nrow = 1) %>% gridExtra::grid.arrange(get_legend(Plot.qualinv4), heights = unit(c(50, 5), "mm"))
 
 annotate_figure(figure,
                 #top = text_grob("Quality of public services and region as predictors of car ownership", color = "black", size = 14, vjust=6),
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Quality of public services", vjust=-9),
+                bottom = text_grob("Quality of public services", vjust=-11),
 )
 
 
@@ -724,8 +738,8 @@ Plot.cs3
 ```
 
 ```{r}
-figure_car <- ggarrange(Plot.cs0, Plot.cs1, Plot.cs2,common.legend = TRUE, legend = "right", vjust=8,
-          ncol = 3, nrow = 1)
+figure_car <- ggarrange(Plot.cs0, Plot.cs1, Plot.cs2,common.legend = TRUE, legend = "none", vjust=8,
+          ncol = 3, nrow = 1)%>%gridExtra::grid.arrange(get_legend(Plot.cs3), heights = unit(c(60, 5), "mm"))
 
 figure_car <- ggarrange(Plot.cs0, Plot.cs1, Plot.cs2,Plot.cs3,common.legend = TRUE, legend = "none", vjust=8,
           ncol = 4, nrow = 1)%>%gridExtra::grid.arrange(get_legend(Plot.cs3), heights = unit(c(60, 5), "mm"))
@@ -833,7 +847,7 @@ figure_work <- ggarrange(Plot.work0, Plot.work1, Plot.work2, Plot.work3,common.l
 
 annotate_figure(figure_work,
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Number of workers", vjust=-9),
+                bottom = text_grob("Number of fulltime workers", vjust=-9),
 )
 ```
 
@@ -1021,7 +1035,7 @@ figure_trip <- ggarrange(Plot.trip0,Plot.trip1, Plot.trip2, Plot.trip3,common.le
 annotate_figure(figure_trip,
                 #top = text_grob("Average triplength and region as predictors of car ownership", color = "black", size = 14, vjust=4),
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Average triplength in kilometers", vjust=-4),
+                bottom = text_grob("Average triplength in kilometers", vjust=-6),
 )
 ```
 
@@ -1233,7 +1247,7 @@ figure_children <- ggarrange(Plot.children0, Plot.children1, Plot.children2, Plo
 annotate_figure(figure_children,
                 #top = text_grob("Children and region as predictors of car ownership", color = "black", size = 14, vjust=6),
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Household with children", vjust=-6),
+                bottom = text_grob("Household with children", vjust=-5),
 )
 ```
 
@@ -1254,7 +1268,7 @@ Plot.ped0 <-ggplot(data=ef99, aes(x=numped, group=region2, color=region2))+
   labs(color = "region")+
       coord_fixed(ratio=20)+
       scale_y_continuous(limits=c(0,0.25),breaks = c(0.1,0.2))+
-   scale_x_continuous(limits=c(0,5),breaks = c(1,2,3,4,5))+
+   scale_x_continuous(limits=c(0,5),breaks = c(0,1,2,3,4,5))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
@@ -1275,7 +1289,7 @@ Plot.ped1 <-ggplot(data=ef99, aes(x=numped, group=region2, color=region2))+
   labs(color = "region")+
       coord_fixed(ratio=5)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
-  scale_x_continuous(limits=c(0,5),breaks = c(1,2,3,4,5))+
+  scale_x_continuous(limits=c(0,5),breaks = c(0,1,2,3,4,5))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
@@ -1296,7 +1310,7 @@ Plot.ped2 <-ggplot(data=ef99, aes(x=numped, group=region2, color=region2))+
   labs(color = "region")+
       coord_fixed(ratio=5)+
       scale_y_continuous(limits=c(0,1),breaks = c(0.2,0.4,0.6,0.8))+
-  scale_x_continuous(limits=c(0,5),breaks = c(1,2,3,4,5))+
+  scale_x_continuous(limits=c(0,5),breaks = c(0,1,2,3,4,5))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
@@ -1317,7 +1331,7 @@ Plot.ped3<-ggplot(data=ef99, aes(x=numped, group=region2, color=region2))+
   labs(color = "region")+
       coord_fixed(ratio=20)+
       scale_y_continuous(limits=c(0,0.25),breaks = c(0.1,0.2))+
-  scale_x_continuous(limits=c(0,5),breaks = c(1,2,3,4,5))+
+  scale_x_continuous(limits=c(0,5),breaks = c(0,1,2,3,4,5))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank())+
@@ -1336,7 +1350,7 @@ figure_ped <- ggarrange(Plot.ped0, Plot.ped1, Plot.ped2,Plot.ped3,common.legend 
 annotate_figure(figure_ped,
                 #top = text_grob("Number of bicycles and region as predictors of car ownership", color = "black", size = 14, vjust=6),
                 left = text_grob("Predicted Probability", color = "black", rot = 90),
-                bottom = text_grob("Number of bicycles/pedelecs", vjust=-9),
+                bottom = text_grob("Number of bicycles/pedelecs", vjust=-5),
 )
 ```
 
