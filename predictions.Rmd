@@ -16,13 +16,12 @@ library(mlbench)
 library(e1071)
 ```
 
-
 Split into training and test set
 
 ```{r}
 
-train_data_temp <- train_data
-test_data_temp<- test_data 
+#train_data_temp <- train_data
+#test_data_temp<- test_data 
 
 set.seed(6) 
 train_index <- sample.split(Y = HH_dt_2_out$numcars , SplitRatio = 0.8)
@@ -164,10 +163,15 @@ tree_plot <-ggplot(data=df_treesize, aes(x=Number.of.trees))+
       scale_x_continuous(limits=c(0,1000),breaks = c(0,250,500,750,1000))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
+              text=element_text(family="Times"),
         panel.grid.minor=element_blank())+
       scale_fill_grey()
 
 tree_plot
+
+savepdf2("treeplot")
+tree_plot
+dev.off()
 ```
 
 Tune nodeSize and mtlr simultaneously (long runtime)
@@ -384,10 +388,18 @@ RF_plot <-ggplot(data=df_mtry, aes(x=mtry, group=nodesize, colour=nodesize))+
       scale_x_continuous(limits=c(2,33), breaks=c(0,5,10,15,20,25,30,35))+
       theme_bw()+ 
         theme(panel.grid.major=element_blank(),
+              legend.position="bottom",
+              text=element_text(family="Times"),
+              legend.key.size = unit(0.7,"line"),
         panel.grid.minor=element_blank())+
+        guides(colour = guide_legend(nrow = 1))+
       scale_fill_grey()
-
+      
 RF_plot
+
+savepdf2("RFplot")
+RF_plot
+dev.off()
 ```
 
 Final RF model 

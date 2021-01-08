@@ -9,14 +9,18 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Calculate model
 ```{r}
-
 table_numcarsregion <- as.data.frame(dplyr::count(HH_dt_2_out, numcars , by=region2)) #ok
 table_numcarsregion <- reshape(table_numcarsregion, idvar = "numcars", timevar = "by", direction = "wide")
 table_numcarsregion$n.urban <- table_numcarsregion$n.urban/26320
 table_numcarsregion$n.suburban <- table_numcarsregion$n.suburban/30899
 table_numcarsregion$n.rural <- table_numcarsregion$n.rural/13101
 
-multinom_int3<-multinom(formula = numcars ~ region2 + numlic + I(numlic^2) + 
+multinom_int3_temp <- multinom_int3
+
+# Calculate model with interactions
+# interactions are added for all terms other than bus, metro, CSmultiple, quali_opnv
+# Nonlinear terms are added for all numerical variables
+multinom_int3 <-multinom(formula = numcars ~ region2 + numlic + I(numlic^2) + 
     region2:numlic + region2:I(numlic^2) + income_numerical + 
     I(income_numerical^2) + region2:income_numerical + region2:I(income_numerical^2) +     quali_nv + region2:quali_nv + CSyes + region2:CSyes + workers + 
     I(workers^2) + region2:workers + region2:I(workers^2) + triplength_avg + 
@@ -34,9 +38,9 @@ multinom_int <- multinom(numcars ~ region2 + numlic + I(numlic^2) + region2:numl
 
 multinom_int <- multinom(numcars ~ region2 + numlic + I(numlic^2) + region2:numlic + region2:I(numlic^2) + income_numerical +I(income_numerical^2)+ region2:income_numerical + region2:I(income_numerical^2) + quali_nv + region2:quali_nv+CSyes + region2:CSyes + workers+ I(workers^2)+ region2:workers + triplength_avg+ I(triplength_avg^2)+ region2:triplength_avg+ region2:I(triplength_avg^2) + log(nummots1) + housing_type + garage + quali_opnv + oldHH + region2:oldHH+ CSmultiple+ hh_children + region2:hh_children + metro28 + tripsavg + parttime + train28 +numped + I(numped^2) + region2:numped + region2:I(numped^2) +bus28, data = HH_dt_2_out, maxit=700)
 
-fm_int <- formula(numcars ~  1|region2 + numlic + I(numlic^2) + 
+fm_int <- formula(numcars ~ 1|region2 + numlic + I(numlic^2) + 
     region2:numlic + region2:I(numlic^2) + income_numerical + 
-    I(income_numerical^2) + region2:income_numerical + region2:I(income_numerical^2) +     quali_nv + region2:quali_nv + CSyes + region2:CSyes + workers + 
+    I(income_numerical^2) + region2:income_numerical + region2:I(income_numerical^2)     +quali_nv + region2:quali_nv + CSyes + region2:CSyes + workers + 
     I(workers^2) + region2:workers + region2:I(workers^2) + triplength_avg + 
     I(triplength_avg^2) + region2:triplength_avg + region2:I(triplength_avg^2) + 
     log(nummots1) + region2:log(nummots1) + housing_type + region2:housing_type + 
@@ -48,9 +52,11 @@ fm_int <- formula(numcars ~  1|region2 + numlic + I(numlic^2) +
     numped + I(numped^2) + region2:numped + region2:I(numped^2) + 
     bus28|1)
 
-fit_int <- mlogit(fm_int, mnlogit_dt_out, ncores=4, choiceVar = "alt")
+fit_int <- mnlogit(fm_int, mnlogit_dt_out, ncores=4, choiceVar = "alt")
+```
 
 
+```{r}
 #substitution of coefficients
 multinom_int2 <- multinom_int
 cf2 <- matrix(multinom_int2$wts, nrow=71) # davor 39 
@@ -64,6 +70,179 @@ multinom_int2$fitted.values <- fit_interaction$probabilities
 
 ```
 
+Coefficient table interaction model
+
+```{r}
+options(scipen = 999)
+
+summary_int <- summary(fit_int)
+coeffs_int <- summary_int$CoefTable
+coeffs_int <- as.data.frame(coeffs_int)
+coeffs_int <- rownames_to_column(coeffs_int)
+coeffs_int$`t-value` <- NULL
+
+coeffs_int1 <- coeffs_int[seq(1, 279, by=3),]
+coeffs_int2 <- coeffs_int[seq(2, 279, by=3),]
+coeffs_int3 <- coeffs_int[seq(3, 279, by=3),]
+
+coeffsint_total <- data.frame(coeffs_int1, coeffs_int2, coeffs_int3)
+coeffsint_total$rowname.1 <- NULL
+coeffsint_total$rowname.2 <- NULL
+
+coeffsint_total$rowname<-  sub(":1", "", coeffsint_total$rowname)
+coeffsint_total$rowname[coeffsint_total$rowname=="I(numlic^2)"] <- "licenses squared"
+coeffsint_total$rowname[coeffsint_total$rowname=="I(parttime^2)"] <- "parttime squared"
+coeffsint_total$rowname[coeffsint_total$rowname=="I(income_numerical^2)"] <- "income squared"
+coeffsint_total$rowname[coeffsint_total$rowname=="I(triplength_avg^2)"] <- "av.triplength squared"
+coeffsint_total$rowname[coeffsint_total$rowname=="log(nummots1)"] <- "motorbikes (log)"
+coeffsint_total$rowname[coeffsint_total$rowname=="I(numped^2)"] <- "numped squared"
+coeffsint_total$rowname[coeffsint_total$rowname=="I(workers^2)"] <- "workers squared"
+coeffsint_total$rowname[coeffsint_total$rowname=="I(tripsavg^2)"] <- "tripsavg squared"
+
+coeffsint_total$rowname[coeffsint_total$rowname=="numlic"] <- "licenses"
+coeffsint_total$rowname[coeffsint_total$rowname=="income_numerical"] <- "income"
+coeffsint_total$rowname[coeffsint_total$rowname=="triplength_avg"] <- "av.triplength"
+coeffsint_total$rowname[coeffsint_total$rowname=="workers"] <- "fulltime"
+coeffsint_total$rowname[coeffsint_total$rowname=="numped"] <- "bikes"
+coeffsint_total$rowname[coeffsint_total$rowname=="tripsavg"] <- "av.trips"
+coeffsint_total$rowname[coeffsint_total$rowname=="CSyes1"] <- "carsharing"
+coeffsint_total$rowname[coeffsint_total$rowname=="CSmultiple1"] <- "m.carsharing"
+coeffsint_total$rowname[coeffsint_total$rowname=="nummots"] <- "motorbikes"
+coeffsint_total$rowname[coeffsint_total$rowname=="parttime"] <- "parttime"
+coeffsint_total$rowname[coeffsint_total$rowname=="region2suburban"] <- "suburban"
+coeffsint_total$rowname[coeffsint_total$rowname=="region2rural"] <- "rural"
+coeffsint_total$rowname[coeffsint_total$rowname=="oldHH1"] <- "old"
+coeffsint_total$rowname[coeffsint_total$rowname=="hh_children1"] <- "children"
+coeffsint_total$rowname[coeffsint_total$rowname=="housing_typemultifamily_h"] <- "multifamily"
+coeffsint_total$rowname[coeffsint_total$rowname=="housing_typeapartmentbuilding"] <- "apartmentbuilding"
+coeffsint_total$rowname[coeffsint_total$rowname=="housing_typeother"] <- "other"
+coeffsint_total$rowname[coeffsint_total$rowname=="garage1"] <- "garage"
+
+coeffsint_total$rowname[coeffsint_total$rowname=="quali_nv2"] <- "ps.2"
+coeffsint_total$rowname[coeffsint_total$rowname=="quali_nv3"] <- "ps.3"
+coeffsint_total$rowname[coeffsint_total$rowname=="quali_nv4"] <- "ps.4"
+
+coeffsint_total$rowname[coeffsint_total$rowname=="quali_opnv2"] <- "pt.2"
+coeffsint_total$rowname[coeffsint_total$rowname=="quali_opnv3"] <- "pt.3"
+coeffsint_total$rowname[coeffsint_total$rowname=="quali_opnv4"] <- "pt.4"
+
+coeffsint_total$rowname[coeffsint_total$rowname=="bus28middle"] <- "bus.2"
+coeffsint_total$rowname[coeffsint_total$rowname=="bus28far"] <- "bus.3"
+coeffsint_total$rowname[coeffsint_total$rowname=="bus28rfar"] <- "bus.4"
+
+coeffsint_total$rowname[coeffsint_total$rowname=="metro28middle"] <- "metro.2"
+coeffsint_total$rowname[coeffsint_total$rowname=="metro28far"] <- "metro.3"
+coeffsint_total$rowname[coeffsint_total$rowname=="metro28rfar"] <- "metro.4"
+
+coeffsint_total$rowname <-  sub("region2suburban", "suburban", coeffsint_total$rowname)
+coeffsint_total$rowname <-  sub("region2rural", "rural", coeffsint_total$rowname)
+
+coeffsint_total$rowname <-  sub("train28rfar", "train.4", coeffsint_total$rowname)
+coeffsint_total$rowname <-  sub("train28far", "train.3", coeffsint_total$rowname)
+coeffsint_total$rowname <-  sub("train28middle", "train.2", coeffsint_total$rowname)
+
+coeffsint_total$rowname <-  sub("quali_nv4", "ps.4", coeffsint_total$rowname)
+coeffsint_total$rowname <-  sub("quali_nv3", "ps.3", coeffsint_total$rowname)
+coeffsint_total$rowname <-  sub("quali_nv2", "ps.2", coeffsint_total$rowname)
+
+colnames(coeffsint_total)<- c("Variable","Parameter","Std. Error", "Sig1.", "Parameter","Std. Error", "Sig2.", "Parameter","Std. Error", "Sig3.")
+
+for(i in 1:93) {
+  if (coeffsint_total$Sig1.[i] < 0.01) {
+    coeffsint_total$Sig1.[i] <- "***"
+  }
+  else if (coeffsint_total$Sig1.[i] < 0.05) {
+    coeffsint_total$Sig1.[i] <- "**"
+  }
+  else if (coeffsint_total$Sig1.[i] < 0.1) {
+    coeffsint_total$Sig1.[i] <- "*"
+  }
+  
+  else{
+    coeffsint_total$Sig1.[i] <- ""
+  }
+}
+
+for(i in 1:93) {
+  if (coeffsint_total$Sig2.[i] < 0.01) {
+    coeffsint_total$Sig2.[i] <- "***"
+  }
+  else if (coeffsint_total$Sig2.[i] < 0.05) {
+    coeffsint_total$Sig2.[i] <- "**"
+  }
+   else if (coeffsint_total$Sig2.[i] < 0.1) {
+    coeffsint_total$Sig2.[i] <- "*"
+   }
+  else{
+    coeffsint_total$Sig2.[i] <- ""
+  }
+}
+
+
+for(i in 1:93) {
+  if (coeffsint_total$Sig3.[i] < 0.01) {
+    coeffsint_total$Sig3.[i] <- "***"
+  }
+  else if (coeffsint_total$Sig3.[i] < 0.05) {
+    coeffsint_total$Sig3.[i] <- "**"
+  }
+   else if (coeffsint_total$Sig3.[i] < 0.1) {
+    coeffsint_total$Sig3.[i] <- "*"
+   }
+  else{
+    coeffsint_total$Sig3.[i] <- ""
+  }
+ }
+
+
+print(xtable(coeffsint_total, type = "latex",digits=c(0,0,3,3,0,3,3,0,3,3,0)),include.rownames=FALSE, file = "coeffsint_model.tex")
+```
+
+
+Model validation interaction model 
+```{r}
+# Waldtest
+waldtest(fit_int, fit_null)
+
+#Scoretest (using mlogit)
+model1_int <- mlogit(numcars ~1|region2 + numlic + I(numlic^2) + 
+    region2:numlic + region2:I(numlic^2) + income_numerical + 
+    I(income_numerical^2) + region2:income_numerical + region2:I(income_numerical^2)     +quali_nv + region2:quali_nv + CSyes + region2:CSyes + workers + 
+    I(workers^2) + region2:workers + region2:I(workers^2) + triplength_avg + 
+    I(triplength_avg^2) + region2:triplength_avg + region2:I(triplength_avg^2) + 
+    log(nummots1) + region2:log(nummots1) + housing_type + region2:housing_type + 
+    garage + region2:garage + quali_opnv + 
+    oldHH + region2:oldHH + CSmultiple + 
+    hh_children + region2:hh_children + metro28 + 
+    tripsavg + I(tripsavg^2) + region2:tripsavg + parttime + 
+    I(parttime^2) + region2:parttime + train28 + region2:train28 + 
+    numped + I(numped^2) + region2:numped + region2:I(numped^2) + 
+    bus28|1, data = mnlogit_dt_out)
+scoretest(model2, model_int)
+
+# Likelihood ratio test
+lrtest(fit_null, fit_int)
+
+# AIC:
+AIC(fit_int)
+AIC(fit_null)
+
+#Pseudo R-Squares
+LL0 <- logLik(fit_null)
+LL1 <- logLik(fit_int)
+N <- nrow(HH_dt_2_out)
+
+#mc fadden pseudo r2 
+mcfadden_int <- as.vector(1 - ((LL1) / (LL0)))
+
+# cox and snell r2 
+cox_int <- as.vector(1 - exp((2/N) * (LL0 - LL1)))
+
+# nagelkerke r2
+nagelkerke_int <- as.vector((1 - exp((2/N) * (LL0 - LL1))) / (1 - exp((2/N)*LL0)))
+
+
+```
 
 Compute effects
 ```{r}

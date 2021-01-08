@@ -5,12 +5,12 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+HH_dt_2_temp <- HH_dt_2
+HH_dt_2out_temp <-HH_dt_2_out
 ```
 
-
-
-
-Remove outliers from the data (do with and without)
+Remove outliers from the data
 
 1. Define Quartiles and IQR for the different continuous variables
 
@@ -52,13 +52,6 @@ lower_bound5
 upper_bound5 
 
 
-# workers:
-Q6 <- quantile(HH_dt_2$workers, probs=c(.25, .75), na.rm = FALSE)
-iqr6 <- IQR(HH_dt_2$workers)
-lower_bound_6 <- Q6[1]-2.2*iqr6  #-3
-upper_bound_6 <- Q6[2]+2.2*iqr6  #5
-lower_bound_6 
-upper_bound_6
 
 
 # average number of trips
@@ -80,13 +73,7 @@ lower_bound_inc
 upper_bound_inc
 
 
-#anzkind18
-Q_kind<- quantile(HH_dt_2$numch18, probs=c(.25, .75), na.rm = FALSE)
-iqr_kind <- IQR(HH_dt_2$numch18)
-lower_bound_kind <- Q_kind[1]-2.2*iqr_kind #0
-upper_bound_kind <- Q_kind[2]+2.2*iqr_kind #2
-lower_bound_kind
-upper_bound_kind
+
 
 ```
 
@@ -174,9 +161,7 @@ corr_dt$metro28 <- as.numeric(corr_dt$metro28)
 corr_dt$quali_nv <- as.numeric(corr_dt$quali_nv)
 corr_dt$quali_opnv <- as.numeric(corr_dt$quali_opnv)
 
-colnames(corr_dt) <-  c("av.trips", "licenses", "fulltime", "parttime", "av.triplength","hhsize", "motorbikes", "bikes", "income", "bus", "metro", "train","quality_ps", "quality_pt")
-
-
+colnames(corr_dt) <-  c("Av.trips", "Licenses", "Fulltime", "Parttime", "Av.triplength","Householdsize", "Motorbikes", "Bikes", "Monthly Income", "Distance Bus", "Distance Metro", "Distance Train","Quality.PS", "Quality.PT")
 
 # show correlation-plot
 corr2 <- rcorr(as.matrix(corr_dt), type="spearman")
@@ -192,15 +177,27 @@ flattenCorrMatrix <- function(cormat, pmat) {
 }
 
 flattenCorrMatrix(corr2$r, corr2$P)
-corrplot(corr2$r, type="upper", order="hclust", sig.level = 0.01, insig = "blank")
+corrplot(corr2$r, type="upper", order="hclust", col = "black", cl.pos = "n", sig.level = 0.01, tl.col="black", family = "Times",number.cex = .6, method = "number", tl.cex=.7)
+
+corrplot(corr2$r, type="upper", upper.col = "black",order="hclust", sig.level = 0.01, tl.col="black", family = "Times",number.cex = .6, method = "circle", tl.cex=.7)
+
 
 corr2_dt <- as.data.frame(flattenCorrMatrix(corr2$r, corr2$P))
 highvalues_dt <- filter(corr2_dt, cor > 0.5 | cor < -0.5)
 
-
-
 # remove hhsize due to correlation
 HH_dt_2[, hhsize := NULL]
+
+#plot to pdf
+
+savepdf3("corrplot_spearman_n")
+corrplot(corr2$r, type="upper", order="hclust", col = "black", cl.pos = "n", sig.level = 0.01, tl.col="black", family = "Times",number.cex = .7, method = "number", tl.cex=.8)
+dev.off()
+
+savepdf3("corrplot_spearman_c")
+corrplot(corr2$r, type="upper", upper.col = "black",order="hclust", sig.level = 0.01, tl.col="black", family = "Times",circle.cex = .7, method = "circle", tl.cex=.7)
+dev.off()
+
 
 ```
 
@@ -280,53 +277,6 @@ cramer_table <- rbind(round(levels,0),cramer_table)
 cramer_table
 ```
 
-Numerical vs. categorical 
-
-```{r}
-#look at correlation between predicted numerical values for triplength_avg and actual values by a linear model using the categorical variable as a predictor
-
-#https://stats.stackexchange.com/questions/119835/correlation-between-a-nominal-iv-and-a-continuous-dv-variable/124618#124618
-
-
-# all really small, no correlation
-
-model.lm <- lm(triplength_avg ~ CS, data = HH_dt_2)
-summary(model.lm)
-rsq <- summary(model.lm)$r.squared
-sqrt(rsq)
-
-model.lm <- lm(triplength_avg ~ householdtype_all, data = HH_dt_2)
-summary(model.lm)
-rsq <- summary(model.lm)$r.squared
-sqrt(rsq)
-
-model.lm <- lm(triplength_avg ~ education, data = HH_dt_2)
-summary(model.lm)
-rsq <- summary(model.lm)$r.squared
-sqrt(rsq)
-
-model.lm <- lm(triplength_avg ~ region1, data = HH_dt_2)
-summary(model.lm)
-rsq <- summary(model.lm)$r.squared
-sqrt(rsq)
-
-model.lm <- lm(triplength_avg ~ region2, data = HH_dt_2)
-summary(model.lm)
-rsq <- summary(model.lm)$r.squared
-sqrt(rsq)
-
-model.lm <- lm(triplength_avg ~ housing_type, data = HH_dt_2)
-summary(model.lm)
-rsq <- summary(model.lm)$r.squared
-sqrt(rsq)
-
-model.lm <- lm(triplength_avg ~ garage, data = HH_dt_2)
-summary(model.lm)
-rsq <- summary(model.lm)$r.squared
-sqrt(rsq)
-
-```
-
 VIF
 
 ```{r}
@@ -336,7 +286,7 @@ VIF
 
 
 HH_dt_2_out$numcars <- as.numeric(as.character(HH_dt_2_out$numcars))
-x_reg <- lm(numcars ~  numlic + region2 + income_numerical + quali_nv + workers + parttime +  hh_children +CSyes + CSmultiple + triplength_avg + nummots + numped + oldHH + education + housing_type + quali_opnv + train28 + bus28 + metro28 + garage + tripsavg + education, data = HH_dt_2_out)
+x_reg <- lm(numcars ~  numlic + region2 + income_numerical + quali_nv + workers + parttime +  hh_children +CSyes + CSmultiple + triplength_avg + nummots + numped + oldHH + housing_type + quali_opnv + train28 + bus28 + metro28 + garage + tripsavg + hhsize, data = HH_dt_2_out)
 x <- vif(x_reg)
 
 x
@@ -345,101 +295,28 @@ x <- as.data.frame(x)
 x <- rownames_to_column(x)
 
 x$rowname[x$rowname=="numlic"] <- "Number of Licenses"
-x$rowname[x$rowname=="income_numerical"] <- "Income"
+x$rowname[x$rowname=="income_numerical"] <- "Monthly Income"
 x$rowname[x$rowname=="triplength_avg"] <- "Average triplength"
-x$rowname[x$rowname=="workers"] <- "Number of workers"
+x$rowname[x$rowname=="workers"] <- "Number of fulltime workers"
+x$rowname[x$rowname=="parttime"] <- "Number of parttime workers"
 x$rowname[x$rowname=="metro28"] <- "Distance to next metrostation"
 x$rowname[x$rowname=="numped"] <- "Number of bikes/pedelecs"
+x$rowname[x$rowname=="nummots"] <- "Number of motorbikes"
 x$rowname[x$rowname=="tripsavg"] <- "Average number of trips"
 x$rowname[x$rowname=="CSyes"] <- "Carsharing available"
+x$rowname[x$rowname=="CSmultiple"] <- "Multiple Carsharing options available"
 x$rowname[x$rowname=="oldHH"] <- "Old household"
-x$rowname[x$rowname=="education"] <- "Highest educational degree"
 x$rowname[x$rowname=="housing_type"] <- "Type of housing"
 x$rowname[x$rowname=="quali_opnv"] <- "Quality of public transport"
+x$rowname[x$rowname=="quali_nv"] <- "Quality of public services"
 x$rowname[x$rowname=="train28"] <- "Distance to nearest trainstation"
 x$rowname[x$rowname=="bus28"] <- "Distance to nearest bus stop"
 x$rowname[x$rowname=="housing_type"] <- "Type of housing"
+x$rowname[x$rowname=="garage"] <- "Availability of a garage"
+x$rowname[x$rowname=="region2"] <- "Region"
+x$rowname[x$rowname=="hh_children"] <- "Household with children"
 
-```
-
-
-Overview table
-
-```{r}
-library(data.table)
-relevant_vars <- names(fit_new$model)[2:21]
-relevant_vars2 <- relevant_vars
-relevant_vars2[8] <- "nummots"
-Overview_df <- HH_dt_2_out[,relevant_vars2, with=FALSE] 
-alloc.col(Overview_df, 200)
-Overview_dummies <- fastDummies::dummy_cols(Overview_df, remove_selected_columns = TRUE)
-
-variables_Overview <- apply(Overview_dummies,2,mean)
-variables_Overview <- as.data.frame(variables_Overview)
-variables_Overview <- rownames_to_column(variables_Overview)
-
-variables_Overview$rowname[variables_Overview$rowname=="numlic"] <- "Number of Licenses"
-variables_Overview$rowname[variables_Overview$rowname=="income_numerical"] <- "Monthly household income in thousand Euro"
-variables_Overview$rowname[variables_Overview$rowname=="triplength_avg"] <- "Average triplength in kilometers"
-variables_Overview$rowname[variables_Overview$rowname=="workers"] <- "Number of full-time workers"
-variables_Overview$rowname[variables_Overview$rowname=="numped"] <- "Number of bikes / pedelecs"
-variables_Overview$rowname[variables_Overview$rowname=="tripsavg"] <- "Average number of daily trips"
-variables_Overview$rowname[variables_Overview$rowname=="CSyes_1"] <- "1 if carsharing available"
-variables_Overview$rowname[variables_Overview$rowname=="CSmultiple_1"] <- "1 if multiple carsharing options available"
-variables_Overview$rowname[variables_Overview$rowname=="nummots"] <- "Number of motorbikes / mopeds"
-variables_Overview$rowname[variables_Overview$rowname=="parttime"] <- "Number of part-time workers"
-variables_Overview$rowname[variables_Overview$rowname=="region2_suburban"] <- "1 if households lives in an suburban environment"
-variables_Overview$rowname[variables_Overview$rowname=="region2_rural"] <- "1 if households lives in an rural environment"
-variables_Overview$rowname[variables_Overview$rowname=="oldHH_1"] <- "1 if categorized as old household"
-variables_Overview$rowname[variables_Overview$rowname=="hh_children_1"] <- "1 if household has children"
-variables_Overview$rowname[variables_Overview$rowname=="housing_type_multifamily_h"] <- "1 if residence is a multifamily-Home"
-variables_Overview$rowname[variables_Overview$rowname=="housing_type_apartmentbuilding"] <- "1 if residence is an apartmentbuilding"
-variables_Overview$rowname[variables_Overview$rowname=="housing_type_singlefamily_h"] <- "1 if residence is a singlefamily-Home (basecategory)"
-variables_Overview$rowname[variables_Overview$rowname=="housing_type_other"] <- "1 if residence is another housing type"
-variables_Overview$rowname[variables_Overview$rowname=="region2_urban"] <- "1 if households lives in an urban environment (basecategory)"
-variables_Overview$rowname[variables_Overview$rowname=="garage_1"] <- "1 if a garage is available"
-
-variables_Overview$rowname[variables_Overview$rowname=="quali_nv_1"] <- "Quality of public services: 1 (basecategory)"
-variables_Overview$rowname[variables_Overview$rowname=="quali_nv_2"] <- "Quality of public services: 2"
-
-variables_Overview$rowname[variables_Overview$rowname=="quali_nv_3"] <- "Quality of public services: 3"
-
-variables_Overview$rowname[variables_Overview$rowname=="quali_nv_4"] <- "Quality of public services: 4"
-
-variables_Overview$rowname[variables_Overview$rowname=="quali_opnv_1"] <- "Quality of public transport: 1 (basecategory)"
-variables_Overview$rowname[variables_Overview$rowname=="quali_opnv_2"] <- "Quality of public transport: 2"
-variables_Overview$rowname[variables_Overview$rowname=="quali_opnv_3"] <- "Quality of public transport: 3"
-variables_Overview$rowname[variables_Overview$rowname=="quali_opnv_4"] <- "Quality of public transport: 4"
-
-variables_Overview$rowname[variables_Overview$rowname=="bus28_near"] <- "Nearest bus stop: air-line distance below 500m (basecategory)"
-variables_Overview$rowname[variables_Overview$rowname=="bus28_middle"] <- "Nearest bus stop: air-line distance between 500m to 2500m"
-variables_Overview$rowname[variables_Overview$rowname=="bus28_far"] <- "Nearest bus stop: air-line distance between 2500 to 5000m"
-variables_Overview$rowname[variables_Overview$rowname=="bus28_rfar"] <- "Nearest bus stop: air-line distance above 5000m"
-
-variables_Overview$rowname[variables_Overview$rowname=="train28_near"] <- "Nearest train station: air-line distance below 500m (basecategory)"
-variables_Overview$rowname[variables_Overview$rowname=="train28_middle"] <- "Nearest train station: air-line distance between 500m to 2500m"
-variables_Overview$rowname[variables_Overview$rowname=="train28_far"] <- "Nearest train station: air-line distance between 2500 to 5000m"
-variables_Overview$rowname[variables_Overview$rowname=="train28_rfar"] <- "Nearest train station: air-line distance above 5000m"
-
-variables_Overview$rowname[variables_Overview$rowname=="metro28_near"] <- "Nearest metro/tram station: air-line distance below 500m (basecategory)"
-variables_Overview$rowname[variables_Overview$rowname=="metro28_middle"] <- "Nearest metro/tram station: air-line distance between 500m to 2500m"
-variables_Overview$rowname[variables_Overview$rowname=="metro28_far"] <- "Nearest metro/tram station: air-line distance between 2500 to 5000m"
-variables_Overview$rowname[variables_Overview$rowname=="metro28_rfar"] <- "Nearest metro/tram station: air-line distance above 5000m"
-
-variables_Overview <- rbind(variables_Overview, data.frame(rowname = "1 if Carsharing not available (Basecategory)", variables_Overview = 1 - (variables_Overview$variables_Overview[variables_Overview$rowname=="1 if carsharing available"]) - (variables_Overview$variables_Overview[variables_Overview$rowname=="1 if multiple carsharing options available"])))
-
-variables_Overview <- variables_Overview[!(variables_Overview$rowname %in% c("CSyes_0","CSmultiple_0","oldHH_0", "hh_children_0", "garage_0")), ]
-
-overview_names <- 1:41
-variables_Overview2 <- cbind(overview_names, variables_Overview)
-
-#maketable in latex
-
-library(xtable)
-#install.packages("xtable")
-print(xtable(variables_Overview2, type = "latex", digits=c(0,0,0,3)), include.rownames=FALSE, file = "overview.tex")
-
-
+print(xtable(x, type = "latex", digits=c(3,3,3,0,3)), include.rownames=FALSE, file = "gvif4.tex")
 
 ```
 
@@ -474,8 +351,6 @@ Done via separate logistic regression between 0 and 1 cars, 0 and 2 cars, 0 and 
 
 
 ```{r}
-
-
 
 HH_dt_bin1  <- filter(HH_dt_2_out, (numcars == 0 | numcars ==1))
 HH_dt_bin2 <- filter(HH_dt_2_out, (numcars == 0 | numcars ==2))
@@ -582,10 +457,29 @@ print(xtable(coefs_total, type = "latex",digits=c(0,0,3,3,3,3,3,3)),include.rown
 
 ```
 
+Function to make plots
+```{r}
+savepdf2 <- function(file, width=16, height=10)
+{
+  fname <- paste(file,".pdf",sep="")
+  pdf(fname, width=width/2.54, height=height/2.54,
+      pointsize=10)
+  par(mgp=c(2.2,0.45,0), tcl=-0.4, mar=c(3.3,3.6,1.1,1.1))
+}
+
+savepdf3 <- function(file, width=12, height=12)
+{
+  fname <- paste(file,".pdf",sep="")
+  pdf(fname, width=width/2.54, height=height/2.54,
+      pointsize=10)
+  par(mgp=c(2.2,0.45,0), tcl=-0.4, mar=c(3.3,3.6,1.1,1.1))
+}
+
+```
+
 
 Plot continuous variables against the logit
 ```{r}
-
 
 #http://www.sthda.com/english/articles/36-classification-methods-essentials/148-logistic-regression-assumptions-and-diagnostics-in-r/
 
@@ -598,45 +492,60 @@ mydata <- mydata %>%
   mutate(logit = log(probabilities/(1-probabilities))) %>%
   gather(key = "predictors", value = "predictor.value", -logit)
 
-ggplot(mydata, aes(logit, predictor.value))+
+logit1_plot <- ggplot(mydata, aes(logit, predictor.value))+
   geom_point(size = 0.5, alpha = 0.5) +
   geom_smooth(method = "loess" ,span = 0.01, size = 1) + 
   theme_bw() + 
+  ylab("Predictorvalue")+
+      xlab("Logit")+
+  ggtitle("Relation of Logit:1 and numeric predictors before transformations")+
+  theme(text=element_text(family="Times"))+
   facet_wrap(~predictors, scales = "free_y", labeller = labeller(predictors = 
-    c("income_numerical" = "income",
-      "nummots" = "motorbikes",
-      "numlic" = "licenses",
-      "workers" = "fulltime",
-      "parttime" = "parttime",
-      "triplength_avg" = "av.triplength",
-      "tripsavg" = "av.trips",
-      "numped" = "bikes")))
+    c("income_numerical" = "Income",
+      "nummots" = "Motorbikes",
+      "numlic" = "Licenses",
+      "workers" = "Fulltime",
+      "parttime" = "Parttime",
+      "triplength_avg" = "Av.triplength",
+      "tripsavg" = "Av.trips",
+      "numped" = "Bikes")))
 
+savepdf2("logit1_bf")
+logit1_plot
+dev.off()
 ```
 
 ```{r}
 # logit2
 probabilities <- predict(mylogit2, type = "response")
-mydata <- HH_dt_bin2[,c('numlic', 'workers', 'parttime1', 'nummots', 'triplength_avg', 'income_numerical', 'tripsavg', 'numped')]
+mydata <- HH_dt_bin2[,c('numlic', 'workers', 'parttime', 'nummots', 'triplength_avg', 'income_numerical', 'tripsavg', 'numped')]
 predictors <- colnames(mydata)
 
 mydata <- mydata %>%
   mutate(logit = log(probabilities/(1-probabilities))) %>%
   gather(key = "predictors", value = "predictor.value", -logit)
 
-ggplot(mydata, aes(logit, predictor.value))+
+logit2_plot <- ggplot(mydata, aes(logit, predictor.value))+
   geom_point(size = 0.5, alpha = 0.5) +
   geom_smooth(method = "loess",span = 0.01, size = 1) + 
   theme_bw() + 
+  ylab("Predictorvalue")+
+      xlab("Logit")+
+  ggtitle("Relation of Logit:2 and numeric predictors before transformations")+
+  theme(text=element_text(family="Times"))+
   facet_wrap(~predictors, scales = "free_y",labeller = labeller(predictors = 
-    c("income_numerical" = "income",
-      "nummots" = "motorbikes",
-      "numlic" = "licenses",
-      "workers" = "fulltime",
-      "parttime1" = "parttime",
-      "triplength_avg" = "av.triplength",
-      "tripsavg" = "av.trips",
-      "numped" = "bikes")))
+    c("income_numerical" = "Income",
+      "nummots" = "Motorbikes",
+      "numlic" = "Licenses",
+      "workers" = "Fulltime",
+      "parttime" = "Parttime",
+      "triplength_avg" = "Av.triplength",
+      "tripsavg" = "Av.trips",
+      "numped" = "Bikes")))
+
+savepdf2("logit2_bf")
+logit2_plot
+dev.off()
 ```
 
 
@@ -652,19 +561,27 @@ mydata <- mydata %>%
   mutate(logit = log(probabilities/(1-probabilities))) %>%
   gather(key = "predictors", value = "predictor.value", -logit)
 
-ggplot(mydata, aes(logit, predictor.value))+
+logit3_plot <- ggplot(mydata, aes(logit, predictor.value))+
   geom_point(size = 0.5, alpha = 0.5) +
   geom_smooth(method = "loess",span = 0.01, size = 1) + 
   theme_bw() + 
+     ylab("Predictorvalue")+
+      xlab("Logit")+
+  ggtitle("Relation of Logit:3 and numeric predictors before transformations")+
+  theme(text=element_text(family="Times"))+
   facet_wrap(~predictors, scales = "free_y", labeller = labeller(predictors = 
-    c("income_numerical" = "income",
-      "nummots" = "motorbikes",
-      "numlic" = "licenses",
-      "workers" = "fulltime",
-      "parttime" = "parttime",
-      "triplength_avg" = "av.triplength",
-      "tripsavg" = "av.trips",
-      "numped" = "bikes")))
+    c("income_numerical" = "Income",
+      "nummots" = "Motorbikes",
+      "numlic" = "Licenses",
+      "workers" = "Fulltime",
+      "parttime" = "Parttime",
+      "triplength_avg" = "Av.triplength",
+      "tripsavg" = "Av.trips",
+      "numped" = "Bikes")))
+
+savepdf2("logit3_bf")
+logit3_plot
+dev.off()
 ```
 
 
@@ -685,50 +602,10 @@ binnedplot(HH_dt_bin1$workers,y, main="Binned plot: Fulltime",ylab="Logit1: Aver
 binnedplot(HH_dt_bin1$parttime,y, main="Binned plot: Parttime",ylab="Logit1: Average residual")#ok
 binnedplot(HH_dt_bin1$nummots,y, main="Binned plot: Motorbikes",ylab="Logit1: Average residual") #ok
 binnedplot(HH_dt_bin1$numped,y, main="Binned plot: Bikes",ylab="Logit1: Average residual") # ok
-binnedplot(x,y, main="Binned plot: Overall",ylab="Logit1: Average residual")
 
-HH_dt_bin1$nummots1 = HH_dt_bin1$nummots
-HH_dt_bin1$nummots1[HH_dt_bin1$nummots == 0] <- HH_dt_bin1$nummots1[HH_dt_bin1$nummots == 0] + 0.0001
-
-
-mylogit <- glm(numcars  ~ numlic + I(numlic^2) + region2 + income_numerical + 
-     I(income_numerical^2)+quali_nv + CSyes + workers + CSmultiple + log(nummots1) + housing_type + 
-    triplength_avg + I(triplength_avg^2) + quali_opnv + oldHH + parttime + I(parttime^2) + tripsavg +  
-    hh_children + numped + metro28 + train28 + garage + bus28, data = HH_dt_bin1, family = "binomial")
-
-library(broom)
-library(dplyr)
-datalogit1 <- augment(mylogit) %>% 
-  dplyr::mutate(index = 1:n()) 
-datalogit1$HHID <- HH_dt_bin1$HH_ID
-influentials1 <- datalogit1 %>% 
-  filter(abs(.std.resid) > 3)
-
-
-datalogit2 <- augment(mylogit2) %>% 
-  dplyr::mutate(index = 1:n()) 
-datalogit2$HHID <- HH_dt_bin2$HH_ID
-influentials2 <- datalogit2 %>% 
-  filter(abs(.std.resid) > 3)
-
-datalogit3 <- augment(mylogit3) %>% 
-  dplyr::mutate(index = 1:n()) 
-datalogit3$HHID <- HH_dt_bin3$HH_ID
-influentials3 <- datalogit3 %>% 
-  filter(abs(.std.resid) > 3)
-
-HHID_logit1 <- as.numeric(as.character(influentials1$HHID))
-HHID_logit2 <- as.numeric(as.character(influentials2$HHID))
-HHID_logit3 <- as.numeric(as.character(influentials3$HHID))
-
-
-temp_influentials <- c(HHID_logit1,HHID_logit2,HHID_logit3)
-HH_dt_2_out <- filter(HH_dt_2_out,!(HH_ID %in% temp_influentials))
-
-duplicates(temp_influentials)
-
-HH_dt_2_out$nummots1 = HH_dt_2_out$nummots
-HH_dt_2_out$nummots1[HH_dt_2_out$nummots == 0] <- HH_dt_2_out$nummots1[HH_dt_2_out$nummots == 0] + 0.0001
+savepdf2("logit1binned_bf")
+binnedplot(x,y, main="Binned plot: Overall",ylab="Logit1: Average residual",family = 'Times')
+dev.off()
 
 ```
 
@@ -738,6 +615,7 @@ Binned plots logit 2 (look at them before and after inserting transformations)
 x2 <- predict(mylogit2, type="response")
 y2 <- resid(mylogit2, type= "response")
 
+
 binnedplot(HH_dt_bin2$triplength_avg,y2, main="Binned plot: Av.triplength",ylab="Logit2: Average residual") #ok
 binnedplot(HH_dt_bin2$income_numerical,y2, main="Binned plot: Income",ylab="Logit2: Average residual")#ok
 binnedplot(HH_dt_bin2$numlic,y2, main="Binned plot: Licenses",ylab="Logit2: Average residual")#ok
@@ -746,15 +624,10 @@ binnedplot(HH_dt_bin2$workers,y2, main="Binned plot: Fulltime",ylab="Logit2: Ave
 binnedplot(HH_dt_bin2$parttime,y2, main="Binned plot: Parttime",ylab="Logit2: Average residual")#ok
 binnedplot(HH_dt_bin2$nummots,y2, main="Binned plot: Motorbikes",ylab="Logit2: Average residual") #ok
 binnedplot(HH_dt_bin2$numped,y2, main="Binned plot: Bikes",ylab="Logit2: Average residual") # ok
-binnedplot(x2,y2, main="Binned plot: Overall",ylab="Logit2: Average residual")
 
-HH_dt_bin2$nummots1 = HH_dt_bin2$nummots
-HH_dt_bin2$nummots1[HH_dt_bin2$nummots == 0] <- HH_dt_bin2$nummots1[HH_dt_bin2$nummots == 0] + 0.0001
-
-mylogit2 <- glm(numcars  ~ numlic + I(numlic^2) + region2 + income_numerical + 
-     I(income_numerical^2)+quali_nv + CSyes + workers + CSmultiple + log(nummots1) + housing_type + 
-    triplength_avg + I(triplength_avg^2) + quali_opnv + oldHH + parttime + I(parttime^2) + tripsavg + 
-    hh_children + numped + metro28 + train28 + garage + bus28 , data = HH_dt_bin2, family = "binomial")
+savepdf2("logit2binned_bf")
+binnedplot(x2,y2, main="Binned plot: Overall",ylab="Logit2: Average residual", family = 'Times')
+dev.off()
 ```
 
 Binned plots logit 3 (look at them before and after inserting transformations)
@@ -772,204 +645,249 @@ binnedplot(HH_dt_bin3$workers,y3, main="Binned plot: Fulltime",ylab="Logit3: Ave
 binnedplot(HH_dt_bin3$parttime,y3, main="Binned plot: Parttime",ylab="Logit3: Average residual")#ok
 binnedplot(HH_dt_bin3$nummots,y3, main="Binned plot: Motorbikes",ylab="Logit3: Average residual") #ok
 binnedplot(HH_dt_bin3$numped,y3, main="Binned plot: Bikes",ylab="Logit3: Average residual") # ok
-binnedplot(x3,y3, main="Binned plot: Overall",ylab="Logit3: Average residual")
+
+savepdf2("logit3binned_bf")
+binnedplot(x3,y3, main="Binned Plot: Logit3",ylab="Logit3: Average residual",family = 'Times')
+dev.off()
+
+```
+
+Introduce nonlinear terms
+
+```{r}
+HH_dt_bin1$nummots1 = HH_dt_bin1$nummots
+HH_dt_bin1$nummots1[HH_dt_bin1$nummots == 0] <- HH_dt_bin1$nummots1[HH_dt_bin1$nummots == 0] + 0.0001
+
+
+mylogit <- glm(numcars  ~ numlic + I(numlic^2) + region2 + income_numerical + 
+     I(income_numerical^2)+quali_nv + CSyes + workers + CSmultiple + log(nummots1) + housing_type + 
+    triplength_avg + I(triplength_avg^2) + quali_opnv + oldHH + parttime + I(parttime^2) + tripsavg +  
+    hh_children + numped + metro28 + train28 + garage + bus28, data = HH_dt_bin1, family = "binomial")
+
+HH_dt_bin2$nummots1 = HH_dt_bin2$nummots
+HH_dt_bin2$nummots1[HH_dt_bin2$nummots == 0] <- HH_dt_bin2$nummots1[HH_dt_bin2$nummots == 0] + 0.0001
+
+mylogit2 <- glm(numcars  ~ numlic + I(numlic^2) + region2 + income_numerical + 
+     I(income_numerical^2)+quali_nv + CSyes + workers + CSmultiple + log(nummots1) + housing_type + 
+    triplength_avg + I(triplength_avg^2) + quali_opnv + oldHH + parttime + I(parttime^2) + tripsavg + 
+    hh_children + numped + metro28 + train28 + garage + bus28 , data = HH_dt_bin2, family = "binomial")
+
 
 HH_dt_bin3$nummots1 = HH_dt_bin3$nummots
 HH_dt_bin3$nummots1[HH_dt_bin3$nummots == 0] <- HH_dt_bin3$nummots1[HH_dt_bin3$nummots == 0] + 0.0001
-
 
 mylogit3 <- glm(numcars  ~ numlic + I(numlic^2) + region2 + income_numerical + 
      I(income_numerical^2)+quali_nv + CSyes + workers + CSmultiple + log(nummots1) + housing_type + 
     triplength_avg + I(triplength_avg^2) + quali_opnv + oldHH + parttime +I(parttime^2) +tripsavg + 
     hh_children + numped + metro28 + train28 + garage + bus28 , data = HH_dt_bin3, family = "binomial")
-
 ```
 
 
-Change logits according to nonlinear associatons: logit1 
+Check linearity plots and binned plots again 
+
 ```{r}
-# only add a small constant to 0 values of a column 
 
-HH_dt_bin1$nummots1 = HH_dt_bin1$nummots
-HH_dt_bin1$nummots1[HH_dt_bin1$nummots == 0] <- HH_dt_bin1$nummots1[HH_dt_bin1$nummots == 0] + 0.0001
+#logit1
+probabilities <- predict(mylogit, type = "response")
+mydata <- HH_dt_bin1[,c('numlic', 'workers', 'parttime', 'nummots', 'triplength_avg', 'income_numerical', 'tripsavg', 'numped')]
+predictors <- colnames(mydata)
 
-HH_dt_bin1$parttime1 = HH_dt_bin1$parttime
-HH_dt_bin1$parttime1[HH_dt_bin1$parttime == 0] <- HH_dt_bin1$parttime1[HH_dt_bin1$parttime == 0] + 0.0001
+mydata <- mydata %>%
+  mutate(logit = log(probabilities/(1-probabilities))) %>%
+  gather(key = "predictors", value = "predictor.value", -logit)
 
-#HH_dt_bin1$shareworkers <- HH_dt_bin1$workers / HH_dt_bin1$hhsize
+logit1_plot2 <- ggplot(mydata, aes(logit, predictor.value))+
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess" ,span = 0.01, size = 1) + 
+  theme_bw() + 
+  ylab("Predictorvalue")+
+      xlab("Logit")+
+  ggtitle("Relation of Logit:1 and numeric predictors after transformations")+
+  theme(text=element_text(family="Times"))+
+  facet_wrap(~predictors, scales = "free_y", labeller = labeller(predictors = 
+    c("income_numerical" = "Income",
+      "nummots" = "Motorbikes",
+      "numlic" = "Licenses",
+      "workers" = "Fulltime",
+      "parttime" = "Parttime",
+      "triplength_avg" = "Av.triplength",
+      "tripsavg" = "Av.trips",
+      "numped" = "Bikes")))
 
-#HH_dt_bin1$sharedrivers1 = HH_dt_bin1$sharedrivers
-#HH_dt_bin1$sharedrivers1[HH_dt_bin1$sharedrivers == 0] <- HH_dt_bin1$sharedrivers1[HH_dt_bin1$sharedrivers == 0] + 0.0001
+savepdf2("logit1_af")
+logit1_plot2
+dev.off()
+```
 
-mylogit <- glm(numcars  ~ numlic + I(numlic^2) + region2 + income_numerical + 
-     I(income_numerical^2)+quali_nv + CSyes + workers + CSmultiple + log(nummots1) + housing_type + 
-    triplength_avg + I(triplength_avg^2) + quali_opnv + oldHH + parttime + tripsavg + 
-    hh_children + numped + I(numped^2) + metro28 + train28 + garage + bus28 , data = HH_dt_bin1, family = "binomial")
+```{r}
+# logit2
+probabilities <- predict(mylogit2, type = "response")
+mydata <- HH_dt_bin2[,c('numlic', 'workers', 'parttime', 'nummots', 'triplength_avg', 'income_numerical', 'tripsavg', 'numped')]
+predictors <- colnames(mydata)
 
-#mylogit <- glm(numcars ~ numlic + region2 + income_numerical + 
-    #I(numlic^2) + quali_nv + I(income_numerical^2) + CSyes + 
-    #workersall + CSmultiple + log(nummots1) + triplength_avg + housing_type+
-    #quali_opnv + I(triplength_avg^2) + oldHH + hh_children + numped + tripsavg + metro28 + train28 + garage + 
-    #bus28, data = HH_dt_bin1, family = "binomial")
+mydata <- mydata %>%
+  mutate(logit = log(probabilities/(1-probabilities))) %>%
+  gather(key = "predictors", value = "predictor.value", -logit)
 
+logit2_plot2 <- ggplot(mydata, aes(logit, predictor.value))+
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess",span = 0.01, size = 1) + 
+  theme_bw() + 
+  ylab("Predictorvalue")+
+      xlab("Logit")+
+  ggtitle("Relation of Logit:2 and numeric predictors after transformations")+
+  theme(text=element_text(family="Times"))+
+  facet_wrap(~predictors, scales = "free_y",labeller = labeller(predictors = 
+    c("income_numerical" = "Income",
+      "nummots" = "Motorbikes",
+      "numlic" = "Licenses",
+      "workers" = "Fulltime",
+      "parttime" = "Parttime",
+      "triplength_avg" = "Av.triplength",
+      "tripsavg" = "Av.trips",
+      "numped" = "Bikes")))
 
-#plot(mylogit)
+savepdf2("logit2_af")
+logit2_plot2
+dev.off()
+```
 
+```{r}
 
-#19833
-#37738 / 14924
-#19137
+# logit 3
+probabilities <- predict(mylogit3, type = "response")
+mydata <- HH_dt_bin3[,c('numlic', 'workers', 'parttime', 'nummots', 'triplength_avg', 'income_numerical', 'tripsavg', 'numped')]
+predictors <- colnames(mydata)
 
-model.data1 <- augment(mylogit) %>% 
-dplyr::mutate(index = 1:n()) 
-model.data1 %>% top_n(3, .cooksd)
-model.data1$HHID <- HH_dt_bin1$HH_ID
-influentials1 = model.data1 %>% 
-filter(abs(.std.resid) > 3)
-influentials1
+mydata <- mydata %>%
+  mutate(logit = log(probabilities/(1-probabilities))) %>%
+  gather(key = "predictors", value = "predictor.value", -logit)
 
+logit3_plot2 <- ggplot(mydata, aes(logit, predictor.value))+
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess",span = 0.01, size = 1) + 
+  theme_bw() + 
+     ylab("Predictorvalue")+
+      xlab("Logit")+
+  ggtitle("Relation of Logit:3 and numeric predictors after transformations")+
+  theme(text=element_text(family="Times"))+
+  facet_wrap(~predictors, scales = "free_y", labeller = labeller(predictors = 
+    c("income_numerical" = "Income",
+      "nummots" = "Motorbikes",
+      "numlic" = "Licenses",
+      "workers" = "Fulltime",
+      "parttime" = "Parttime",
+      "triplength_avg" = "Av.triplength",
+      "tripsavg" = "Av.trips",
+      "numped" = "Bikes")))
 
-templogit1 <- c(14925,14947, 37742)
-HHID_logit1 <- influentials1$HHID[influentials1$index %in% templogit1]
-
-HH_dt_bin1 <- filter(HH_dt_bin1, !(HH_ID %in% HHID_logit1))
-#HH_dt_bin1 <- filter(HH_dt_bin1, !(HH_ID %in% influentials1$HHID))
-
-mylogit <- glm(numcars ~  numlic + I(numlic^2) + region2 + income_numerical+quali_nv + CSyes + CSmultiple + workers + I(workers^2) + triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + oldHH+ hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + I(numped^2)+ bus28, data = HH_dt_bin1,family = "binomial")
-
-
-
+savepdf2("logit3_af")
+logit3_plot2
+dev.off()
 ```
 
 
-Change logits according to nonlinear associatons: logit2
-
+Binned plots logit 1 
 ```{r}
 
+x <- predict(mylogit, type="response")
+y <- resid(mylogit, type= "response")
 
-HH_dt_bin2$nummots1 = HH_dt_bin2$nummots
-HH_dt_bin2$nummots1[HH_dt_bin2$nummots == 0] <- HH_dt_bin2$nummots1[HH_dt_bin2$nummots == 0] + 0.0001
+#library(arm)
+binnedplot(HH_dt_bin1$triplength_avg,y, main="Binned plot: Av.triplength",ylab="Logit1: Average residual") #ok
+binnedplot(HH_dt_bin1$income_numerical,y, main="Binned plot: Income",ylab="Logit1: Average residual")#ok
+binnedplot(HH_dt_bin1$numlic,y, main="Binned plot: Licenses",ylab="Logit1: Average residual")#ok
+binnedplot(HH_dt_bin1$tripsavg,y, main="Binned plot: Av.trips",ylab="Logit1: Average residual")#ok
+binnedplot(HH_dt_bin1$workers,y, main="Binned plot: Fulltime",ylab="Logit1: Average residual")#ok
+binnedplot(HH_dt_bin1$parttime,y, main="Binned plot: Parttime",ylab="Logit1: Average residual")#ok
+binnedplot(HH_dt_bin1$nummots,y, main="Binned plot: Motorbikes",ylab="Logit1: Average residual") #ok
+binnedplot(HH_dt_bin1$numped,y, main="Binned plot: Bikes",ylab="Logit1: Average residual") # ok
 
-HH_dt_bin2$parttime1 = HH_dt_bin2$parttime
-HH_dt_bin2$parttime1[HH_dt_bin2$parttime == 0] <- HH_dt_bin2$parttime1[HH_dt_bin2$parttime == 0] + 0.0001
-
-#HH_dt_bin2$sharedrivers1 = HH_dt_bin2$sharedrivers
-#HH_dt_bin2$sharedrivers1[HH_dt_bin2$sharedrivers == 0] <- HH_dt_bin2$sharedrivers1[HH_dt_bin2$sharedrivers == 0] + 0.0001
-
-mylogit2 <- glm(numcars  ~ numlic + I(numlic^2) + region2 + income_numerical + 
-     I(income_numerical^2)+quali_nv + CSyes + workers + CSmultiple + log(nummots1) + housing_type + 
-    triplength_avg + I(triplength_avg^2) + quali_opnv + oldHH + parttime + tripsavg + 
-    hh_children + numped + I(numped^2) + metro28 + train28 + garage + bus28 , data = HH_dt_bin2, family = "binomial")
-
-
-#mylogit2 <- glm(numcars ~ numlic + region2 + income_numerical +  I(numlic^2) + quali_nv + I(income_numerical^2) + CSyes +workers + CSmultiple + log(nummots1) + triplength_avg + housing_type + quali_opnv + I(triplength_avg^2) + oldHH + parttime +hh_children + numped + tripsavg + metro28 + train28 + garage + bus28, data = HH_dt_bin2, family = "binomial")
-
-plot(mylogit2)
-#15347
-#20378
-#7235
-
-model.data2 <- augment(mylogit2) %>% 
-dplyr::mutate(index = 1:n()) 
-model.data2 %>% top_n(3, .cooksd)
-model.data2$HHID <- HH_dt_bin2$HH_ID
-influentials2 = model.data2 %>% 
-filter(abs(.std.resid) > 3)
-
-templogit2 <- c(15349,10847,14315)
-HHID_logit2 <- influentials2$HHID[influentials2$index %in% templogit2]
-
-HH_dt_bin2 <- filter(HH_dt_bin2, !(HH_ID %in% HHID_logit2))
-
-mylogit2 <- glm(numcars ~   numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + shareold + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28 , data = HH_dt_bin2, family = "binomial")
-
-
-
-
-
+savepdf2("logit1binned_af")
+binnedplot(x,y, main="Binned plot: Overall",ylab="Logit1: Average residual",family = 'Times')
+dev.off()
 
 ```
 
+Binned plots logit 2 
 
-Change logits according to nonlinear associatons: logit3
+```{r}
+x2 <- predict(mylogit2, type="response")
+y2 <- resid(mylogit2, type= "response")
+
+
+binnedplot(HH_dt_bin2$triplength_avg,y2, main="Binned plot: Av.triplength",ylab="Logit2: Average residual") #ok
+binnedplot(HH_dt_bin2$income_numerical,y2, main="Binned plot: Income",ylab="Logit2: Average residual")#ok
+binnedplot(HH_dt_bin2$numlic,y2, main="Binned plot: Licenses",ylab="Logit2: Average residual")#ok
+binnedplot(HH_dt_bin2$tripsavg,y2, main="Binned plot: Av.trips",ylab="Logit2: Average residual")#ok
+binnedplot(HH_dt_bin2$workers,y2, main="Binned plot: Fulltime",ylab="Logit2: Average residual")#ok
+binnedplot(HH_dt_bin2$parttime,y2, main="Binned plot: Parttime",ylab="Logit2: Average residual")#ok
+binnedplot(HH_dt_bin2$nummots,y2, main="Binned plot: Motorbikes",ylab="Logit2: Average residual") #ok
+binnedplot(HH_dt_bin2$numped,y2, main="Binned plot: Bikes",ylab="Logit2: Average residual") # ok
+
+savepdf2("logit2binned_af")
+binnedplot(x2,y2, main="Binned plot: Overall",ylab="Logit2: Average residual", family = 'Times')
+dev.off()
+```
+
+Binned plots logit 3 
 
 ```{r}
 
-HH_dt_bin3$nummots1 = HH_dt_bin3$nummots
-HH_dt_bin3$nummots1[HH_dt_bin3$nummots == 0] <- HH_dt_bin3$nummots1[HH_dt_bin3$nummots == 0] + 0.0001
+x3 <- predict(mylogit3, type="response")
+y3 <- resid(mylogit3, type= "response")
 
-#HH_dt_bin3$parttime1 = HH_dt_bin3$parttime
-#HH_dt_bin3$parttime1[HH_dt_bin3$parttime == 0] <- HH_dt_bin3$parttime1[HH_dt_bin3$parttime == 0] + 0.0001
+binnedplot(HH_dt_bin3$triplength_avg,y3, main="Binned plot: Av.triplength",ylab="Logit3: Average residual") #ok
+binnedplot(HH_dt_bin3$income_numerical,y3, main="Binned plot: Income",ylab="Logit3: Average residual")#ok
+binnedplot(HH_dt_bin3$numlic,y3, main="Binned plot: Licenses",ylab="Logit3: Average residual")#ok
+binnedplot(HH_dt_bin3$tripsavg,y3, main="Binned plot: Av.trips",ylab="Logit3: Average residual")#ok
+binnedplot(HH_dt_bin3$workers,y3, main="Binned plot: Fulltime",ylab="Logit3: Average residual")#ok
+binnedplot(HH_dt_bin3$parttime,y3, main="Binned plot: Parttime",ylab="Logit3: Average residual")#ok
+binnedplot(HH_dt_bin3$nummots,y3, main="Binned plot: Motorbikes",ylab="Logit3: Average residual") #ok
+binnedplot(HH_dt_bin3$numped,y3, main="Binned plot: Bikes",ylab="Logit3: Average residual") # ok
 
-
-#mylogit3 <- glm(numcars ~  numlic + region2 + income_numerical +  I(numlic^2) + quali_nv + I(income_numerical^2) + CSyes +workers + CSmultiple + log(nummots1) + triplength_avg + housing_type + quali_opnv + I(triplength_avg^2) + oldHH + parttime +hh_children + numped + tripsavg + metro28 + train28 + garage + bus28, data = HH_dt_bin3, family = "binomial")
-
-mylogit3 <- glm(numcars  ~ numlic + I(numlic^2) + region2 + income_numerical + 
-     I(income_numerical^2)+quali_nv + CSyes + workers + CSmultiple + log(nummots1) + housing_type + 
-    triplength_avg + I(triplength_avg^2) + quali_opnv + oldHH + parttime + tripsavg + 
-    hh_children + numped + I(numped^2) + metro28 + train28 + garage + bus28 , data = HH_dt_bin3, family = "binomial")
-
-
-#Extract model results logit3 and remove all influential points as here are less and more heterogenous observations
-plot(mylogit3)
-model.data <- augment(mylogit3) %>% 
-dplyr::mutate(index = 1:n()) 
-model.data %>% top_n(4, .cooksd)
-model.data$HHID <- HH_dt_bin3$HH_ID
-influentials = model.data %>% 
-filter(abs(.std.resid) > 3)
-influentials
-
-HH_dt_bin3 <- filter(HH_dt_bin3, !(HH_ID %in% influentials$HHID))
-
-templogit3 <- c(4454,8595,3569)
-templogit3 <- c(11919,8517,4402)
-HHID_logit3 <- influentials$HHID[influentials$index %in% templogit3]
-
-HH_dt_bin3 <- filter(HH_dt_bin3, !(HH_ID %in% HHID_logit3))
-
-mylogit3 <- glm(numcars ~    numlic + I(numlic^2) + region2 + income_numerical+ quali_nv + CSyes + CSmultiple + workers +triplength_avg+ I(triplength_avg^2) + log(nummots1)+ housing_type + quali_opnv + share2039 + shareold + hh_children + garage + metro28 + train28 + tripsavg + parttime + numped + bus28 , data = HH_dt_bin3, family = "binomial")
-
-#64610800
+savepdf2("logit3binned_af")
+binnedplot(x3,y3, main="Binned Plot: Logit3",ylab="Logit3: Average residual",family = 'Times')
+dev.off()
 
 ```
 
-Merge all higly influential points to remove them from the big dataframe
+Remove highly influential points
 
 ```{r}
-#http://www.sthda.com/english/articles/36-classification-methods-essentials/148-logistic-regression-assumptions-and-diagnostics-in-r/ ( for higly influential points)
 
+#temp_influentials_2 <- temp_influentials
 
-#influential_HHID <- influentials$HHID
-#influential_HHID <- as.numeric(as.character(influentials$HHID))
-#HHID_logit1 <- as.numeric(as.character(HHID_logit1))
-#HHID_logit2 <- as.numeric(as.character(HHID_logit2))
-#HHID_logit3 <- as.numeric(as.character(HHID_logit3))
-#temp100 = c(influential_HHID,HHID_logit1, HHID_logit2)
-temp_influentials <- c(influentials1$HHID,influentials2$HHID, influentials3$HHID)
+datalogit1 <- augment(mylogit) %>% 
+  dplyr::mutate(index = 1:n()) 
+datalogit1$HHID <- HH_dt_bin1$HH_ID
+influentials1 <- datalogit1 %>% 
+  filter(abs(.std.resid) > 3)
+
+datalogit2 <- augment(mylogit2) %>% 
+  dplyr::mutate(index = 1:n()) 
+datalogit2$HHID <- HH_dt_bin2$HH_ID
+influentials2 <- datalogit2 %>% 
+  filter(abs(.std.resid) > 3)
+
+datalogit3 <- augment(mylogit3) %>% 
+  dplyr::mutate(index = 1:n()) 
+datalogit3$HHID <- HH_dt_bin3$HH_ID
+influentials3 <- datalogit3 %>% 
+  filter(abs(.std.resid) > 3)
+
+HHID_logit1 <- as.numeric(as.character(influentials1$HHID))
+HHID_logit2 <- as.numeric(as.character(influentials2$HHID))
+HHID_logit3 <- as.numeric(as.character(influentials3$HHID))
+
+temp_influentials <- c(HHID_logit1,HHID_logit2,HHID_logit3)
 HH_dt_2_out <- filter(HH_dt_2_out,!(HH_ID %in% temp_influentials))
 
 HH_dt_2_out$nummots1 = HH_dt_2_out$nummots
 HH_dt_2_out$nummots1[HH_dt_2_out$nummots == 0] <- HH_dt_2_out$nummots1[HH_dt_2_out$nummots == 0] + 0.0001
-
-#HH_dt_2_out$parttime1 = HH_dt_2_out$parttime
-#HH_dt_2_out$parttime1[HH_dt_2_out$parttime == 0] <- HH_dt_2_out$parttime1[HH_dt_2_out$parttime == 0] + 0.0001
-
-#HH_dt_2_out$CSno <- 0
-#HH_dt_2_out$CSno[HH_dt_2_out$CS == "no"] <- HH_dt_2_out$CSno[HH_dt_2_out$CS == "no"] + 1
-
-#HH_dt_2_out$CSyes <- 0 
-#HH_dt_2_out$CSyes[HH_dt_2_out$CS == "yes"] <- HH_dt_2_out$CSyes[HH_dt_2_out$CS == "yes"] + 1
-
-#HH_dt_2_out$CSmultiple  <- 0
-#HH_dt_2_out$CSmultiple[HH_dt_2_out$CS == "yes_multiple"] <- HH_dt_2_out$CSmultiple[HH_dt_2_out$CS == #"yes_multiple"] + 1
-
-#as factors
-#HH_dt_2_out$CSmultiple <- factor(HH_dt_2_out$CSmultiple)
-#HH_dt_2_out$CSyes <- factor(HH_dt_2_out$CSyes)
-#HH_dt_2_out$CSno <- factor(HH_dt_2_out$CSno)
 ```
 
+Forward selection with nonlinear terms
 
 ```{r}
 fit_multinom_null <- multinom(numcars ~ 1, data = HH_dt_2_out,maxit=350)
@@ -985,43 +903,109 @@ model_nonlinear <- multinom(numcars ~ numlic + region2 + income_numerical + I(nu
     quali_nv + I(income_numerical^2) + CSyes + workers + CSmultiple + 
     log(nummots1) + triplength_avg + housing_type + quali_opnv + 
     I(triplength_avg^2) + oldHH + parttime + hh_children + numped + 
-    tripsavg + metro28 + train28 + garage + bus28 + I(parttime^2)
+   tripsavg + metro28 + train28 + garage + bus28 + I(parttime^2)
 , data = HH_dt_2_out,maxit=500)
 
 # Mit mnlogit zum Vergleich
 
-mnlogit_dt_out <- mlogit.data(HH_dt_2_out, choice = "numcars", shape = "wide") 
-
+#mnlogit_dt_out <- mlogit.data(HH_dt_2_out, choice = "numcars", shape = "wide") 
 fm_new <- formula(numcars ~  1| numlic + region2 + income_numerical + I(numlic^2) + 
     quali_nv + I(income_numerical^2) + CSyes + workers + CSmultiple + 
     log(nummots1) + triplength_avg + housing_type + quali_opnv + 
-    I(triplength_avg^2) + oldHH + parttime + hh_children + numped + 
-    tripsavg + metro28 + train28 + garage + bus28 + I(parttime^2)|1)
+    I(triplength_avg^2) + oldHH + parttime + hh_children + tripsavg + 
+   numped + metro28 + train28 + garage + bus28 + I(parttime^2)|1)
 fit_new <- mnlogit(fm_new, mnlogit_dt_out, ncores=4, choiceVar = "alt")
 
 
 ```
 
-Test for influential points: standardized residuals
+
+Overview table
 
 ```{r}
 
+library(data.table)
+relevant_vars <- names(fit_new$model)[2:21]
+relevant_vars2 <- relevant_vars
+relevant_vars2[8] <- "nummots"
+Overview_df <- HH_dt_2_out[,relevant_vars2, with=FALSE] 
+alloc.col(Overview_df, 200)
+Overview_dummies <- fastDummies::dummy_cols(Overview_df, remove_selected_columns = TRUE)
 
-unstandardizedResiduals <- residuals(model_nonlinear, outcome=FALSE)
- #get standardized values
-standardizedResiduals <- (unstandardizedResiduals - mean(unstandardizedResiduals)) / sd(unstandardizedResiduals)
+variables_Overview <- apply(Overview_dummies,2,mean)
+variables_Overview <- as.data.frame(variables_Overview)
+variables_Overview <- rownames_to_column(variables_Overview)
 
-# no standardized residuals above 3 or below -3
-SR_df <- as.data.frame(standardizedResiduals)
-summary_SR <- summary(SR_df)
-filter(SR_df, standardizedResiduals > 3 |standardizedResiduals <  -3)
+variables_max <- apply(Overview_dummies,2,max)
+variables_max <- as.data.frame(variables_max)
+variables_max <- rownames_to_column(variables_max)
+variables_min <- apply(Overview_dummies,2,min)
+variables_min <- as.data.frame(variables_min)
+variables_min <- rownames_to_column(variables_min)
 
-#Table for Appendix:
-summary_SR <- as.data.frame(summary_SR)
-summary_SR <- separate(data = summary_SR, col = "Freq", into = c("Var", "Standardized Residuals"), sep = ":")
-summary_SR$Var1 <- NULL
-summary_SR$Var2 <- NULL
+variables_Overview$rowname[variables_Overview$rowname=="numlic"] <- "Number of Licenses"
+variables_Overview$rowname[variables_Overview$rowname=="income_numerical"] <- "Monthly household income in thousand Euro"
+variables_Overview$rowname[variables_Overview$rowname=="triplength_avg"] <- "Average triplength in kilometers"
+variables_Overview$rowname[variables_Overview$rowname=="workers"] <- "Number of full-time workers"
+variables_Overview$rowname[variables_Overview$rowname=="numped"] <- "Number of bikes / pedelecs"
+variables_Overview$rowname[variables_Overview$rowname=="tripsavg"] <- "Average number of daily trips"
+variables_Overview$rowname[variables_Overview$rowname=="CSyes_1"] <- "1 if carsharing available"
+variables_Overview$rowname[variables_Overview$rowname=="CSmultiple_1"] <- "1 if multiple carsharing options available"
+variables_Overview$rowname[variables_Overview$rowname=="nummots"] <- "Number of motorbikes / mopeds"
+variables_Overview$rowname[variables_Overview$rowname=="parttime"] <- "Number of part-time workers"
+variables_Overview$rowname[variables_Overview$rowname=="region2_suburban"] <- "1 if households lives in an suburban environment"
+variables_Overview$rowname[variables_Overview$rowname=="region2_rural"] <- "1 if households lives in an rural environment"
+variables_Overview$rowname[variables_Overview$rowname=="oldHH_1"] <- "1 if categorized as old household"
+variables_Overview$rowname[variables_Overview$rowname=="hh_children_1"] <- "1 if household has children"
+variables_Overview$rowname[variables_Overview$rowname=="housing_type_multifamily_h"] <- "1 if residence is a multifamily-Home"
+variables_Overview$rowname[variables_Overview$rowname=="housing_type_apartmentbuilding"] <- "1 if residence is an apartmentbuilding"
+variables_Overview$rowname[variables_Overview$rowname=="housing_type_singlefamily_h"] <- "1 if residence is a singlefamily-Home (basecategory)"
+variables_Overview$rowname[variables_Overview$rowname=="housing_type_other"] <- "1 if residence is another housing type"
+variables_Overview$rowname[variables_Overview$rowname=="region2_urban"] <- "1 if households lives in an urban environment (basecategory)"
+variables_Overview$rowname[variables_Overview$rowname=="garage_1"] <- "1 if a garage is available"
 
-print(xtable(summary_SR, type = "latex",digits=c(0,0,3)),include.rownames=FALSE, file = "standardresid.tex")
+variables_Overview$rowname[variables_Overview$rowname=="quali_nv_1"] <- "Quality of public services: 1 (basecategory)"
+variables_Overview$rowname[variables_Overview$rowname=="quali_nv_2"] <- "Quality of public services: 2"
+
+variables_Overview$rowname[variables_Overview$rowname=="quali_nv_3"] <- "Quality of public services: 3"
+
+variables_Overview$rowname[variables_Overview$rowname=="quali_nv_4"] <- "Quality of public services: 4"
+
+variables_Overview$rowname[variables_Overview$rowname=="quali_opnv_1"] <- "Quality of public transport: 1 (basecategory)"
+variables_Overview$rowname[variables_Overview$rowname=="quali_opnv_2"] <- "Quality of public transport: 2"
+variables_Overview$rowname[variables_Overview$rowname=="quali_opnv_3"] <- "Quality of public transport: 3"
+variables_Overview$rowname[variables_Overview$rowname=="quali_opnv_4"] <- "Quality of public transport: 4"
+
+variables_Overview$rowname[variables_Overview$rowname=="bus28_near"] <- "Nearest bus stop: air-line distance below 500m (basecategory)"
+variables_Overview$rowname[variables_Overview$rowname=="bus28_middle"] <- "Nearest bus stop: air-line distance between 500m to 2500m"
+variables_Overview$rowname[variables_Overview$rowname=="bus28_far"] <- "Nearest bus stop: air-line distance between 2500 to 5000m"
+variables_Overview$rowname[variables_Overview$rowname=="bus28_rfar"] <- "Nearest bus stop: air-line distance above 5000m"
+
+variables_Overview$rowname[variables_Overview$rowname=="train28_near"] <- "Nearest train station: air-line distance below 500m (basecategory)"
+variables_Overview$rowname[variables_Overview$rowname=="train28_middle"] <- "Nearest train station: air-line distance between 500m to 2500m"
+variables_Overview$rowname[variables_Overview$rowname=="train28_far"] <- "Nearest train station: air-line distance between 2500 to 5000m"
+variables_Overview$rowname[variables_Overview$rowname=="train28_rfar"] <- "Nearest train station: air-line distance above 5000m"
+
+variables_Overview$rowname[variables_Overview$rowname=="metro28_near"] <- "Nearest metro/tram station: air-line distance below 500m (basecategory)"
+variables_Overview$rowname[variables_Overview$rowname=="metro28_middle"] <- "Nearest metro/tram station: air-line distance between 500m to 2500m"
+variables_Overview$rowname[variables_Overview$rowname=="metro28_far"] <- "Nearest metro/tram station: air-line distance between 2500 to 5000m"
+variables_Overview$rowname[variables_Overview$rowname=="metro28_rfar"] <- "Nearest metro/tram station: air-line distance above 5000m"
+
+variables_Overview <- variables_Overview[!(variables_Overview$rowname %in% c("CSyes_0","CSmultiple_0","oldHH_0", "hh_children_0", "garage_0")), ]
+
+variables_max <- variables_max[!(variables_max$rowname %in% c("CSyes_0","CSmultiple_0","oldHH_0", "hh_children_0", "garage_0")), ]
+variables_min <- variables_min[!(variables_min$rowname %in% c("CSyes_0","CSmultiple_0","oldHH_0", "hh_children_0", "garage_0")), ]
+
+overview_names <- 1:40
+variables_Overview2 <- cbind(overview_names, variables_Overview)
+variables_Overview3 <- cbind(variables_Overview2, variables_min$variables_min, variables_max$variables_max)
+
+#maketable in latex
+
+library(xtable)
+#install.packages("xtable")
+print(xtable(variables_Overview3, type = "latex", digits=c(0,0,0,3,1,1)), include.rownames=FALSE, file = "overview.tex")
+
+
+
 ```
-

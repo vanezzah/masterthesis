@@ -7,35 +7,14 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Libraries
-
-```{r}
-#install.packages('stargazer')
-#install.packages('texreg')
-#install.packages('mnlogit')
-#install.packages("effects")
-library(stargazer)
-library(texreg)
-library(effects)
-
-```
-
-
 Model 1
 
 Regression using mnlogit
 
 ```{r}
 
-#https://cran.r-project.org/web/packages/mnlogit/vignettes/mnlogit.pdf
-
 HH_dt_2_out$numcars <- as.numeric(as.character(HH_dt_2_out$numcars))
 HH_dt_2_out$numcars <- factor(HH_dt_2_out$numcars)
-
-# 18 bis 36
-# 37 + 
-# old hh: mehr als 0.5
-
 
 library(mlogit)
 
@@ -53,37 +32,11 @@ fm_null <- formula(numcars ~ 1 | 1 | 1)
 fit_null <- mnlogit(fm_null, mnlogit_dt_out, ncores=4, choiceVar = "alt")
 
 # model formulation normal
-fm1 <- formula(numcars ~ 1 | numlic+ region2 + income_numerical + quali_nv + workers + CSyes + CSmultiple + triplength_avg +nummots + numped+ share2039 + share4064+ housing_type + quali_opnv + train28 + bus28 + metro28 + garage + tripsavg + numch18 + hh_children | 1)
-fit1 <- mnlogit(fm1, mnlogit_dt_out, ncores=4, choiceVar = "alt")
-summary(fit1)
-
-# model formulation after accounting for nonlinearity and multicollinearity
-#now with shareold instead of share4064
-
-fm_new <- formula(numcars ~  1| numcars ~ numlic + region2 + income_numerical + 
-    I(numlic^2) + quali_nv + I(income_numerical^2) + CSyes + 
-    workers + CSmultiple + log(nummots1) + triplength_avg + housing_type + 
-    quali_opnv + I(triplength_avg^2) + oldHH + parttime + hh_children + 
-    I(workers^2) + numped + tripsavg + metro28 + train28 + garage + 
-    bus28|1)
-fit_new <- mnlogit(fm_new, mnlogit_dt_out, ncores=4, choiceVar = "alt")
-summary(fit_new)
-#fit_new_mlogit<- mlogit(fm_new, mnlogit_dt_out, reflevel = '0')
-
-#final 24.12.2020
-mnlogit_dt_out <- mlogit.data(HH_dt_2_out, choice = "numcars", shape = "wide") 
-
-#NULL MODEL (only intercept)
-fm_null <- formula(numcars ~ 1 | 1 | 1)
-fit_null <- mnlogit(fm_null, mnlogit_dt_out, ncores=4, choiceVar = "alt")
-
-# model formulation normal
 fm1 <- formula(numcars ~ 1 | numlic + region2 + income_numerical + 
     quali_nv + CSyes + workers + CSmultiple + nummots + housing_type + 
     triplength_avg + quali_opnv + oldHH + parttime + tripsavg + 
     hh_children + numped + metro28 + train28 + garage + bus28 | 1)
 fit1 <- mnlogit(fm1, mnlogit_dt_out, ncores=4, choiceVar = "alt")
-
 
 #with nonlinear terms
 fm_new <- formula(numcars ~  1| numlic + region2 + income_numerical + I(numlic^2) + 
@@ -93,7 +46,7 @@ fm_new <- formula(numcars ~  1| numlic + region2 + income_numerical + I(numlic^2
     tripsavg + metro28 + train28 + garage + bus28 + I(parttime^2)|1)
 fit_new <- mnlogit(fm_new, mnlogit_dt_out, ncores=4, choiceVar = "alt")
 
-# compare normal and nonlinearity model -> non linearity performs better
+# compare normal and model featuring non-linear terms -> nonlinearity performs better
 LL0 <- logLik(fit1)
 LL1 <- logLik(fit_new)
 N <- nrow(HH_dt_2_out)
@@ -102,8 +55,6 @@ lrtest(fit_new, fit1)
 
 AIC(fit_new)
 AIC(fit1)
-
-
 
 # compare with null model 
 LL0 <- logLik(fit_null)
@@ -142,9 +93,7 @@ model1 <- mlogit(numcars ~  1| numlic + region2 + income_numerical + I(numlic^2)
     log(nummots1) + triplength_avg + housing_type + quali_opnv + 
     I(triplength_avg^2) + oldHH + parttime + hh_children + numped + 
     tripsavg + metro28 + train28 + garage + bus28 + I(parttime^2), data = mnlogit_dt_out)
-model2 <- mlogit(numcars ~ 1, data = mnlogit_dt_out)
-
-
+model2 <- mlogit(numcars ~ 1|numlic, data = mnlogit_dt_out)
 mlogit::scoretest(model2, model1)
 
 # Likelihood ratio test
@@ -155,31 +104,6 @@ lrtest(fit_null, fit_new)
 # AIC:
 AIC(fit_new)
 AIC(fit_null)
-
-
-#format(fitted(fit_new, outcome=FALSE), scientific = FALSE)
-
-
-
-
-```
-
-Hosmer and Lemeshow test for goodness of fit (on separate logit models)
-
-```{r}
-
-summary(mylogit)
-summary(mylogit2)
-summary(mylogit3)
-
-#Hosmer and Lemeshow test of model fit
-
-logitgof(HH_dt_bin1$numcars, fitted(mylogit, outcome = FALSE), g=10, ord=FALSE)
-
-logitgof(HH_dt_bin2$numcars, fitted(mylogit2, outcome=FALSE), g=10, ord=FALSE)
-
-logitgof(HH_dt_bin3$numcars, fitted(mylogit3, outcome=FALSE), g=20, ord=FALSE)
-
 
 
 ```
@@ -197,16 +121,17 @@ Hosmer-Lemeshow standardization for large samples
 # save HL statistic
 # find distribution of HL statistic
 
-#dplyr::count(HH_dt_2_out,numcars)
-#0	7436 -> 10.6%	-> 53		
+dplyr::count(HH_dt_2_out,numcars)
+#0	7467 -> 10.6%	-> 53		
 #1	35909	-> 51% -> 255		
-#2	21764	-> 31%	-> 155	
-#3	5185 -> 7.4% -> 37
+#2	21762	-> 31%	-> 155	
+#3	5182 -> 7.4% -> 37
 
 HL_dist <- as.matrix(data.frame(t(c("1"))))
 colnames(HL_dist) <- c("Stat")
 
-for (i in 1:100){
+#! takes some time to compute
+for (i in 1:1000){
  a<- sample(subset(HH_dt_2_out, numcars == "0"), 53)
  b<- sample(subset(HH_dt_2_out, numcars == "1"), 255)
  c <- sample(subset(HH_dt_2_out, numcars == "2"), 155)
@@ -241,9 +166,10 @@ runif(1)
 
 Results - Model 1
 
-Coefficient table
+Coefficient table / Log-odds
 ```{r}
 options(scipen = 999)
+
 summary <- summary(fit_new)
 coeffs <- summary$CoefTable
 coeffs <- as.data.frame(coeffs)
@@ -359,24 +285,7 @@ for(i in 1:38) {
 
 print(xtable(coeffs_total, type = "latex",digits=c(0,0,3,3,0,3,3,0,3,3,0)),include.rownames=FALSE, file = "coeffs_model.tex")
 ```
-
-
-Log-odds -> remove education as it is not significant
-```{r}
-# interpreting the intercept? -> leave in
-#The intercept might be interpreted as the estimated baseline log odds when all independent variables are set to 0, or the reference category in case of categorical variables. The probability when all independent variables are set to 0 is log(intercept)/(1+log(intercept)).
-
-# how to interpret:
-# total of 3 models, 1 relative to 0, 2 relative to 0, 3 relative to zero
-
-# output represents log-odds
-# standard interpretation of the multinomial logit is that for a unit change in the predictor variable, the logit of outcome m relative to the referent group is expected to change by its respective parameter estimate (which is in log-odds units) given the variables in the model are held constant.
-summary(fit_new)
-coef(fit_new)
-
-```
-
-Odds ratios
+Odds ratios - Table
 ```{r}
 #relative risk rates / the odds ratio 
 
@@ -384,10 +293,13 @@ Odds ratios
 ## extract the coefficients from the model and exponentiate
 # The odds ratio of a coefficient indicates how the risk of the outcome falling in the comparison group compared to the risk of the outcome falling in the referent group changes with the variable in question.  An odds ratio > 1 indicates that the risk of the outcome falling in the comparison group relative to the risk of the outcome falling in the referent group increases as the variable increases.  In other words, the comparison outcome is more likely.  An odds ratio < 1 indicates that the risk of the outcome falling in the comparison group relative to the risk of the outcome falling in the referent group decreases as the variable increases.
 
-results_oddsratios <- format(round(exp(coef(fit_new)),4), scientific = FALSE)
-sort(results_oddsratios, decreasing = TRUE)
-as.numeric(results_oddsratios, names=TRUE)
-data.frame(t(results_oddsratios))
+coeffs_odds <- coeffs_total
+coeffs_odds <- coeffs_odds[-c(3,4,6,7,9,10)]
+coeffs_odds$Parameter <- exp(coeffs_odds$Parameter)
+coeffs_odds$Parameter.1 <- exp(coeffs_odds$Parameter.1)
+coeffs_odds$Parameter.2 <- exp(coeffs_odds$Parameter.2)
+
+print(xtable(coeffs_odds, type = "latex",digits=c(0,0,3,3,3)),include.rownames=FALSE, file = "coeffs_odds.tex")
 ```
 
 Average marginal effects
@@ -843,127 +755,16 @@ AVE_df <- as.data.frame(AVE_df)
 ```
 
 
-Average marginal effects anders: funktioniert nicht
+Compute Average marginal effects
 
 ```{r}
 
+#!takes some time to compute!
+# AMEs are calculated differently depending on the number of corresponding coefficients, first AMEs are calculated for variables with one level, than for variables with four levels and lastly for variables with three levels (e.g. region). Lastly, the AMEs for the number of motorbikes is computed separately, due to its logit transformation
 
-#https://stackoverflow.com/questions/54079553/how-to-get-average-marginal-effects-ames-with-standard-errors-of-a-multinomial
-
-# geht so nur mit numericals
-fit_mlogit <- mlogit(anzauto ~ 1 | anzfs + region2 + hheink_imp + quali_nv + berufstaetige + householdtype+ CS + Weglänge_avg + anzmots + anzahl2039 + haustyp + quali_opnv + anzahl65 + Bildung + bahn28 + garage + anzahlWege| 1, data = mlogitSample2, reflevel = "0")
-
-c.names <- names(fit_mlogit$model)[- c(1, 19:21)]
-ME.mnl <- sapply(c.names, function(x) {stats::effects(fit_mlogit, covariate="region2", data=mlogitSample2)}, simplify=FALSE) 
-
-Me_test2 <-  stats::effects(fit_mlogit, covariate="anzahlWege", data=mlogitSample)
-
-# get AMEs
-AME.mnl <- colMeans(Me_test2)
-AME.mnl
-
-AME.fun <- function(betas) {
-  tmp <- fit_mlogit
-  tmp$coefficients <- betas
-  ME.mnl <- sapply(c.names, function(x) 
-    effects(tmp, covariate = x, data = mlogitSample), simplify = FALSE)
-  c(sapply(ME.mnl, colMeans))
-}
-
-install.packages("numDeriv")
-require(numDeriv)
-grad <- jacobian(AME.fun, fit_mlogit$coef)
-
-(AME.mnl.se <- matrix(sqrt(diag(grad %*% vcov(fit_mlogit) %*% t(grad))), nrow = 16, byrow = TRUE))
-
-# standard errors:
-AME.mnl / AME.mnl.se
-
-```
-
-Weiteres mit effects
-
-```{r}
-myeffects<-function (object, covariate = NULL, type = c("aa", "ar", "rr", 
-                                             "ra"), data = NULL, ...) 
-{
-    type <- match.arg(type)
-    if (is.null(data)) {
-        P <- predict(object, returnData = TRUE)
-        data <- attr(P, "data")
-        attr(P, "data") <- NULL
-    }
-    else P <- predict(object, data)
-    newdata <- data
-    J <- length(P)
-    alt.levels <- names(P)
-    pVar <- substr(type, 1, 1)
-    xVar <- substr(type, 2, 2)
-    cov.list <- strsplit(as.character(attr(formula(object), "rhs")), " + ", fixed = TRUE)
-    rhs <- sapply(cov.list, function(x) length(na.omit(match(x, 
-                                                             covariate))) > 0)
-    rhs <- (1:length(cov.list))[rhs]
-    eps <- 1e-05
-    if (rhs %in% c(1, 3)) {
-        if (rhs == 3) {
-            theCoef <- paste(alt.levels, covariate, sep = ":")
-            theCoef <- coef(object)[theCoef]
-        }
-        else theCoef <- coef(object)[covariate]
-        me <- c()
-        for (l in 1:J) {
-            newdata[l, covariate] <- data[l, covariate] + eps
-            newP <- predict(object, newdata)
-            me <- rbind(me, (newP - P)/eps)
-            newdata <- data
-        }
-        if (pVar == "r") 
-            me <- t(t(me)/P)
-        if (xVar == "r") 
-            me <- me * matrix(rep(data[[covariate]], J), J)
-        dimnames(me) <- list(alt.levels, alt.levels)
-    }
-    if (rhs == 2) {
-        newdata[, covariate] <- data[, covariate] + eps
-        newP <- predict(object, newdata)
-        me <- (newP - P)/eps
-        if (pVar == "r") 
-            me <- me/P
-        if (xVar == "r") 
-            me <- me * data[[covariate]]
-        names(me) <- alt.levels
-    }
-    me
-}
-
-myeffects(fit_mlogit, covariate = "anzfs", data = mlogitSample2)
-```
-
-
-Interaction terms
-
-
-Tabellen 
-```{r}
-library(texreg)
-texreg::extract(fit_new)
-texreg::texreg(fit_new)
-```
-
-Wilcoxon rank sum to test for differences between AMEs
-
-```{r}
-#me2039 <- me
-#me4064 <- me
-res <- wilcox.test(me2039[,4], me4064[,4], paired = TRUE)
-```
-
-Average marginal effects mit margins
-
-```{r}
-
-library(emmeans)
-emtrends(multinom_int3, ~ region2 , var = "garage", mode = "prob")
+AME_df_temp <- AME_df
+#library(emmeans)
+#emtrends(multinom_int3, ~ region2 , var = "garage", mode = "prob")
 
 AME_df <- as.matrix(data.frame(t(c("name", "zero_cars","1_car","2_cars","3_cars"))))
 colnames(AME_df) <- c("name", "zero_cars","one_car","two_cars","three_cars")
@@ -972,7 +773,6 @@ a.names <- names(fit_new$model)[- c(1, 22:25)]
 
 names_num <- a.names[-c(2,4,8,10:11,17:18,20)]
 names_cat <- a.names[c(4,10:11,17:18,20)]
-#region alleine
 
   for(i in names_num){
   
@@ -1016,7 +816,7 @@ names_cat <- a.names[c(4,10:11,17:18,20)]
   }
 
 
-# region
+# region Variable
 
  a <- marginal_effects(data=HH_dt_2_out, fit_multinom_v3, variables = "region2",category="0")
   a_mean <- mean(a[,1])
@@ -1034,7 +834,7 @@ names_cat <- a.names[c(4,10:11,17:18,20)]
   v <- c(paste0("region2","suburban"),a_mean,b_mean,c_mean,d_mean)
   v2 <- c(paste0("region2","rural"),a_mean2,b_mean2,c_mean2,d_mean2)
   
-   AME_df <- insertRow(AME_df,1,v)
+  AME_df <- insertRow(AME_df,1,v)
   AME_df <- insertRow(AME_df,1,v2)
   
 
@@ -1113,152 +913,108 @@ AME_df$name[AME_df$name=="metro282"] <- "metro.2"
 AME_df$name[AME_df$name=="metro283"] <- "metro.3"
 AME_df$name[AME_df$name=="metro284"] <- "metro.4"
 
-print(xtable(AME_df, type = "latex",digits=c(0,0,3,3,3,3)),include.rownames=FALSE, file = "AME.tex")
+```
+
+Standardized coefficients
+```{r}
+importance_ml <- as.data.frame(coef(fit_new))
+importance_ml <- rownames_to_column(importance_ml)
+importance_ml1 <- importance_ml[1:38,]
+importance_ml2 <- importance_ml[39:76,]
+importance_ml3 <- importance_ml[77:114,]
+importance_ml_final <- data.frame(importance_ml1, importance_ml2, importance_ml3)
+importance_ml_final$rowname.1 <- NULL
+importance_ml_final$rowname.2 <- NULL
+colnames(importance_ml_final)<- c("Variable","One car","Two cars", "Three and more cars")
+importance_ml_final <- importance_ml_final[order(importance_ml_final$Variable),]
+importance_ml_final <- filter(importance_ml_final, Variable!= c("(Intercept):1"))
+importance_ml_final <- filter(importance_ml_final, Variable!= c("I(numlic^2):1"))
+importance_ml_final <- filter(importance_ml_final, Variable!= c("I(income_numerical^2):1"))
+importance_ml_final <- filter(importance_ml_final, Variable!= c("I(triplength_avg^2):1"))
+importance_ml_final <- filter(importance_ml_final, Variable!= c("I(workers^2):1"))
+importance_ml_final <- filter(importance_ml_final, Variable!= c("I(parttime^2):1"))
+
+#standard deviation of variables
+relevant_vars <- names(fit_new$model)[2:21]
+SD_df <- HH_dt_2_out[,relevant_vars, with=FALSE] 
+alloc.col(SD_df, 200)
+test_dummies <- fastDummies::dummy_cols(SD_df, remove_first_dummy = TRUE, remove_selected_columns = TRUE)
+test_dummies$nummots1 <- log(test_dummies$nummots1)
+names(test_dummies)[names(test_dummies) == 'nummots1'] <- 'log(nummots1)'
+variables_SD <- apply(test_dummies,2,sd)
+variables_SD <- as.data.frame(variables_SD)
+variables_SD <- rownames_to_column(variables_SD)
+variables_SD <- variables_SD[order(variables_SD$rowname),]
+
+# calculate standardized coefficients
+importance_f <- importance_ml_final
+result_importance <- data.frame(importance_f, variables_SD)
+result_importance$standardized_coef_1 <- abs(result_importance$One.car * result_importance$variables_SD)
+result_importance$standardized_coef_2 <- abs(result_importance$Two.cars * result_importance$variables_SD)
+result_importance$standardized_coef_3 <- abs(result_importance$Three.and.more.cars * result_importance$variables_SD)
+result_importance$standardized_coef_total <- result_importance$standardized_coef_1 + result_importance$standardized_coef_2 + result_importance$standardized_coef_3
+
+result_importance <- result_importance[order(result_importance$standardized_coef_total, decreasing=TRUE),]
+
+result_importance2<- data.frame(result_importance$rowname,result_importance$standardized_coef_total)
+colnames(result_importance2)<- c("rowname","Standardizedcoef")
+result_importance2$rank <- c(1:33)
+result_importance2$relimp <- result_importance2$Standardizedcoef/sum(result_importance2$Standardizedcoef)
+
+# change names
+result_importance2$rowname <- as.character(result_importance2$rowname)
+result_importance2$rowname<-  sub("_", "", result_importance2$rowname)
+result_importance2$rowname<-  sub("_", "", result_importance2$rowname)
+
+result_importance2$rowname[result_importance2$rowname=="log(nummots1)"] <- "motorbikes"
+result_importance2$rowname[result_importance2$rowname=="numlic"] <- "licenses"
+result_importance2$rowname[result_importance2$rowname=="incomenumerical"] <- "income"
+result_importance2$rowname[result_importance2$rowname=="triplengthavg"] <- "av.triplength"
+result_importance2$rowname[result_importance2$rowname=="workers"] <- "fulltime"
+result_importance2$rowname[result_importance2$rowname=="numped"] <- "bikes"
+result_importance2$rowname[result_importance2$rowname=="tripsavg"] <- "av.trips"
+result_importance2$rowname[result_importance2$rowname=="CSyes1"] <- "carsharing"
+result_importance2$rowname[result_importance2$rowname=="CSmultiple1"] <- "m.carsharing"
+result_importance2$rowname[result_importance2$rowname=="parttime"] <- "parttime"
+result_importance2$rowname[result_importance2$rowname=="region2suburban"] <- "suburban"
+result_importance2$rowname[result_importance2$rowname=="region2rural"] <- "rural"
+result_importance2$rowname[result_importance2$rowname=="oldHH1"] <- "old"
+result_importance2$rowname[result_importance2$rowname=="hh_children1"] <- "children"
+result_importance2$rowname[result_importance2$rowname=="housingtypemultifamily_h"] <- "multifamily"
+result_importance2$rowname[result_importance2$rowname=="housingtypeapartmentbuilding"] <- "apartmentbuilding"
+result_importance2$rowname[result_importance2$rowname=="housingtypeother"] <- "other"
+result_importance2$rowname[result_importance2$rowname=="garage1"] <- "garage"
+
+result_importance2$rowname[result_importance2$rowname=="qualinv2"] <- "ps.2"
+result_importance2$rowname[result_importance2$rowname=="qualinv3"] <- "ps.3"
+result_importance2$rowname[result_importance2$rowname=="qualinv4"] <- "ps.4"
+
+result_importance2$rowname[result_importance2$rowname=="qualiopnv2"] <- "pt.2"
+result_importance2$rowname[result_importance2$rowname=="qualiopnv3"] <- "pt.3"
+result_importance2$rowname[result_importance2$rowname=="qualiopnv4"] <- "pt.4"
+
+result_importance2$rowname[result_importance2$rowname=="bus28middle"] <- "bus.2"
+result_importance2$rowname[result_importance2$rowname=="bus28far"] <- "bus.3"
+result_importance2$rowname[result_importance2$rowname=="bus28rfar"] <- "bus.4"
+
+result_importance2$rowname[result_importance2$rowname=="train28middle"] <- "train.2"
+result_importance2$rowname[result_importance2$rowname=="train28far"] <- "train.3"
+result_importance2$rowname[result_importance2$rowname=="train28rfar"] <- "train.4"
+
+result_importance2$rowname[result_importance2$rowname=="metro28middle"] <- "metro.2"
+result_importance2$rowname[result_importance2$rowname=="metro28far"] <- "metro.3"
+result_importance2$rowname[result_importance2$rowname=="metro28rfar"] <- "metro.4"
 
 ```
 
-
-alt AMEs
+Merge AMEs and standardized coefficients and make table
 
 ```{r}
 
-a <- marginal_effects(data=HH_dt_2_out, fit_multinom2, variables = "CSmultiple",category="0")
+table_AMEstand <- merge(AME_df, result_importance2, by.x = "name", by.y="rowname")
+table_AMEstand<- table_AMEstand[order(table_AMEstand$rank, decreasing=FALSE),]
 
-a_mean <- mean(a$dydx_CSmultiple1)
-b <- margins(data=HH_dt_2_out, fit_multinom2, variables = "CSmultiple",category="1")
-c <- margins(data=HH_dt_2_out, fit_multinom2, variables = "CSmultiple",category="2")
-d <- margins(data=HH_dt_2_out, fit_multinom2, variables = "CSmultiple",category="3")
-v <- c("CSmultiple",a,b,c,d)
-
-
-
-
-
-
-
-
-summary(margins(data=data.frame(HH_dt_2_out), fit_multinom2, variables = "CSyes",category="0"))
-margins(data=HH_dt_2_out, fit_multinom2, variables = "CSyes",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "CSyes",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "CSyes",category="3")
-
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "income_numerical",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "income_numerical",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "income_numerical",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "income_numerical",category="3")
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "share2039",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "share2039",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "share2039",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "share2039",category="3")
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "share4064",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "share4064",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "share4064",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "share4064",category="3")
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "numlic",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "numlic",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "numlic",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "numlic",category="3")
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "triplength_avg",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "triplength_avg",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "triplength_avg",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "triplength_avg",category="3")
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "tripsavg",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "tripsavg",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "tripsavg",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "tripsavg",category="3")
-
-#how does margins treat transformed variables?
-margins(data=HH_dt_2_out, fit_multinom2, variables = "nummots1",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "nummots1",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "nummots1",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "nummots1",category="3")
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "numped",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "numped",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "numped",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "numped",category="3")
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "workers",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "workers",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "workers",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "workers",category="3")
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "parttime",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "parttime",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "partime",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "parttime",category="3")
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "hh_children",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "hh_children",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "hh_children",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "hh_children",category="3")
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "quali_nv",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "quali_nv",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "quali_nv",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "quali_nv",category="3")
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "quali_opnv",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "quali_opnv",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "quali_opnv",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "quali_opnv",category="3")
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "garage",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "garage",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "garage",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "garage",category="3")
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "housing_type",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "housing_type",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "housing_type",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "housing_type",category="3")
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "metro28",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "metro28",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "metro28",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "metro28",category="3")
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "bus28",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "bus28",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "bus28",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "bus28",category="3")
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "train28",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "train28",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "train28",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "train28",category="3")
-
-margins(data=HH_dt_2_out, fit_multinom2, variables = "region2",category="0")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "region2",category="1")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "region2",category="2")
-margins(data=HH_dt_2_out, fit_multinom2, variables = "region2",category="3")
-
-```
-
-Standardized residuals of model
-```{r}
-
-unstandardizedResiduals <- resid(fit_new)
- #get standardized values
-standardizedResiduals <- (unstandardizedResiduals - mean(unstandardizedResiduals)) / sd(unstandardizedResiduals)
-
-# no standardized residuals above 3 or below -3
-SR_df <- as.data.frame(standardizedResiduals)
-summary_SR <- summary(SR_df)
-
-#Table for Appendix:
-summary_SR <- as.data.frame(summary_SR)
-summary_SR <- separate(data = summary_SR, col = "Freq", into = c("Var", "Standardized Residuals"), sep = ":")
-summary_SR$Var1 <- NULL
-summary_SR$Var2 <- NULL
-
-print(xtable(summary_SR, type = "latex",digits=c(0,0,3)),include.rownames=FALSE, file = "standardresid.tex")
+print(xtable(table_AMEstand, type = "latex",digits=c(0,0,3,3,3,3,1,0,2)),include.rownames=FALSE, file = "AME2stand.tex")
 
 ```
 
@@ -1321,133 +1077,20 @@ AIC(fit_interaction) - AIC(fit_adapated)
 
 ```
 
-quali_nv separate levels
-
-```{r}
-
-HH_dt_2_out$qualinv1 <- 0
-HH_dt_2_out$qualinv1[HH_dt_2_out$quali_nv == "1"] <- HH_dt_2_out$qualinv1[HH_dt_2_out$quali_nv == "1"] + 1
-
-HH_dt_2_out$qualinv2 <- 0
-HH_dt_2_out$qualinv2[HH_dt_2_out$quali_nv == "2"] <- HH_dt_2_out$qualinv2[HH_dt_2_out$quali_nv == "2"] + 1
-
-HH_dt_2_out$qualinv3  <- 0
-HH_dt_2_out$qualinv3[HH_dt_2_out$quali_nv == "3"] <- HH_dt_2_out$qualinv3[HH_dt_2_out$quali_nv == "3"] + 1
-
-HH_dt_2_out$qualinv4  <- 0
-HH_dt_2_out$qualinv4[HH_dt_2_out$quali_nv == "4"] <- HH_dt_2_out$qualinv4[HH_dt_2_out$quali_nv == "4"] + 1
-
-HH_dt_2_out$qualinv1 <- factor(HH_dt_2_out$qualinv1)
-HH_dt_2_out$qualinv2 <- factor(HH_dt_2_out$qualinv2)
-HH_dt_2_out$qualinv3 <- factor(HH_dt_2_out$qualinv3)
-HH_dt_2_out$qualinv4 <- factor(HH_dt_2_out$qualinv4)
-```
-
-#Average marginal effects for interaction effects (Beispiel numlic)
-#https://stackoverflow.com/questions/45421196/replicating-the-stata-marginlist-argument-using-r-margins-package
-
-```{r}
-
-c.names <- names(fit_new$model)[- c(1, 26:28)]
-
-# get marginal effects
-ME.mnl <- sapply(c.names, function(x) 
-  stats::effects(fit_multinom_v3, covariate=x, data=HH_dt_2_out), 
-  simplify=FALSE) 
-
-# get AMEs
-(AME.mnl <- t(sapply(ME.mnl, colMeans)))
-
-c.names <- names(fit_int$model)[- c(1, 29:31)]
-
-myeffects<-function (object, covariate = NULL, type = c("aa", "ar", "rr", 
-                                             "ra"), data = NULL, ...) 
-{
-    type <- match.arg(type)
-    if (is.null(data)) {
-        P <- predict(object, returnData = TRUE)
-        data <- attr(P, "data")
-        attr(P, "data") <- NULL
-    }
-    else P <- predict(object, data)
-    newdata <- data
-    J <- length(P)
-    alt.levels <- names(P)
-    pVar <- substr(type, 1, 1)
-    xVar <- substr(type, 2, 2)
-    cov.list <- strsplit(as.character(attr(formula(object), "rhs")), " + ", fixed = TRUE)
-    rhs <- sapply(cov.list, function(x) length(na.omit(match(x, 
-                                                             covariate))) > 0)
-    rhs <- (1:length(cov.list))[rhs]
-    eps <- 1e-05
-    if (rhs %in% c(1, 3)) {
-        if (rhs == 3) {
-            theCoef <- paste(alt.levels, covariate, sep = ":")
-            theCoef <- coef(object)[theCoef]
-        }
-        else theCoef <- coef(object)[covariate]
-        me <- c()
-        for (l in 1:J) {
-            newdata[l, covariate] <- data[l, covariate] + eps
-            newP <- predict(object, newdata)
-            me <- rbind(me, (newP - P)/eps)
-            newdata <- data
-        }
-        if (pVar == "r") 
-            me <- t(t(me)/P)
-        if (xVar == "r") 
-            me <- me * matrix(rep(data[[covariate]], J), J)
-        dimnames(me) <- list(alt.levels, alt.levels)
-    }
-    if (rhs == 2) {
-        newdata[, covariate] <- data[, covariate] + eps
-        newP <- predict(object, newdata)
-        me <- (newP - P)/eps
-        if (pVar == "r") 
-            me <- me/P
-        if (xVar == "r") 
-            me <- me * data[[covariate]]
-        names(me) <- alt.levels
-    }
-    me
-}
-
-c.names <- names(fit_new$model)[- c(1, 26:28)]
-c.names <- fit_multinom_v3$coefnames[-c(1)]
-
-AME.fun <- function(betas) {
-  tmp <- fit_multinom_v3
-  tmp$coefficients <- betas
-  ME.mnl <- sapply(names_numint, function(x) 
-    marginal_effects(tmp, variables = x, data = HH_dt_2_out, category = "0"), simplify = FALSE)
-  c(sapply(ME.mnl, colMeans))
-}
-
-require(numDeriv)
-grad <- jacobian(AME.fun, coef(fit_multinom_v3))
-
-(AME.mnl.se <- matrix(sqrt(diag(grad %*% vcov(fit_multinom_v3) %*% t(grad))), nrow = 3, byrow = TRUE))
-
-
-AME.mnl / AME.mnl.se
-
-```
-
-
-
 # for 0 cars
 ```{r}
 
 #AME_temp <- AME_int
-AME_int <- as.matrix(data.frame(t(c("name", "urban","suburban","rural","pvalue1", "pvalue2", "pvalue3"))))
-colnames(AME_int) <- c("name", "urban","suburban","rural","pvalue1", "pvalue2", "pvalue3")
+library(margins)
 
 test_margins0 <- margins(multinom_int3, variables=c("numlic","income_numerical","CSyes", "workers", "parttime", "hh_children", "oldHH", "garage", "numped", "triplength_avg","quali_nv", "housing_type", "train28"), data = data.frame(HH_dt_2_out), at = list("region2"=c("urban", "suburban", "rural")), category = "0")
 
-library(margins)
-test_margins_numlic <- margins(multinom_int3, variables="numlic", data = data.frame(HH_dt_2_out), category = "1")
+test_margins1 <- margins(multinom_int3, variables=c("numlic","income_numerical","CSyes", "workers", "parttime", "hh_children", "oldHH", "garage", "numped", "triplength_avg", "quali_nv", "housing_type", "train28"), data = data.frame(HH_dt_2_out), at = list("region2"=c("urban", "suburban", "rural")), category = "1")
 
-cplot(test_margins1, "numlic")
+test_margins2 <- margins(multinom_int3, variables=c("numlic","income_numerical","CSyes", "workers", "parttime", "hh_children", "oldHH", "garage", "numped", "triplength_avg", "quali_nv", "housing_type", "train28"), data = data.frame(HH_dt_2_out), at = list("region2"=c("urban", "suburban", "rural")), category = "2")
+
+test_margins3 <- margins(multinom_int3, variables=c("numlic","income_numerical","CSyes", "workers", "parttime", "hh_children", "oldHH", "garage", "numped", "triplength_avg", "quali_nv", "housing_type", "train28"), data = data.frame(HH_dt_2_out), at = list("region2"=c("urban", "suburban", "rural")), category = "3")
+
 test_margins0_df <- as.data.frame(summary(test_margins0))
 test_margins0_df[,3:7] <- NULL
 test_margins0_df <- reshape(test_margins0_df, idvar = "factor", timevar = "region2", direction = "wide")
@@ -1464,20 +1107,12 @@ test_margins3_df <- as.data.frame(summary(test_margins3))
 test_margins3_df[,4:8] <- NULL
 test_margins3_df <- reshape(test_margins3_df, idvar = "factor", timevar = "region2", direction = "wide")
 
-vcov <- vcov(multinom_int3)
-
-test_margins1 <- margins(multinom_int3, variables=c("numlic","income_numerical","CSyes", "workers", "parttime", "hh_children", "oldHH", "garage", "numped", "triplength_avg", "quali_nv", "housing_type", "train28"), data = data.frame(HH_dt_2_out), at = list("region2"=c("urban", "suburban", "rural")), category = "1")
-
-test_margins2 <- margins(multinom_int3, variables=c("numlic","income_numerical","CSyes", "workers", "parttime", "hh_children", "oldHH", "garage", "numped", "triplength_avg", "quali_nv", "housing_type", "train28"), data = data.frame(HH_dt_2_out), at = list("region2"=c("urban", "suburban", "rural")), category = "2")
-
-test_margins3 <- margins(multinom_int3, variables=c("numlic","income_numerical","CSyes", "workers", "parttime", "hh_children", "oldHH", "garage", "numped", "triplength_avg", "quali_nv", "housing_type", "train28"), data = data.frame(HH_dt_2_out), at = list("region2"=c("urban", "suburban", "rural")), category = "3")
-
-
 margins_total <- cbind(test_margins0_df, test_margins1_df, test_margins2_df, test_margins3_df)
 margins_total[,c(5,9,13)] <- NULL
 
 print(xtable(margins_total, type = "latex", digits=c(0,0,3,3,3,3,3,3,3,3,3,3,3,3)), include.rownames=FALSE, file = "margins_int.tex")
 
+# test significance of differences in interaction effects between regions: 
 
 AME_int2 <- as.matrix(data.frame(t(c("name","pvalue1", "pvalue2", "pvalue3"))))
 names_numint <- names_num[c(1,2,3,4,6,7,8,9,10,12)]
@@ -1514,44 +1149,6 @@ names_numint <- names_num[c(1,2,3,4,6,7,8,9,10,12)]
   w <- c(i, res1, res2, res3)
   AME_int2 <- insertRow(AME_int2,1,w)
   }
-
-tempurb <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], multinom_int3,variables= i,category = "1") 
-
-AME_int1 <- as.matrix(data.frame(t(c("name", "urban","suburban","rural","pvalue1", "pvalue2", "pvalue3"))))
-colnames(AME_int1) <- c("name", "urban","suburban","rural","pvalue1", "pvalue2", "pvalue3")
-for(i in names_numint){
-  tempurb <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], multinom_int3,variables= i,category = "1")  
-  mean_urb <- mean(tempurb[,1])
-  tempsub <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], multinom_int3,variables= i,category = "1")  
-  mean_sub <- mean(tempsub[,1])
-  temprur <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], multinom_int3,variables= i,category = "1")  
-  mean_rur <- mean(temprur[,1])
-  
-  testa <- wilcox.test(tempurb[,1],tempsub[,1], paired = FALSE)
-  testb <- wilcox.test(tempurb[,1],temprur[,1], paired = FALSE)
-  testc <- wilcox.test(tempsub[,1],temprur[,1], paired = FALSE)
-  
-  res1 = round(mean_urb - mean_sub,3)
-  if(testa$p.value < 0.01) 
-  {res1 = paste0(round(mean_urb - mean_sub,3),"*")}
-  else {res1 = "none"}
-  
-  res2 = round(mean_urb - mean_rur,3)
-  if(testb$p.value < 0.01) 
-    {res2 = paste0(round(mean_urb - mean_rur,3),"*")}
-  else {res2 = "none"}
-  res3 = round(mean_sub - mean_rur,3)
-  if(testc$p.value < 0.01) 
-  {res3 = paste0(round(mean_sub - mean_rur,3),"*")}
-  else {res3 = "none"}
-  
-  w <- c(i,round(mean_urb,3),round(mean_sub,3),round(mean_rur,3), res1, res2, res3)
-  AME_int1 <- insertRow(AME_int1,1,w)
-}
-
-AME_inttotal <- data.frame(AME_int, AME_int1)
-
-
 
 names_catint <- names_cat[c(1,2,5)]
 for(i in names_catint){
@@ -1617,83 +1214,51 @@ for(i in names_catint){
   AME_int <- insertRow(AME_int,1,w)
   AME_int <- insertRow(AME_int,1,w2)
   AME_int <- insertRow(AME_int,1,w3)
-  }
+}
 
-
+AME_inttotal <- data.frame(AME_int, AME_int1)
 
 ```
 
-alt ( alles hiernach)
+Test significance of interaction effects
 
 ```{r}
-#just AME
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "housing_type")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "numlic")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "numlic")
 
-#AME with distributions
-#margins(multinom_int2,category=1)
-temp <- dydx(data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], multinom_int2, "numlic", category = "0")
 
-temp2 <- dydx(data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], multinom_int2, "numlic", category = "0", type="response")
+tempurb <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], multinom_int3,variables= i,category = "1") 
 
-temp3 <- dydx(data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], multinom_int2, "numlic", category = "0", type="response")
+AME_int1 <- as.matrix(data.frame(t(c("name", "urban","suburban","rural","pvalue1", "pvalue2", "pvalue3"))))
+colnames(AME_int1) <- c("name", "urban","suburban","rural","pvalue1", "pvalue2", "pvalue3")
+for(i in names_numint){
+  tempurb <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], multinom_int3,variables= i,category = "1")  
+  mean_urb <- mean(tempurb[,1])
+  tempsub <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], multinom_int3,variables= i,category = "1")  
+  mean_sub <- mean(tempsub[,1])
+  temprur <- marginal_effects(data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], multinom_int3,variables= i,category = "1")  
+  mean_rur <- mean(temprur[,1])
+  
+  testa <- wilcox.test(tempurb[,1],tempsub[,1], paired = FALSE)
+  testb <- wilcox.test(tempurb[,1],temprur[,1], paired = FALSE)
+  testc <- wilcox.test(tempsub[,1],temprur[,1], paired = FALSE)
+  
+  res1 = round(mean_urb - mean_sub,3)
+  if(testa$p.value < 0.01) 
+  {res1 = paste0(round(mean_urb - mean_sub,3),"*")}
+  else {res1 = "none"}
+  
+  res2 = round(mean_urb - mean_rur,3)
+  if(testb$p.value < 0.01) 
+    {res2 = paste0(round(mean_urb - mean_rur,3),"*")}
+  else {res2 = "none"}
+  res3 = round(mean_sub - mean_rur,3)
+  if(testc$p.value < 0.01) 
+  {res3 = paste0(round(mean_sub - mean_rur,3),"*")}
+  else {res3 = "none"}
+  
+  w <- c(i,round(mean_urb,3),round(mean_sub,3),round(mean_rur,3), res1, res2, res3)
+  AME_int1 <- insertRow(AME_int1,1,w)
+}
 ```
 
 
-Interaction effects
-
-```{r}
-wilcox.test(temp2$dydx_numlic	,temp$dydx_numlic, paired = FALSE)
-wilcox.test(temp2$dydx_numlic	,temp3$dydx_numlic, paired = FALSE)
-wilcox.test(temp3$dydx_numlic	,temp$dydx_numlic, paired = FALSE)
-
-```
-CS
-```{r}
-
-#just AME
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "CSyes")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "CSyes")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "CSyes")
-
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "CSyes",category="1")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "CSyes",category="1")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "CSyes",category="1")
-
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "CSyes",category="2")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "CSyes",category="2")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "CSyes",category="2")
-
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "CSyes",category="3")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "CSyes",category="3")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "CSyes",category="3")
-
-#AME with distributions
-#margins(multinom_int2,category=1)
-temp <- dydx(data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], multinom_int2, "numlic", category = "0", type="response")
-
-temp2 <- dydx(data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], multinom_int2, "numlic", category = "0", type="response")
-
-temp3 <- dydx(data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], multinom_int2, "numlic", category = "0", type="response")
-```
-
-```{r}
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "share2039", category="0")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "share2039", category="0")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "share2039", category="0")
-
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "share2039", category="1")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "share2039", category="1")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "share2039", category="1")
-
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "share2039", category="2")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "share2039", category="2")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "share2039", category="2")
-
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "urban"], variables = "share2039", category="3")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "suburban"], variables = "share2039", category="3")
-margins(multinom_int2, data = HH_dt_2_out[HH_dt_2_out$region2 == "rural"], variables = "share2039", category="3")
-
-```
 

@@ -9,15 +9,6 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Nützliche Befehle
-```{r}
-#save.image(file='yoursession.RData')
-
-#To load this data later you can use:
-
-#load('yoursession.RData')
-```
-
 Packages and libraries
 
 ```{r}
@@ -40,6 +31,10 @@ Packages and libraries
 #install.packages("Formula")
 #install.packages("xtable")
 #install.packages("psych")
+#install.packages('stargazer')
+#install.packages('texreg')
+#install.packages('mnlogit')
+#install.packages("effects")
 
 library(margins)
 library(psych)
@@ -52,6 +47,9 @@ library(MASS)
 library(car)
 library(ggplot2)
 library(mlogit)
+library(stargazer)
+library(texreg)
+library(effects)
 library(nnet)
 library(foreign)
 library(data.table)
